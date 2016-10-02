@@ -1,0 +1,1 @@
+# firephp-for-firefox-devtools
