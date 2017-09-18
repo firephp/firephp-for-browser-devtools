@@ -1,0 +1,6 @@
+/.installed.*
+.tmp~*
+*~.compiled.bash
+.actual.*
+node_modules/
+.rt/
