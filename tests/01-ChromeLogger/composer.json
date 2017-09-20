@@ -1,0 +1,6 @@
+{
+    "name": "firephp/firephp-for-firefox-devtools~tests~01-ChromeLogger",
+    "require": {
+        "ccampbell/chromephp": "4.1.0"
+    }
+}
