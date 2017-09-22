@@ -10,6 +10,17 @@ function do_build {
 
     CALL_webext run {
         "manifest": {
+            "name": "FirePHP",
+            "description": "Log any PHP variable to a Firefox Developer Tools Panel.",
+            "applications": {
+                "gecko": {
+                    "id": "firephp-for-firefox-devtools-0@firephp.org",
+                    "strict_min_version": "42.0"
+                }
+            },            
+            "icons": {
+                "48": "$__DIRNAME__/src/skin/Logo.png"
+            },
             "permissions": [
                 "webRequest",
                 "webRequestBlocking",
@@ -98,14 +109,6 @@ function do_sign {
         CALL_webext sign {
             "dist": "$__DIRNAME__/dist/firephp.xpi",
             "manifest": {
-                "name": "firephp-for-firefox-devtools",
-                "description": "FirePHP for Firefox Developer Tools",
-                "applications": {
-                    "gecko": {
-                        "id": "firephp-for-firefox-devtools-0@firephp.org",
-                        "strict_min_version": "42.0"
-                    }
-                }
             }
         }
 
@@ -122,8 +125,17 @@ if [ "$ARGS_1" == "build" ]; then
 
 elif [ "$ARGS_1" == "sign" ]; then
 
+    if [ "$ARGS_OPT_dev" == "true" ]; then
+        export BO_TEST_FLAG_DEV=1
+    fi
+
     if [ "$ARGS_OPT_skip_build" != "true" ]; then
         do_build
+    fi
+
+    if [ "$ARGS_OPT_dev" == "true" ]; then
+        echo "Not signing. Exiting due to --dev"
+        exit 0
     fi
 
     do_sign
