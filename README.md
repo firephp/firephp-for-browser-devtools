@@ -23,12 +23,6 @@ On the **server** you need one of the following **PHP libraries**:
 Install
 -------
 
-**Linked:**
-
-  1. Click [here]() to install [dist/firephp.xpi](https://github.com/firephp/firephp-for-firefox-devtools/blob/master/dist/firephp.xpi)
-
-**Manual:**
-
   1. Download: [dist/firephp.xpi](https://github.com/firephp/firephp-for-firefox-devtools/raw/master/dist/firephp.xpi)
   2. Drag into Firefox
 
