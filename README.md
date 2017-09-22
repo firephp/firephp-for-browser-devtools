@@ -1,9 +1,9 @@
-**Stability: Experimental. Use at your own risk!**
+**Stability: Experimental. Use at your own risk! Not much to see. [Watch for updates!](https://github.com/firephp/firephp-for-firefox-devtools/issues/1)**
+
+![FirePHP Logo](https://rawgit.com/firephp/firephp-for-firefox-devtools/master/src/skin/Logo.png "FirePHP Logo")
 
 FirePHP for Firefox Developer Tools
 ===================================
-
-**Work in Progress: Watch for updates.**
 
 This project holds the [FirePHP Tool](http://firephp.org) in the form of a [Mozilla Web Extension](https://developer.mozilla.org/en-US/Add-ons/WebExtensions) which is compatible with the latest *Multiprocess Firefox Browser*.
 
