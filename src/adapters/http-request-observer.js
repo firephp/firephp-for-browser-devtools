@@ -30,14 +30,16 @@ exports.for = function (API) {
                 "headers": request.requestHeaders,
                 setRequestHeader: function (name, value) {
 
-//console.log("SET HEADER!", name, value);
-
                     request.requestHeaders.filter(function (header) {
                         return (header.name === name);
                     })[0].value = value;
                 }
             });
         });
+
+        return {
+            requestHeaders: request.requestHeaders
+        };
     }
 
 
