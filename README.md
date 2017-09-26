@@ -17,7 +17,7 @@ On the **server** you need one of the following **PHP libraries**:
     * One file only
   * [FirePHP 1.0](https://github.com/firephp/firephp) - Advanced
     * *NOTE: Not all features provided by this library are implemented in the extension at this time.*
-    * Voluminous data sent via HTTP headers and *data & interaction endpoints*
+    * Data sent via *HTTP headers* and *secondary AJAX requests* to support logging in volume
     * Many features including enable security
 
 Install
