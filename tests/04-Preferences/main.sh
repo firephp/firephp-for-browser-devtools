@@ -20,24 +20,19 @@ CALL_webext run {
                         "code": {
                             "@github.com~jsonrep~jsonrep#s1": {
                                 "page": {
-                                    "@announcer": {
-                                        "message": "Hello World!"
+                                    "@panels": {
+                                        "@fireconsole": {
+                                            "messages": [
+                                                "Hello World!"
+                                            ]
+                                        },
+                                        "@settings": {}
                                     }
                                 },
                                 "reps": {
-                                    "announcer": function /* CodeBlock */ () {
-
-                                        exports.main = function (JSONREP, node) {
-
-                                            setTimeout(function () {
-
-                                                console.log("Check DOM and report /stop status to test runner server.");
-
-                                            }, 500);
-
-                                            return JSONREP.markupNode(node);
-                                        };
-                                    }
+                                    "panels": "$__DIRNAME__/../../src/panels.rep.js",
+                                    "settings": "$__DIRNAME__/../../src/settings.rep.js",
+                                    "fireconsole": "/dl/source/github.com~fireconsole~fireconsole.rep.js/src/fireconsole.rep.js"
                                 }
                             }
                         }
@@ -50,24 +45,19 @@ CALL_webext run {
         "^/": {
             "@github.com~jsonrep~jsonrep#s1": {
                 "page": {
-                    "@announcer": {
-                        "message": "Hello World!"
+                    "@panels": {
+                        "@fireconsole": {
+                            "messages": [
+                                "Hello World!"
+                            ]
+                        },
+                        "@settings": {}
                     }
                 },
                 "reps": {
-                    "announcer": function /* CodeBlock */ () {
-
-                        exports.main = function (JSONREP, node) {
-
-                            setTimeout(function () {
-
-                                console.log("Check DOM and report /stop status to test runner server.");
-
-                            }, 500);
-
-                            return JSONREP.markupNode(node);
-                        };
-                    }
+                    "panels": "$__DIRNAME__/../../src/panels.rep.js",
+                    "settings": "$__DIRNAME__/../../src/settings.rep.js",
+                    "fireconsole": "/dl/source/github.com~fireconsole~fireconsole.rep.js/src/fireconsole.rep.js"
                 }
             }
         }
