@@ -14,7 +14,7 @@ function do_build {
             "description": "Log any PHP variable to a Firefox Developer Tools Panel.",
             "applications": {
                 "gecko": {
-                    "id": "firephp-for-firefox-devtools-0@firephp.org",
+                    "id": "firephp-for-firefox-devtools-1@firephp.org",
                     "strict_min_version": "42.0"
                 }
             },            
