@@ -9,8 +9,9 @@ echo "TEST_MATCH_IGNORE>>>"
 CALL_webext run {
     "manifest": {
         "permissions": [
+            "storage",
             "webRequest",
-            "webRequestBlocking",
+            "webRequestBlocking",            
             "<all_urls>"
         ],
         "background": {
@@ -24,6 +25,7 @@ CALL_webext run {
                                 "01-HelloWorld": function /* CodeBlock */ () {
 
                                     var WILDFIRE = require("$__DIRNAME__/../../src/wildfire");
+                                    WILDFIRE.forcedEnable(true);
 
                                     describe('Wait for messages', function () {
                                         this.timeout(5 * 1000);
@@ -66,7 +68,7 @@ CALL_webext run {
                     'X-Wf-1-Index': '1'
                 });
 
-                res.end("FirePHP Core formatted messages sent in HTTP headers.");
+                res.end("FirePHP Core formatted messages sent in HTTP response headers.");
             };
         <<<),
         "^/tests": {

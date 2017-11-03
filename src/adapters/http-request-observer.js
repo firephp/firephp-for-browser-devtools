@@ -1,7 +1,7 @@
 
 exports.for = function (API) {
 
-    var processors = [];
+    var processor = null;
     var requestIndex = 0;
 
 
@@ -11,35 +11,53 @@ exports.for = function (API) {
 
         var requestId = null;
 
+        var headers = {};
         request.requestHeaders.forEach(function (header) {
             if (header.name.toLowerCase() === "x-request-id") {
                 requestId = header.value;
             }
+            headers[header.name] = header.value;
         });
-
-        processors.forEach(function (processor) {
 
 //console.log("register processor", processor);
 
-            processor({
-                "id": requestId || "id:" + request.url + ":" + requestIndex,
-                "url": request.url,
-                "hostname": request.url.replace(/^https?:\/\/([^:]+)(:\d+)?\/.*$/, "$1")[1],
-                "port": request.url.replace(/^https?:\/\/[^:]+:?(\d+)?\/.*$/, "$1")[1] || 80,
-                "method": request.method,
-                "headers": request.requestHeaders,
-                setRequestHeader: function (name, value) {
+        var result = processor({
+            "id": requestId || "id:" + request.url + ":" + requestIndex,
+            "url": request.url,
+            "hostname": request.url.replace(/^https?:\/\/([^:\/]+)(:\d+)?\/.*?$/, "$1"),
+            "port": request.url.replace(/^https?:\/\/[^:]+:?(\d+)?\/.*?$/, "$1") || 80,
+            "method": request.method,
+            "headers": headers,
+            setRequestHeader: function (name, value) {
 
-                    request.requestHeaders.filter(function (header) {
-                        return (header.name === name);
-                    })[0].value = value;
-                }
-            });
+                request.requestHeaders.filter(function (header) {
+                    return (header.name === name);
+                })[0].value = value;
+            }
         });
 
-        return {
-            requestHeaders: request.requestHeaders
-        };
+        if (!result) {
+            return {};
+        }
+
+        return result.then(function (changes) {
+
+            if (!changes) {
+                return {};
+            }
+
+            var headers = [];
+            Object.keys(changes.requestHeaders).forEach(function (name) {
+                headers.push({
+                    name: name,
+                    value: changes.requestHeaders[name]
+                });
+            });
+
+            return {
+                requestHeaders: headers
+            };    
+        });
     }
 
 
@@ -62,8 +80,8 @@ exports.for = function (API) {
     });
 
     return {
-        register: function (processor) {
-            processors.push(processor);
+        register: function (_processor) {
+            processor = _processor;
         }
     };
 }

@@ -22,8 +22,9 @@ function do_build {
                 "48": "$__DIRNAME__/src/skin/Logo.png"
             },
             "permissions": [
+                "storage",
                 "webRequest",
-                "webRequestBlocking",
+                "webRequestBlocking",            
                 "<all_urls>"
             ],
             "background": {

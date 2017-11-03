@@ -1,4 +1,4 @@
-
+    
 const EVENTS = require("eventemitter2");
 
 
@@ -10,6 +10,12 @@ API.WILDFIRE = require("wildfire-for-js");
 const REQUEST_OBSERVER = require("./adapters/http-request-observer").for(API);
 const RESPONSE_OBSERVER = require("./adapters/http-response-observer").for(API);
 
+
+
+var forceEnabled = false;
+API.forcedEnable = function (oo) {
+    forceEnabled = oo;
+}
 
 
 API.on.chromeLoggerMessage = function (message) {
@@ -126,25 +132,73 @@ function getAnnounceMessageForRequest (request) {
     return cache[request.hostname];
 }
 
-REQUEST_OBSERVER.register(function (request) {
-    if (!isEnabled()) return;
 
-    var headers = {};
-    request.headers.forEach(function (header) {
-        headers[header.name] = header.value;
+
+
+
+
+var domainSettingsCache = {};
+browser.storage.onChanged.addListener(function (changes, area) {
+    for (var item of Object.keys(changes)) {
+        if (!/^domain\[.+\]\.settings\..+$/.test(item)) continue;
+        domainSettingsCache[item] = changes[item].newValue;
+    }    
+});
+function getSetting (name) {
+    if (typeof domainSettingsCache[name] === "undefined") {
+        return Promise.resolve(false);
+    }
+    return browser.storage.local.get(name).then(function (value) {
+        console.log("get value from STORAGE", value);
+        return (domainSettingsCache[name] = value[name] || false);
     });
+}
 
-    if (!headers["User-Agent"].match(/\sFirePHP\/([\.|\d]*)\s?/)) {
-        request.setRequestHeader("User-Agent", headers["User-Agent"] + " FirePHP/0.5");
+
+function getDomainSettings (request) {
+    if (forceEnabled) {
+        return Promise.resolve({
+            "enableUserAgentHeader": true,
+            "enableFirePHPHeader": true
+        });
+    }
+    return getSetting("domain[" + request.hostname + "].settings.enableUserAgentHeader").then(function (enableUserAgentHeader) {
+        return getSetting("domain[" + request.hostname + "].settings.enableFirePHPHeader").then(function (enableFirePHPHeader) {            
+            return Promise.resolve({
+                "enableUserAgentHeader": enableUserAgentHeader,
+                "enableFirePHPHeader": enableFirePHPHeader
+            });
+        });
+    });
+}
+
+
+
+REQUEST_OBSERVER.register(function (request) {
+    if (!isEnabled()) {
+        return null;
     }
 
-/*        
+    return getDomainSettings(request).then(function (settings) {
 
-    // NOTE: Do NOT set this header. This only works with FirePHPCore 0.3.2 and most users are using
-    //       FirePHPCore 0.3.1. If someone does not want their user-agent modified they should use FirePHP 1.0 with DeveloperCompanion
-    //       and disable the 'extensions.devcomp.firePHPCoreCompatibility' option.
-    // request.httpChannel.setRequestHeader("X-FirePHP-Version", "0.4", false);
+        if (settings.enableUserAgentHeader) {
+            if (!request.headers["User-Agent"].match(/\sFirePHP\/([\.|\d]*)\s?/)) {
+                request.headers["User-Agent"] = request.headers["User-Agent"] + " FirePHP/0.5";
+            }
+        }
 
+        if (settings.enableFirePHPHeader) {
+            request.headers["X-FirePHP-Version"] = "0.4";
+        }
+
+        return {
+            requestHeaders: request.headers
+        };
+    });
+
+
+/*
+// TODO: Implement wildfire messaging
     var announceMessage = getAnnounceMessageForRequest(request);
     if (announceMessage) {
         // dispatch announce message

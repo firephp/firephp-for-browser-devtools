@@ -4,7 +4,8 @@
   "dependencies": {
     "bash.origin": "^0.1.61",
     "bash.origin.test": "^0.1.33",
-    "eventemitter2": "^4.1.2"
+    "eventemitter2": "^4.1.2",
+    "wildfire-for-js": "^0.1.2"
   },
   "scripts": {
     "test": "BO_ROOT_SCRIPT_PATH=$(pwd)/node_modules/bash.origin/bash.origin bash.origin.test tests"

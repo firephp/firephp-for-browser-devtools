@@ -21,8 +21,9 @@ CALL_webext run {
     "homepage": ":${port}/",
     "manifest": {
         "permissions": [
+            "storage",
             "webRequest",
-            "webRequestBlocking",
+            "webRequestBlocking",            
             "<all_urls>"
         ],
         "background": {
@@ -36,6 +37,7 @@ CALL_webext run {
                                 "01-HelloWorld": function /* CodeBlock */ () {
 
                                     var WILDFIRE = require("$__DIRNAME__/../../src/wildfire");
+                                    WILDFIRE.forcedEnable(true);
 
                                     describe('Wait for messages', function () {
                                         this.timeout(5 * 1000);

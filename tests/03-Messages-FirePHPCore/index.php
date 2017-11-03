@@ -25,8 +25,15 @@ if ($_SERVER["HTTP_CACHE_CONTROL"] == "max-age=0") {
     array('SELECT * FROM Bar','0.04',array('row1','row2'))
     )),FirePHP::TABLE);
 
-    $firephp->fb($arr,'RequestHeaders',FirePHP::DUMP);
+    $firephp->group('Group 1');
+        $firephp->fb('Hello World');
+        $firephp->group('Group 1');
+            $firephp->fb('Hello World');
+        $firephp->groupEnd();
+    $firephp->groupEnd();
 
-    echo("FirePHP formatted messages sent in HTTP headers.");
+    $firephp->fb($arr,'RequestHeaders',FirePHP::DUMP);
+    
+    echo("FirePHP formatted messages sent in HTTP response headers.");
 
 }

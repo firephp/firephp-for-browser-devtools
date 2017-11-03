@@ -30,6 +30,18 @@ exports.main = function (JSONREP, node) {
                 on: {
                     mount: function (el) {
 
+
+                        console.log("Panels mounted! Issue messages ...");
+
+
+                        function log () {
+                            FC.log([
+                                "Hello World"
+                            ]);
+                            setTimeout(log, 1000);
+                        }
+                        log();
+
                     }
                 }
             }
