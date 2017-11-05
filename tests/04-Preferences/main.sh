@@ -45,7 +45,7 @@ CALL_webext run {
                                 "reps": {
                                     "panels": "$__DIRNAME__/../../src/panels.rep.js",
                                     "settings": "$__DIRNAME__/../../src/settings.rep.js",
-                                    "fireconsole": "/dl/source/github.com~fireconsole~fireconsole.rep.js/src/fireconsole.rep.js"
+                                    "fireconsole": "$__DIRNAME__/../../node_modules/fireconsole.rep.js/src/fireconsole.rep.js"
                                 }
                             }
                         }

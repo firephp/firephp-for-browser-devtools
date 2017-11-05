@@ -40,11 +40,7 @@ CALL_webext run {
 
                                     const BACKGROUND = require("$__DIRNAME__/../../src/background");
 
-                                    BACKGROUND.WILDFIRE.forcedEnable(true);
-
-                                    return;
-
-                                    var WILDFIRE = require("$__DIRNAME__/../../src/wildfire");
+                                    const WILDFIRE = BACKGROUND.WILDFIRE;
                                     WILDFIRE.forcedEnable(true);
 
                                     describe('Wait for messages', function () {
@@ -127,7 +123,7 @@ CALL_webext run {
                                     }
                                 },
                                 "reps": {
-                                    "fireconsole": "/dl/source/github.com~fireconsole~fireconsole.rep.js/src/fireconsole.rep.js",
+                                    "fireconsole": "$__DIRNAME__/../../node_modules/fireconsole.rep.js/src/fireconsole.rep.js",
                                     "message-listener": "$__DIRNAME__/../../src/message-listener.rep.js"
                                 }
                             }
@@ -143,7 +139,7 @@ CALL_webext run {
         }
     },
     "files": {
-        "/dist/resources/insight.renderers.default/*": "/dl/source/github.com~fireconsole~fireconsole.rep.js/node_modules/insight.renderers.default/resources"
+        "/dist/resources/insight.renderers.default/*": "$__DIRNAME__/../../node_modules/fireconsole.rep.js/node_modules/insight.renderers.default/resources"
     },    
     "expect": {
         "exit": true,

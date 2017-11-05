@@ -24,41 +24,45 @@ function do_build {
             "permissions": [
                 "storage",
                 "webRequest",
+                "webNavigation",
                 "webRequestBlocking",            
                 "<all_urls>"
             ],
+            "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self'; img-src 'self'",
             "background": {
                 "scripts": [
                     {
-                        "worker.js": {
-                            "@it.pinf.org.mochajs#s1": {
-                                "suite": "worker",
-                                "apiBaseUrl": "/tests",
-                                "tests": {
-                                    "01-HelloWorld": function /* CodeBlock */ () {
-
-                                        var WILDFIRE = require("$__DIRNAME__/src/wildfire");
-
-                                        describe('Wait for messages', function () {
-                                            this.timeout(5 * 1000);
-
-                                            it('received', function (done) {
-
-                                                WILDFIRE.once("error", done);
-
-                                                WILDFIRE.on("message.firephp", function (message) {
-
-                                                    chai.assert.equal(message.meta, "{\"msg.preprocessor\":\"FirePHPCoreCompatibility\",\"target\":\"console\",\"lang.id\":\"registry.pinf.org/cadorn.org/github/renderers/packages/php/master\",\"priority\":\"log\",\"file\":\"/path/to/file\",\"line\":10}");
-                                                    chai.assert.equal(message.data, "\"Hello World\"");
-                                                    chai.assert.equal(message.receiver, "http://meta.firephp.org/Wildfire/Structure/FirePHP/FirebugConsole/0.1");
-                                                    chai.assert.equal(message.sender, "http://meta.firephp.org/Wildfire/Plugin/FirePHP/Library-FirePHPCore/0.0.0master1106021548");
-
-                                                    done();
-                                                });
-
-                                                browser.tabs.reload();
-                                            });
-                                        });
+                        "background.js": {
+                            "@it.pinf.org.browserify#s1": {
+                                "src": "$__DIRNAME__/src/background.js"
+                            }
+                        }
+                    }
+                ]
+            },
+            "devtools": {
+                "panels": [
+                    {
+                        "devtools.js": {
+                            "label": "FirePHP",
+                            "icon": "$__DIRNAME__/src/skin/Logo.png",
+                            "code": {
+                                "@github.com~jsonrep~jsonrep#s1": {
+                                    "page": {
+                                        "@panels": {
+                                            "@settings": {},
+                                            "@fireconsole": {
+                                                "plugins": {
+                                                    "@message-listener": {}
+                                                }                                                
+                                            }
+                                        }
+                                    },
+                                    "reps": {
+                                        "panels": "$__DIRNAME__/src/panels.rep.js",
+                                        "settings": "$__DIRNAME__/src/settings.rep.js",
+                                        "fireconsole": "$__DIRNAME__/node_modules/fireconsole.rep.js/src/fireconsole.rep.js",
+                                        "message-listener": "$__DIRNAME__/src/message-listener.rep.js"                                        
                                     }
                                 }
                             }
@@ -68,36 +72,39 @@ function do_build {
             }
         },
         "routes": {
-            "^/$": (javascript () >>>
+            "^/$": (javascript (API) >>>
 
                 return function (req, res, next) {
 
-                    res.writeHead(200, {
-                        'X-Wf-Protocol-1': 'http://meta.wildfirehq.org/Protocol/JsonStream/0.2',
-                        'X-Wf-1-Plugin-1': 'http://meta.firephp.org/Wildfire/Plugin/FirePHP/Library-FirePHPCore/0.0.0master1106021548',
-                        'X-Wf-1-Structure-1': 'http://meta.firephp.org/Wildfire/Structure/FirePHP/FirebugConsole/0.1',
-                        'X-Wf-1-1-1-1': '63|[{"Type":"LOG","File":"/path/to/file","Line":10},"Hello World"]|',
-                        'X-Wf-1-Index': '1'
-                    });
+                    if (
+                        req.headers["x-firephp-version"] ||
+                        /\sFirePHP\/([\.|\d]*)\s?/.test(req.headers["user-agent"])
+                    ) {
 
-                    res.end("FirePHP Core formatted messages sent in HTTP headers.");
+                        res.writeHead(200, {
+                            'X-Wf-Protocol-1': 'http://meta.wildfirehq.org/Protocol/JsonStream/0.2',
+                            'X-Wf-1-Plugin-1': 'http://meta.firephp.org/Wildfire/Plugin/FirePHP/Library-FirePHPCore/0.0.0master1106021548',
+                            'X-Wf-1-Structure-1': 'http://meta.firephp.org/Wildfire/Structure/FirePHP/FirebugConsole/0.1',
+                            'X-Wf-1-1-1-1': '63|[{"Type":"LOG","File":"/path/to/file","Line":10},"Hello World"]|',
+                            'X-Wf-1-Index': '1'
+                        });
+
+                        res.end("FirePHP Core formatted messages sent in HTTP response headers.");
+                    } else {
+
+                        res.end("No FirePHP HTTP request headers found.");
+                    }
+
+                    if (process.env.BO_TEST_FLAG_DEV) return;
+
+                    setTimeout(function () {
+                        API.SERVER.stop();
+                    }, 1000);
                 };
             <<<),
             "^/tests": {
                 "@it.pinf.org.mochajs#s1": {}
             }
-        },
-        "expect": {
-            "exit": true,
-            "conditions": [
-                {
-                    "@it.pinf.org.mochajs#s1": {
-                        "suites": [
-                            "worker"
-                        ]
-                    }
-                }        
-            ]
         }
     }
 
