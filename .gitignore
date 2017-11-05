@@ -4,3 +4,4 @@
 .actual.*
 node_modules/
 .rt/
+~.rt_*

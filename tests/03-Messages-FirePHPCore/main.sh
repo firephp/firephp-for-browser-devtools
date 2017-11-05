@@ -37,6 +37,12 @@ CALL_webext run {
                             "tests": {
                                 "01-HelloWorld": function /* CodeBlock */ () {
 
+                                    const BACKGROUND = require("$__DIRNAME__/../../src/background");
+
+                                    BACKGROUND.WILDFIRE.forcedEnable(true);
+
+                                    return;
+
                                     var WILDFIRE = require("$__DIRNAME__/../../src/wildfire");
                                     WILDFIRE.forcedEnable(true);
 
@@ -113,10 +119,15 @@ CALL_webext run {
                         "code": {
                             "@github.com~jsonrep~jsonrep#s1": {
                                 "page": {
-                                    "@fireconsole": {}
+                                    "@fireconsole": {
+                                        "plugins": {
+                                            "@message-listener": {}
+                                        }
+                                    }
                                 },
                                 "reps": {
-                                    "fireconsole": "/dl/source/github.com~fireconsole~fireconsole.rep.js/src/fireconsole.rep.js"
+                                    "fireconsole": "/dl/source/github.com~fireconsole~fireconsole.rep.js/src/fireconsole.rep.js",
+                                    "message-listener": "$__DIRNAME__/../../src/message-listener.rep.js"
                                 }
                             }
                         }
@@ -130,6 +141,9 @@ CALL_webext run {
             "@it.pinf.org.mochajs#s1": {}
         }
     },
+    "files": {
+        "/dist/resources/insight.renderers.default/*": "/dl/source/github.com~fireconsole~fireconsole.rep.js/node_modules/insight.renderers.default/resources"
+    },    
     "expect": {
         "exit": true,
         "conditions": [
