@@ -105,6 +105,9 @@ function do_build {
             "^/tests": {
                 "@it.pinf.org.mochajs#s1": {}
             }
+        },
+        "files": {
+            "/dist/resources/insight.renderers.default/*": "$__DIRNAME__/node_modules/fireconsole.rep.js/node_modules/insight.renderers.default/resources"
         }
     }
 
