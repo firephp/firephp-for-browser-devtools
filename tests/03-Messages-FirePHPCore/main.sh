@@ -26,6 +26,7 @@ CALL_webext run {
             "webRequestBlocking",            
             "<all_urls>"
         ],
+        "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self'; img-src 'self'",
         "background": {
             "scripts": [
                 {
