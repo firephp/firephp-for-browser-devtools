@@ -9,7 +9,16 @@ exports.main = function (JSONREP, node) {
 
         if (message.to === "message-listener") {
 
-            WINDOW.FC.log(message.message);
+            if (message.message) {
+
+                WINDOW.FC.log(message.message);
+
+            } else
+            if (message.event === "clear") {
+
+                WINDOW.FC.clear();
+            }
+
         }
     });
 

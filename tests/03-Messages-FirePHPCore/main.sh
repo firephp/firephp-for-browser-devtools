@@ -23,6 +23,7 @@ CALL_webext run {
         "permissions": [
             "storage",
             "webRequest",
+            "webNavigation",
             "webRequestBlocking",            
             "<all_urls>"
         ],

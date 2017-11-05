@@ -11,7 +11,7 @@ WILDFIRE.on("message.firephp", function (message) {
 
 //    console.log("RECEIVED FIREPHP MESSAGE!!5555!", message);
 
-    var sending = BROWSER.runtime.sendMessage({
+    BROWSER.runtime.sendMessage({
         to: "message-listener",
         message: {
             sender: message.sender,
@@ -19,10 +19,24 @@ WILDFIRE.on("message.firephp", function (message) {
             meta: message.meta,
             data: message.data            
         }
-    });
-    sending.then(function (response) {
-    }, function (err) {
+    }).catch(function (err) {
         console.error(err);
     });
 
+});
+
+
+BROWSER.webNavigation.onBeforeNavigate.addListener(function (details) {
+
+    BROWSER.runtime.sendMessage({
+        to: "message-listener",
+        event: "clear"
+    }).catch(function (err) {
+        console.error(err);
+    });
+
+}, {
+    url: [
+        {}
+    ]
 });
