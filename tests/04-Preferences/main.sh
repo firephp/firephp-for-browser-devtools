@@ -7,6 +7,7 @@ depend {
 CALL_webext run {
     "manifest": {
         "permissions": [
+            "tabs",
             "storage",
             "webRequest",
             "webNavigation",

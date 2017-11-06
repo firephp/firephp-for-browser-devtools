@@ -14,7 +14,7 @@ exports.main = function (JSONREP, node) {
                 WINDOW.FC.log(message.message);
 
             } else
-            if (message.event === "clear") {
+            if (message.event === "onBeforeNavigate") {
 
                 WINDOW.FC.clear();
             }

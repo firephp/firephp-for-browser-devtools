@@ -36,7 +36,7 @@ BROWSER.webNavigation.onBeforeNavigate.addListener(function (details) {
     try {
         BROWSER.runtime.sendMessage({
             to: "message-listener",
-            event: "clear"
+            event: "onBeforeNavigate"
         }).catch(function (err) {
             console.error(err);
         });
@@ -48,4 +48,37 @@ BROWSER.webNavigation.onBeforeNavigate.addListener(function (details) {
     url: [
         {}
     ]
+});
+
+BROWSER.webNavigation.onDOMContentLoaded.addListener(function (details) {
+
+    try {
+        BROWSER.runtime.sendMessage({
+            to: "message-listener",
+            event: "onDOMContentLoaded"
+        }).catch(function (err) {
+            console.error(err);
+        });
+    } catch (err) {
+        console.log("warning", err);
+    }
+
+}, {
+    url: [
+        {}
+    ]
+});
+
+browser.tabs.onActivated.addListener(function (info) {
+
+    try {
+        BROWSER.runtime.sendMessage({
+            to: "message-listener",
+            event: "tabs.onActivated"
+        }).catch(function (err) {
+            console.error(err);
+        });
+    } catch (err) {
+        console.log("warning", err);
+    }
 });

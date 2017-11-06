@@ -22,6 +22,7 @@ function do_build {
                 "48": "$__DIRNAME__/src/skin/Logo.png"
             },
             "permissions": [
+                "tabs",
                 "storage",
                 "webRequest",
                 "webNavigation",
@@ -51,18 +52,26 @@ function do_build {
                             "code": {
                                 "@github.com~jsonrep~jsonrep#s1": {
                                     "page": {
-                                        "@panels": {
-                                            "@settings": {},
-                                            "@fireconsole": {
-                                                "plugins": {
-                                                    "@message-listener": {}
-                                                }                                                
+                                        "@layout": {
+                                            "console": {
+                                                "@fireconsole": {
+                                                    "plugins": {
+                                                        "@message-listener": {}
+                                                    }                                                
+                                                }
+                                            },
+                                            "settings": {
+                                                "@settings": {}
+                                            },
+                                            "inspector": {
+                                                "@inspector": {}
                                             }
                                         }
                                     },
                                     "reps": {
-                                        "panels": "$__DIRNAME__/src/panels.rep.js",
+                                        "layout": "$__DIRNAME__/src/layout.rep.js",
                                         "settings": "$__DIRNAME__/src/settings.rep.js",
+                                        "inspector": "$__DIRNAME__/src/inspector.rep.js",
                                         "fireconsole": "$__DIRNAME__/node_modules/fireconsole.rep.js/src/fireconsole.rep.js",
                                         "message-listener": "$__DIRNAME__/src/message-listener.rep.js"                                        
                                     }

@@ -21,6 +21,7 @@ CALL_webext run {
     "homepage": ":${port}/",
     "manifest": {
         "permissions": [
+            "tabs",
             "storage",
             "webRequest",
             "webNavigation",
