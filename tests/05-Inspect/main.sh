@@ -1,10 +1,24 @@
 #!/usr/bin/env bash.origin.script
 
 depend {
-    "webext": "@com.github/pinf-to/to.pinf.org.mozilla.web-ext#s1"
+    "webext": "@com.github/pinf-to/to.pinf.org.mozilla.web-ext#s1",
+    "php": "@com.github/bash-origin/bash.origin.php#s1",
+    "process": "@com.github/bash-origin/bash.origin.process#s1"
 }
 
+echo "TEST_MATCH_IGNORE>>>"
+
+CALL_php composer install
+
+
+local port="$(CALL_process free_port)"
+echo "PHP server port: ${port}"
+
+CALL_php start "${port}"
+
+
 CALL_webext run {
+    "homepage": ":${port}/",
     "manifest": {
         "permissions": [
             "storage",
@@ -38,6 +52,7 @@ CALL_webext run {
                                 "page": {
                                     "@panels": {
                                         "@settings": {},
+                                        "@inspector": {},
                                         "@fireconsole": {
                                             "plugins": {
                                                 "@message-listener": {}
@@ -48,6 +63,7 @@ CALL_webext run {
                                 "reps": {
                                     "panels": "$__DIRNAME__/../../src/panels.rep.js",
                                     "settings": "$__DIRNAME__/../../src/settings.rep.js",
+                                    "inspector": "$__DIRNAME__/../../src/inspector.rep.js",
                                     "fireconsole": "$__DIRNAME__/../../node_modules/fireconsole.rep.js/src/fireconsole.rep.js",
                                     "message-listener": "$__DIRNAME__/../../src/message-listener.rep.js"
                                 }
@@ -59,39 +75,20 @@ CALL_webext run {
         }
     },
     "routes": {
-        "^/$": (javascript () >>>
-
-            return function (req, res, next) {
-
-                if (
-                    req.headers["x-firephp-version"] ||
-                    /\sFirePHP\/([\.|\d]*)\s?/.test(req.headers["user-agent"])
-                ) {
-
-                    res.writeHead(200, {
-                        'X-Wf-Protocol-1': 'http://meta.wildfirehq.org/Protocol/JsonStream/0.2',
-                        'X-Wf-1-Plugin-1': 'http://meta.firephp.org/Wildfire/Plugin/FirePHP/Library-FirePHPCore/0.0.0master1106021548',
-                        'X-Wf-1-Structure-1': 'http://meta.firephp.org/Wildfire/Structure/FirePHP/FirebugConsole/0.1',
-                        'X-Wf-1-1-1-1': '63|[{"Type":"LOG","File":"/path/to/file","Line":10},"Hello World"]|',
-                        'X-Wf-1-Index': '1'
-                    });
-
-                    res.end("FirePHP Core formatted messages sent in HTTP response headers.");
-                } else {
-
-                    res.end("No FirePHP HTTP request headers found.");
-                }
-            };
-        <<<)
+        "^/tests": {
+            "@it.pinf.org.mochajs#s1": {}
+        }
     },
+    "files": {
+        "/dist/resources/insight.renderers.default/*": "$__DIRNAME__/../../node_modules/fireconsole.rep.js/node_modules/insight.renderers.default/resources"
+    },    
     "expect": {
         "exit": true,
         "conditions": [
             {
                 "@it.pinf.org.mochajs#s1": {
                     "suites": [
-                        "devtools",
-                        "page"
+                        "worker"
                     ]
                 }
             }        
@@ -99,4 +96,10 @@ CALL_webext run {
     }
 }
 
+echo "<<<TEST_MATCH_IGNORE"
+
 echo "OK"
+
+echo "TEST_MATCH_IGNORE>>>"
+
+CALL_php stop "${port}"

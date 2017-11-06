@@ -34,7 +34,9 @@ function do_build {
                     {
                         "background.js": {
                             "@it.pinf.org.browserify#s1": {
-                                "src": "$__DIRNAME__/src/background.js"
+                                "src": "$__DIRNAME__/src/background.js",
+                                "prime": true,
+                                "format": "pinf"
                             }
                         }
                     }
