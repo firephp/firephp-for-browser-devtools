@@ -9,7 +9,7 @@ exports.main = function (JSONREP, node) {
 
             <div>
                 <h2>{ hostname }</h2>
-                <ul>
+                <ul class="settings">
                     <li><input type="checkbox" name="settings.enableUserAgentHeader" onchange={syncCheckbox}/> Enable UserAgent Header</li>
                     <li><input type="checkbox" name="settings.enableFirePHPHeader" onchange={syncCheckbox}/> Enable FirePHP Header</li>
                 </ul>
@@ -22,13 +22,13 @@ exports.main = function (JSONREP, node) {
                     padding-right: 10px;
                 }
                 
-                :scope DIV > UL {
+                :scope DIV > UL.settings {
                     padding-left: 10px;
                     padding-right: 10px;
                     list-style-type: none;
                 }
 
-                :scope DIV > UL > LI {
+                :scope DIV > UL.settings > LI {
                     white-space: nowrap;
                 }
 
@@ -96,10 +96,10 @@ exports.main = function (JSONREP, node) {
                     browser.runtime.onMessage.addListener(function (message) {
                         if (message.to === "message-listener") {
                             if (message.event === "onDOMContentLoaded") {
-                                triggerSync();//setTimeout(triggerSync, 0);
+                                triggerSync();
                             } else
                             if (message.event === "tabs.onActivated") {
-                                triggerSync();//setTimeout(triggerSync, 0);
+                                triggerSync();
                             }
                         }
                     });
