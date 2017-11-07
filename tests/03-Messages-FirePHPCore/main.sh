@@ -116,15 +116,14 @@ CALL_webext run {
                         "code": {
                             "@github.com~jsonrep~jsonrep#s1": {
                                 "page": {
-                                    "@fireconsole": {
-                                        "plugins": {
-                                            "@message-listener": {}
+                                    "@console": {
+                                        "@fireconsole": {
                                         }
                                     }
                                 },
                                 "reps": {
                                     "fireconsole": "$__DIRNAME__/../../node_modules/fireconsole.rep.js/src/fireconsole.rep.js",
-                                    "message-listener": "$__DIRNAME__/../../src/message-listener.rep.js"
+                                    "console": "$__DIRNAME__/../../src/console.rep.js"
                                 }
                             }
                         }

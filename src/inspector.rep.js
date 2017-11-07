@@ -33,14 +33,16 @@ exports.main = function (JSONREP, node) {
             on: {
                 mount: function (el) {
 
-                    WINDOW.FC.on("inspectMessage", function (info) {
+                    var currentDomain = null;
 
+                    WINDOW.FC.on("inspectMessage", function (info) {
+                        currentDomain = info.message.domain;
                         WINDOW.FC.renderMessageInto(el.querySelector(".viewer"), info.message);
                         el.querySelector(".close").style.display = "inline-block";
                     });
 
                     WINDOW.FC.on("inspectFile", function (info) {
-                        
+
                         console.log("EVENT:inspectFile", info);
                     });
 
@@ -52,12 +54,14 @@ exports.main = function (JSONREP, node) {
                     el.querySelector(".close").addEventListener("click", clear, false);
 
                     browser.runtime.onMessage.addListener(function (message) {
-                        
+
                         if (message.to === "message-listener") {
                 
                             if (message.event === "onBeforeNavigate") {
-                
-                                clear();
+
+                                if (message.hostname === currentDomain) {
+                                    clear();
+                                }
                             }
                         }
                     });                    

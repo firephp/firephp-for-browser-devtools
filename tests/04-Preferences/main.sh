@@ -39,9 +39,8 @@ CALL_webext run {
                                 "page": {
                                     "@panels": {
                                         "@settings": {},
-                                        "@fireconsole": {
-                                            "plugins": {
-                                                "@message-listener": {}
+                                        "@console": {
+                                            "@fireconsole": {
                                             }
                                         }
                                     }
@@ -50,7 +49,7 @@ CALL_webext run {
                                     "panels": "$__DIRNAME__/../../src/panels.rep.js",
                                     "settings": "$__DIRNAME__/../../src/settings.rep.js",
                                     "fireconsole": "$__DIRNAME__/../../node_modules/fireconsole.rep.js/src/fireconsole.rep.js",
-                                    "message-listener": "$__DIRNAME__/../../src/message-listener.rep.js"
+                                    "console": "$__DIRNAME__/../../src/console.rep.js"
                                 }
                             }
                         }

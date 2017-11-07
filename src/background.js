@@ -7,43 +7,40 @@ WILDFIRE.once("error", function (err) {
     console.error(err);
 });
 
-WILDFIRE.on("message.firephp", function (message) {
 
+function broadcastForUrl (url, message) {
+    return broadcastForHostname(url.replace(/^[^:]+:\/\/([^:\/]+)(:\d+)?\/.*?$/, "$1"), message);
+}
+
+function broadcastForHostname (hostname, message) {
+    message.to = "message-listener";
+    message.hostname = hostname;
+    return BROWSER.runtime.sendMessage(message).catch(function (err) {
+        console.log("WARNING", err);
+    });
+}
+
+
+WILDFIRE.on("message.firephp", function (message) {
+    
 //    console.log("RECEIVED FIREPHP MESSAGE!!5555!", message);
 
-    try {
-    
-        BROWSER.runtime.sendMessage({
-            to: "message-listener",
-            message: {
-                sender: message.sender,
-                receiver: message.receiver,
-                meta: message.meta,
-                data: message.data            
-            }
-        }).catch(function (err) {
-            console.error(err);
-        });
-    } catch (err) {
-        console.log("warning", err);
-    }
-
+    broadcastForUrl(message.requestUrl, {
+        message: {
+            sender: message.sender,
+            receiver: message.receiver,
+            meta: message.meta,
+            data: message.data            
+        }
+    });
 });
 
 
 BROWSER.webNavigation.onBeforeNavigate.addListener(function (details) {
 
-    try {
-        BROWSER.runtime.sendMessage({
-            to: "message-listener",
-            event: "onBeforeNavigate"
-        }).catch(function (err) {
-            console.error(err);
-        });
-    } catch (err) {
-        console.log("warning", err);
-    }
-
+    broadcastForUrl(details.url, {
+        event: "onBeforeNavigate"
+    });
 }, {
     url: [
         {}
@@ -52,17 +49,9 @@ BROWSER.webNavigation.onBeforeNavigate.addListener(function (details) {
 
 BROWSER.webNavigation.onDOMContentLoaded.addListener(function (details) {
 
-    try {
-        BROWSER.runtime.sendMessage({
-            to: "message-listener",
-            event: "onDOMContentLoaded"
-        }).catch(function (err) {
-            console.error(err);
-        });
-    } catch (err) {
-        console.log("warning", err);
-    }
-
+    broadcastForUrl(details.url, {
+        event: "onDOMContentLoaded"
+    });
 }, {
     url: [
         {}
@@ -71,14 +60,12 @@ BROWSER.webNavigation.onDOMContentLoaded.addListener(function (details) {
 
 browser.tabs.onActivated.addListener(function (info) {
 
-    try {
-        BROWSER.runtime.sendMessage({
-            to: "message-listener",
-            event: "tabs.onActivated"
-        }).catch(function (err) {
-            console.error(err);
+    BROWSER.tabs.get(info.tabId).then(function (tab) {
+
+        return broadcastForUrl(tab.url, {
+            event: "tabs.onActivated",
         });
-    } catch (err) {
-        console.log("warning", err);
-    }
+    }).catch(function (err) {
+        console.error(err);
+    });
 });

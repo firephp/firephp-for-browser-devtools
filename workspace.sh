@@ -54,10 +54,9 @@ function do_build {
                                     "page": {
                                         "@layout": {
                                             "console": {
-                                                "@fireconsole": {
-                                                    "plugins": {
-                                                        "@message-listener": {}
-                                                    }                                                
+                                                "@console": {
+                                                    "@fireconsole": {
+                                                    }
                                                 }
                                             },
                                             "settings": {
@@ -73,7 +72,7 @@ function do_build {
                                         "settings": "$__DIRNAME__/src/settings.rep.js",
                                         "inspector": "$__DIRNAME__/src/inspector.rep.js",
                                         "fireconsole": "$__DIRNAME__/node_modules/fireconsole.rep.js/src/fireconsole.rep.js",
-                                        "message-listener": "$__DIRNAME__/src/message-listener.rep.js"                                        
+                                        "console": "$__DIRNAME__/src/console.rep.js"                                        
                                     }
                                 }
                             }

@@ -22,6 +22,8 @@ exports.for = function (API) {
 
 //      	        try {
 
+                  message.requestUrl = request.url;
+    
                   API.console.log("INSIGHT MESSAGE [" + uri + "] onMessageReceived !1", message);
                   API.console.log("INSIGHT MESSAGE API.on", API.on);
 

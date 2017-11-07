@@ -10,6 +10,7 @@ API.WILDFIRE = require("wildfire-for-js");
 const REQUEST_OBSERVER = require("./adapters/http-request-observer").for(API);
 const RESPONSE_OBSERVER = require("./adapters/http-response-observer").for(API);
 
+const SETTINGS = require("./settings");
 
 
 var forceEnabled = false;
@@ -135,59 +136,26 @@ function getAnnounceMessageForRequest (request) {
 
 
 
-
-
-var domainSettingsCache = {};
-browser.storage.onChanged.addListener(function (changes, area) {
-    for (var item of Object.keys(changes)) {
-        if (!/^domain\[.+\]\.settings\..+$/.test(item)) continue;
-        domainSettingsCache[item] = changes[item].newValue;
-    }    
-});
-function getSetting (name) {
-    if (typeof domainSettingsCache[name] === "undefined") {
-        return Promise.resolve(false);
-    }
-    return browser.storage.local.get(name).then(function (value) {
-        console.log("get value from STORAGE", value);
-        return (domainSettingsCache[name] = value[name] || false);
-    });
-}
-
-
-function getDomainSettings (request) {
-    if (forceEnabled) {
-        return Promise.resolve({
-            "enableUserAgentHeader": true,
-            "enableFirePHPHeader": true
-        });
-    }
-    return getSetting("domain[" + request.hostname + "].settings.enableUserAgentHeader").then(function (enableUserAgentHeader) {
-        return getSetting("domain[" + request.hostname + "].settings.enableFirePHPHeader").then(function (enableFirePHPHeader) {            
-            return Promise.resolve({
-                "enableUserAgentHeader": enableUserAgentHeader,
-                "enableFirePHPHeader": enableFirePHPHeader
-            });
-        });
-    });
-}
-
-
-
 REQUEST_OBSERVER.register(function (request) {
     if (!isEnabled()) {
         return null;
     }
 
-    return getDomainSettings(request).then(function (settings) {
+    return SETTINGS.getDomainSettingsForRequest(request).then(function (settings) {
 
-        if (settings.enableUserAgentHeader) {
+        if (
+            forceEnabled ||
+            settings.enableUserAgentHeader
+        ) {
             if (!request.headers["User-Agent"].match(/\sFirePHP\/([\.|\d]*)\s?/)) {
                 request.headers["User-Agent"] = request.headers["User-Agent"] + " FirePHP/0.5";
             }
         }
 
-        if (settings.enableFirePHPHeader) {
+        if (
+            forceEnabled ||
+            settings.enableFirePHPHeader
+        ) {
             request.headers["X-FirePHP-Version"] = "0.4";
         }
 
@@ -233,7 +201,7 @@ REQUEST_OBSERVER.register(function (request) {
 API.on("http.response", function (response) {
     if (!isEnabled()) return;
 
-console.log("RESPONSE IN EXTENSION2345!!!", response);
+//console.log("RESPONSE IN EXTENSION2345!!!", response);
 
     var chromeLoggerMessage = response.headers.filter(function (header) {
         return (header.name === "X-ChromeLogger-Data");

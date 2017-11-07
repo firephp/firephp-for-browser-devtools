@@ -9,6 +9,7 @@ exports.for = function (API) {
 	    onMessageReceived: function(request, message) {
 
 //	        try {
+                message.requestUrl = request.url;
 
 	        	API.console.log("FirebugConsole onMessageReceived 1", message);
 
@@ -34,6 +35,8 @@ exports.for = function (API) {
 
 //	        try {
 
+                message.requestUrl = request.url;
+    
 	        	API.console.log("FirePHP onMessageReceived", message);
 
                 if (
