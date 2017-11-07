@@ -25,7 +25,7 @@ CALL_webext run {
                             "@github.com~jsonrep~jsonrep#s1": {
                                 "page": {
                                     "@layout": {
-                                        "console": "Console",
+                                        "console": "Console<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line",
                                         "settings": {
                                             "@settings": {}
                                         },
@@ -48,7 +48,7 @@ CALL_webext run {
             "@github.com~jsonrep~jsonrep#s1": {
                 "page": {
                     "@layout": {
-                        "console": "Console",
+                        "console": "Console<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line",
                         "settings": {
                             "@settings": {}
                         },
