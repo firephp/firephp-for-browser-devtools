@@ -228,6 +228,7 @@ API.on("http.response", function (response) {
             "id": response.request.id,
             "url": response.request.url,
             "hostname": response.request.hostname,
+            "tabId": response.request.tabId,
             "port": response.request.port,
             "method": response.request.method,
             "status": response.status,

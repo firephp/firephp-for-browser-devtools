@@ -10,7 +10,8 @@ exports.for = function (API) {
 
 //	        try {
                 message.requestUrl = request.url;
-
+                message.tabId = request.tabId;
+    
 	        	API.console.log("FirebugConsole onMessageReceived 1", message);
 
                 if (
@@ -36,7 +37,8 @@ exports.for = function (API) {
 //	        try {
 
                 message.requestUrl = request.url;
-    
+                message.tabId = request.tabId;
+                
 	        	API.console.log("FirePHP onMessageReceived", message);
 
                 if (

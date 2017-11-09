@@ -8,13 +8,15 @@ WILDFIRE.once("error", function (err) {
 });
 
 
-function broadcastForUrl (url, message) {
-    return broadcastForHostname(url.replace(/^[^:]+:\/\/([^:\/]+)(:\d+)?\/.*?$/, "$1"), message);
-}
-
-function broadcastForHostname (hostname, message) {
+function broadcastForContext (context, message) {
+    if (context.url) {
+        context.hostname = context.url.replace(/^[^:]+:\/\/([^:\/]+)(:\d+)?\/.*?$/, "$1");
+    }
     message.to = "message-listener";
-    message.hostname = hostname;
+    message.context = context;
+
+//console.log("SEND RT MESSAGE", message, JSON.stringify(message.context));
+
     return BROWSER.runtime.sendMessage(message).catch(function (err) {
         console.log("WARNING", err);
     });
@@ -25,7 +27,10 @@ WILDFIRE.on("message.firephp", function (message) {
     
 //    console.log("RECEIVED FIREPHP MESSAGE!!5555!", message);
 
-    broadcastForUrl(message.requestUrl, {
+broadcastForContext({
+    url: message.requestUrl,
+    tabId: message.tabId
+}, {
         message: {
             sender: message.sender,
             receiver: message.receiver,
@@ -38,7 +43,10 @@ WILDFIRE.on("message.firephp", function (message) {
 
 BROWSER.webNavigation.onBeforeNavigate.addListener(function (details) {
 
-    broadcastForUrl(details.url, {
+    broadcastForContext({
+        url: details.url,
+        tabId: details.tabId
+    }, {
         event: "onBeforeNavigate"
     });
 }, {
@@ -49,7 +57,10 @@ BROWSER.webNavigation.onBeforeNavigate.addListener(function (details) {
 
 BROWSER.webNavigation.onDOMContentLoaded.addListener(function (details) {
 
-    broadcastForUrl(details.url, {
+    broadcastForContext({
+        url: details.url,
+        tabId: details.tabId
+    }, {
         event: "onDOMContentLoaded"
     });
 }, {
@@ -61,11 +72,21 @@ BROWSER.webNavigation.onDOMContentLoaded.addListener(function (details) {
 browser.tabs.onActivated.addListener(function (info) {
 
     BROWSER.tabs.get(info.tabId).then(function (tab) {
-
-        return broadcastForUrl(tab.url, {
+        return broadcastForContext({
+            url: tab.url,
+            tabId: info.tabId
+        }, {
             event: "tabs.onActivated",
         });
     }).catch(function (err) {
         console.error(err);
+    });
+});
+
+browser.tabs.onRemoved.addListener(function (tabId) {
+    return broadcastForContext({
+        tabId: tabId
+    }, {
+        event: "tabs.onRemoved",
     });
 });

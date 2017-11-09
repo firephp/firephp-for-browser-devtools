@@ -35,7 +35,8 @@ exports.for = function (API) {
                 "hostname": request.url,
                 "port": request.url,
                 "method": request.method,
-                "headers": []
+                "headers": [],
+                "tabId": request.tabId
             },
             "status": request.statusCode,
             "contentType": contentType,

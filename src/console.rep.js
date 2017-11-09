@@ -13,11 +13,8 @@ exports.main = function (JSONREP, node) {
 
                     var consoles = {};
 
-                    function getConsoleForHostname (hostname) {
-                        if (!consoles[hostname]) {
-                            consoles[hostname] = WINDOW.FC.consoleForId(hostname);
-                        }
-                        return consoles[hostname];
+                    function makeKeyForContext (context) {
+                        return context.tabId + ":" + context.hostname;
                     }
 
                     BROWSER.runtime.onMessage.addListener(function (message) {
@@ -25,23 +22,41 @@ exports.main = function (JSONREP, node) {
                         if (message.to === "message-listener") {
 
                             if (message.message) {
-                                message.message.domain = message.hostname;
-                                getConsoleForHostname(message.hostname).getAPI().log(message.message);
+                                message.message.domain = message.context.hostname;
+
+                                var key = makeKeyForContext(message.context);
+                                if (!consoles[key]) {
+                                    consoles[key] = WINDOW.FC.consoleForId(key);
+                                }
+                                consoles[key].getAPI().log(message.message);
                             } else
                             if (message.event === "onBeforeNavigate") {
 
+                                var key = makeKeyForContext(message.context);
+                                
                                 // We only forward the call if the console exists
-                                if (consoles[message.hostname]) {
-                                    consoles[message.hostname].getAPI().clear();
+                                if (consoles[key]) {
+                                    consoles[key].getAPI().clear();
                                 }
                             } else
                             if (message.event === "tabs.onActivated") {
 
+                                var key = makeKeyForContext(message.context);
+                                
                                 Object.keys(consoles).forEach(function (id) {
-                                    if (id === message.hostname) {
+                                    if (id === key) {
                                         consoles[id].show();
                                     } else {
                                         consoles[id].hide();
+                                    }
+                                });
+                            } else
+                            if (message.event === "tabs.onRemoved") {
+
+                                Object.keys(consoles).forEach(function (id) {
+                                    if (id.replace(/^([^:]+):.+$/, "$1") == message.context.tabId) {
+                                        WINDOW.FC.destroyConsoleForId(id);
+                                        delete consoles[id];
                                     }
                                 });
                             }
