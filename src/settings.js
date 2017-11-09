@@ -1,18 +1,18 @@
 
+const BROWSER = browser;
 
 var domainSettingsCache = {};
 BROWSER.storage.onChanged.addListener(function (changes, area) {
     for (var item of Object.keys(changes)) {
         if (!/^domain\[.+\]\.settings\..+$/.test(item)) continue;
         domainSettingsCache[item] = changes[item].newValue;
-    }    
+    }
 });
 function getSetting (name) {
     if (typeof domainSettingsCache[name] === "undefined") {
         return Promise.resolve(false);
     }
-    return browser.storage.local.get(name).then(function (value) {
-        console.log("get value from STORAGE", value);
+    return BROWSER.storage.local.get(name).then(function (value) {
         return (domainSettingsCache[name] = value[name] || false);
     });
 }
@@ -38,6 +38,9 @@ exports.isEnabledForDomain = function (domain) {
 }    
 
 exports.getDomainSettingsForRequest = function (request) {
-    return exports.getDomainSettingsForDomain(request.hostname);
+    return exports.getDomainSettingsForDomain(request.hostname).then(function (settings) {
+        console.log("Domain settings for '" + request.hostname + "':", settings);
+        return settings;
+    });
 }
 
