@@ -98,6 +98,16 @@ httpHeaderChannel.setNoReceiverCallback(function(id) {
 });
 
 
+httpHeaderChannel.addListener({
+    afterChannelOpen: function (context) {
+
+        API.emit("response", {
+            context: context.context
+        });
+    }
+});
+
+
 // TODO: Load dynamically
 require("./receivers/firephp").for(API);
 require("./receivers/insight").for(API);
@@ -228,7 +238,7 @@ API.on("http.response", function (response) {
             "id": response.request.id,
             "url": response.request.url,
             "hostname": response.request.hostname,
-            "tabId": response.request.tabId,
+            "context": response.request.context,
             "port": response.request.port,
             "method": response.request.method,
             "status": response.status,

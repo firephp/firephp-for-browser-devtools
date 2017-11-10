@@ -42,11 +42,6 @@ exports.main = function (JSONREP, node) {
 
                 if (typeof browser !== "undefined") {
 
-                    function getHostname () {
-                        return browser.devtools.inspectedWindow.eval("window.location.hostname").then(function (result) {
-                            return result[0];                    
-                        });
-                    }
                     function getSettingForHostname (hostname, name) {
                         var key = "domain[" + hostname + "]." + name;
                         return browser.storage.local.get(key).then(function (value) {
@@ -57,65 +52,40 @@ exports.main = function (JSONREP, node) {
                         var obj = {};
                         obj["domain[" + hostname + "]." + name] = value;
                         return browser.storage.local.set(obj);
-                    }                 
-
-                    function sync (preUpdate) {
-                        return getHostname().then(function (hostname) {
-
-                            tag.hostname = hostname;
-
-                            if (preUpdate) {
-                                return null;
-                            }
-                            
-                            $('INPUT[type="checkbox"]', tag.root).each(function () {
-                                var el = $(this);
-                                var name = el.attr("name");
-                                if (!/^settings\./.test(name)) return;                                
-                                getSettingForHostname(hostname, name).then(function (enabled) {
-                                    el.get(0).checked = enabled;
-                                    return null;
-                                }).catch(function (err) {
-                                    console.error(err);
-                                });
-                            });
-
-                            return null;
-                        }).catch(function (err) {
-                            console.error(err);
-                        });
-                    }
-
-                    function triggerSync () {
-                        sync(true).then(function () {
-                            tag.update();
-                            return null;
-                        });                        
                     }
 
                     browser.runtime.onMessage.addListener(function (message) {
                         if (message.to === "message-listener") {
-                            if (message.event === "onDOMContentLoaded") {
-                                triggerSync();
-                            } else
-                            if (message.event === "tabs.onActivated") {
-                                triggerSync();
+                            if (
+                                message.event === "currentContext" &&
+                                message.context
+                            ) {
+                                tag.hostname = message.context.hostname;
+                                tag.update();
                             }
                         }
                     });
 
-                    tag.on("mount", function () {
-                        triggerSync();
+                    tag.on("mount", tag.update);
+                    tag.on("updated", function () {
+
+                        $('INPUT[type="checkbox"]', tag.root).each(function () {
+                            var el = $(this);
+                            var name = el.attr("name");
+                            if (!/^settings\./.test(name)) return;                                
+                            getSettingForHostname(tag.hostname, name).then(function (enabled) {
+                                el.get(0).checked = enabled;
+                                return null;
+                            }).catch(function (err) {
+                                console.error(err);
+                            });
+                        });
                     });
-                    tag.on("updated", sync);
                     
                     tag.syncCheckbox = function (event) {
 
                         var name = event.target.getAttribute("name");
-
-                        getHostname().then(function (hostname) {    
-                            return setSettingForHostname(hostname, name, event.target.checked);
-                        }).then(function () {
+                        return setSettingForHostname(tag.hostname, name, event.target.checked).then(function () {
                             tag.update();
                             return null;
                         }).catch(function (err) {

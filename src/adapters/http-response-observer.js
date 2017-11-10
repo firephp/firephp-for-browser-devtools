@@ -36,7 +36,11 @@ exports.for = function (API) {
                 "port": request.url,
                 "method": request.method,
                 "headers": [],
-                "tabId": request.tabId
+                "context": {
+                    tabId: request.tabId,
+                    url: request.url,
+                    hostname: request.url.replace(/^[^:]+:\/\/([^:\/]+)(:\d+)?\/.*?$/, "$1")
+                }
             },
             "status": request.statusCode,
             "contentType": contentType,

@@ -9,8 +9,8 @@ exports.for = function (API) {
 	    onMessageReceived: function(request, message) {
 
 //	        try {
-                message.requestUrl = request.url;
-                message.tabId = request.tabId;
+                //message.requestUrl = request.url;
+                message.context = request.context;
     
 	        	API.console.log("FirebugConsole onMessageReceived 1", message);
 
@@ -32,12 +32,12 @@ exports.for = function (API) {
     var transportReceiver2 = API.WILDFIRE.Receiver();
     transportReceiver2.setId("http://meta.firephp.org/Wildfire/Structure/FirePHP/Dump/0.1");
     transportReceiver2.addListener({
-	    onMessageReceived: function(request, message) {
+        onMessageReceived: function(request, message) {
 
 //	        try {
 
-                message.requestUrl = request.url;
-                message.tabId = request.tabId;
+                //message.requestUrl = request.url;
+                message.context = request.context;
                 
 	        	API.console.log("FirePHP onMessageReceived", message);
 

@@ -59,6 +59,9 @@ function do_build {
                                                     }
                                                 }
                                             },
+                                            "menu": {
+                                                "@menu": {}
+                                            },
                                             "settings": {
                                                 "@settings": {}
                                             },
@@ -69,6 +72,7 @@ function do_build {
                                     },
                                     "reps": {
                                         "layout": "$__DIRNAME__/src/layout.rep.js",
+                                        "menu": "$__DIRNAME__/src/menu.rep.js",
                                         "settings": "$__DIRNAME__/src/settings.rep.js",
                                         "inspector": "$__DIRNAME__/src/inspector.rep.js",
                                         "fireconsole": "$__DIRNAME__/node_modules/fireconsole.rep.js/src/fireconsole.rep.js",

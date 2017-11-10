@@ -14,33 +14,58 @@ exports.main = function (JSONREP, node) {
                     var consoles = {};
 
                     function makeKeyForContext (context) {
-                        return context.tabId + ":" + context.hostname;
+                        return context.tabId + ":" + context.url;
+                    }
+
+                    function getConsoleForContext (context) {
+                        var key = makeKeyForContext(context);
+                        if (!consoles[key]) {
+                            consoles[key] = WINDOW.FC.consoleForId(key);
+                        }
+                        return consoles[key];
                     }
 
                     BROWSER.runtime.onMessage.addListener(function (message) {
                         
                         if (message.to === "message-listener") {
 
-                            if (message.message) {
-                                message.message.domain = message.context.hostname;
-
-                                var key = makeKeyForContext(message.context);
-                                if (!consoles[key]) {
-                                    consoles[key] = WINDOW.FC.consoleForId(key);
-                                }
-                                consoles[key].getAPI().log(message.message);
-                            } else
-                            if (message.event === "onBeforeNavigate") {
-
-                                var key = makeKeyForContext(message.context);
+                            if (message.response) {
                                 
-                                // We only forward the call if the console exists
-                                if (consoles[key]) {
-                                    consoles[key].getAPI().clear();
-                                }
-                            } else
-                            if (message.event === "tabs.onActivated") {
+                                var panelEl = getConsoleForContext(message.context).getPanelEl();
+                                
+                                var el = WINDOW.document.createElement('div');
+                                el.setAttribute("class", "request");
+                                el.setAttribute("style", [
+                                    'padding: 3px',
+                                    'padding-left: 10px',
+                                    'padding-right: 10px',
+                                    'color: #FFFFFF',
+                                    'background-color: #0000FF',
+                                    'border: 1px solid black'
+                                ].join(";"));
+                                el.innerHTML = message.context.url;
+                                
+                                panelEl.appendChild(el);
 
+                            } else                                
+                            if (message.message) {
+                                message.message.context = message.context;
+
+                                getConsoleForContext(message.context).getAPI().log(message.message);
+                            } else
+                            if (message.event === "clear") {
+
+                                Object.keys(consoles).forEach(function (id) {
+
+                                    if (consoles[id].isShowing()) {
+                                        consoles[id].getAPI().clear();
+                                    }
+                                });                                
+                            } else
+                            if (
+                                message.event === "currentContext" &&
+                                message.context
+                            ) {
                                 var key = makeKeyForContext(message.context);
                                 
                                 Object.keys(consoles).forEach(function (id) {
@@ -51,7 +76,7 @@ exports.main = function (JSONREP, node) {
                                     }
                                 });
                             } else
-                            if (message.event === "tabs.onRemoved") {
+                            if (message.event === "destroyContext") {
 
                                 Object.keys(consoles).forEach(function (id) {
                                     if (id.replace(/^([^:]+):.+$/, "$1") == message.context.tabId) {

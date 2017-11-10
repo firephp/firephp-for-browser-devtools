@@ -25,6 +25,9 @@ CALL_webext run {
                             "@github.com~jsonrep~jsonrep#s1": {
                                 "page": {
                                     "@layout": {
+                                        "menu": {
+                                            "@menu": {}
+                                        },
                                         "console": "Console<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line",
                                         "settings": {
                                             "@settings": {}
@@ -34,6 +37,7 @@ CALL_webext run {
                                 },
                                 "reps": {
                                     "layout": "$__DIRNAME__/../../src/layout.rep.js",
+                                    "menu": "$__DIRNAME__/../../src/menu.rep.js",
                                     "settings": "$__DIRNAME__/../../src/settings.rep.js"
                                 }
                             }
@@ -48,6 +52,9 @@ CALL_webext run {
             "@github.com~jsonrep~jsonrep#s1": {
                 "page": {
                     "@layout": {
+                        "menu": {
+                            "@menu": {}
+                        },
                         "console": "Console<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line",
                         "settings": {
                             "@settings": {}
@@ -57,6 +64,7 @@ CALL_webext run {
                 },
                 "reps": {
                     "layout": "$__DIRNAME__/../../src/layout.rep.js",
+                    "menu": "$__DIRNAME__/../../src/menu.rep.js",
                     "settings": "$__DIRNAME__/../../src/settings.rep.js"
                 }
             }
