@@ -67,11 +67,14 @@ exports.main = function (JSONREP, node) {
             <<<),
             css: (css () >>>
 
+                BODY {
+                    background-color: #ffffff;                    
+                }
+
                 :scope.views,
                 :scope.views TABLE {
                     font-family: Monaco;
                     font-size: 12px;
-                    background-color: #ffffff;
                 }
 
                 :scope .layout TD {
