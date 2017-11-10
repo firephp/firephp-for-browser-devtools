@@ -1,5 +1,3 @@
-**Stability: Experimental. Use at your own risk! Not much to see. [Watch for updates!](https://github.com/firephp/firephp-for-firefox-devtools/issues/1)**
-
 ![FirePHP Logo](https://rawgit.com/firephp/firephp-for-firefox-devtools/master/src/skin/Logo.png "FirePHP Logo")
 
 FirePHP for Firefox Developer Tools
@@ -15,7 +13,7 @@ On the **server** you need one of the following **PHP libraries**:
     * Limited data all sent via *HTTP headers*
     * No enable security
     * One file only
-  * [FirePHP 1.0](https://github.com/firephp/firephp) - Advanced
+  * [FirePHP 1.0](https://github.com/firephp/firephp) - Advanced (**NOT YET IMPLEMENTED**)
     * *NOTE: Not all features provided by this library are implemented in the extension at this time.*
     * Data sent via *HTTP headers* and *secondary AJAX requests* to support logging in volume
     * Many features including enable security
