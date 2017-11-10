@@ -71,6 +71,10 @@ exports.main = function (JSONREP, node) {
                     background-color: #ffffff;                    
                 }
 
+                :scope.views {
+                    height: 100%;
+                }
+                
                 :scope.views,
                 :scope.views TABLE {
                     font-family: Monaco;
@@ -104,6 +108,7 @@ exports.main = function (JSONREP, node) {
                 :scope .uninitialized {
                     text-align: center;
                     padding-top: 50px;
+                    height: 100%;
                 }
                 :scope .uninitialized > P {
                     font-weight: bold;
