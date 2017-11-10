@@ -71,6 +71,7 @@ exports.main = function (JSONREP, node) {
                 :scope.views TABLE {
                     font-family: Monaco;
                     font-size: 12px;
+                    background-color: #ffffff;
                 }
 
                 :scope .layout TD {
