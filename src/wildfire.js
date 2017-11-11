@@ -145,6 +145,9 @@ function getAnnounceMessageForRequest (request) {
 
 
 
+var hostnameSettings = {};
+
+API.hostnameSettings = hostnameSettings;
 
 REQUEST_OBSERVER.register(function (request) {
     if (!isEnabled()) {
@@ -152,6 +155,17 @@ REQUEST_OBSERVER.register(function (request) {
     }
 
     return SETTINGS.getDomainSettingsForRequest(request).then(function (settings) {
+
+//console.log("REQUEST SETTINGS !!!!", settings);
+
+        hostnameSettings[request.hostname] = settings;
+        
+        if (
+            !forceEnabled &&
+            !settings.enabled
+        ) {
+            return {};
+        }
 
         if (
             forceEnabled ||
@@ -209,10 +223,23 @@ REQUEST_OBSERVER.register(function (request) {
 });
 
 API.on("http.response", function (response) {
-    if (!isEnabled()) return;
+    if (!isEnabled()) {
+        return;
+    }
 
-//console.log("RESPONSE IN EXTENSION2345!!!", response);
+//console.log("RESPONSE IN EXTENSION2345!!!", response.request);
 
+    var settings = hostnameSettings[response.request.context.hostname];
+
+//console.log("RESPONSE SETTINGS !!!!", settings);
+
+    if (
+        !forceEnabled &&
+        !settings.enabled
+    ) {
+        return;
+    }
+    
     var chromeLoggerMessage = response.headers.filter(function (header) {
         return (header.name === "X-ChromeLogger-Data");
     });
@@ -223,7 +250,7 @@ API.on("http.response", function (response) {
                 // @see https://craig.is/writing/chrome-logger/techspecs
                 var message = decodeURIComponent(escape(atob(header.value)));
                 message = JSON.parse(message);
-                
+
                 API.on.chromeLoggerMessage(message);
             } catch (err) {
                 console.error("header", header);

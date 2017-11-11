@@ -2,6 +2,8 @@
 const BROWSER = browser;
 const WILDFIRE = exports.WILDFIRE = require("./wildfire");
 
+const VERBOSE = false;
+
 
 WILDFIRE.once("error", function (err) {
     console.error(err);
@@ -22,7 +24,7 @@ function broadcastForContext (context, message) {
     //console.log("SEND RT MESSAGE", message, JSON.stringify(message.context));
 
     return BROWSER.runtime.sendMessage(message).catch(function (err) {
-        console.log("WARNING", err);
+        if (VERBOSE) console.log("WARNING", err);
     });
 }
 
@@ -59,10 +61,14 @@ var broadcastCurrentContext = false;
 
 BROWSER.runtime.onMessage.addListener(function (message) {
 
-    console.log("BACKGROUND MESSAGE", message);
+    if (VERBOSE) console.log("BACKGROUND MESSAGE", message);
 
     if (message.to === "broadcast") {
-        broadcastForContext(null, message);    
+        if (message.event === "currentContext") {
+            broadcastForContext(currentContext, message);
+        } else {
+            broadcastForContext(null, message);
+        }
     }
 
 /*
@@ -93,7 +99,7 @@ BROWSER.webNavigation.onBeforeNavigate.addListener(function (details) {
         tabId: details.tabId
     };
 
-    console.log("onBeforeNavigate", currentContext, details);
+    if (VERBOSE) console.log("onBeforeNavigate", currentContext, details);
 
     broadcastForContext(currentContext, {
         event: "currentContext"
@@ -115,7 +121,7 @@ BROWSER.webNavigation.onDOMContentLoaded.addListener(function (details) {
         tabId: details.tabId
     };
 
-    console.log("onDOMContentLoaded", currentContext);
+    if (VERBOSE) console.log("onDOMContentLoaded", currentContext);
     
     broadcastForContext(currentContext, {
         event: "currentContext"
@@ -135,7 +141,7 @@ browser.webNavigation.onCommitted.addListener(function (details) {
         tabId: details.tabId
     };
 
-    console.log("onCommitted", currentContext);
+    if (VERBOSE) console.log("onCommitted", currentContext);
     
     broadcastForContext(currentContext, {
         event: "currentContext"
@@ -159,13 +165,13 @@ browser.tabs.onActivated.addListener(function (info) {
             tabId: info.tabId
         };
 
-        console.log("tabs.onActivated", currentContext);
+        if (VERBOSE) console.log("tabs.onActivated", currentContext);
         
         return broadcastForContext(currentContext, {
             event: "currentContext"
         });
     }).catch(function (err) {
-        console.error(err);
+        if (VERBOSE) console.error(err);
     });
 });
 

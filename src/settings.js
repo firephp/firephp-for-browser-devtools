@@ -6,6 +6,9 @@ BROWSER.storage.onChanged.addListener(function (changes, area) {
     for (var item of Object.keys(changes)) {
         if (!/^domain\[.+\]\.settings\..+$/.test(item)) continue;
         domainSettingsCache[item] = changes[item].newValue;
+
+//console.log("[background] Updated domain settings '" + item + "':", domainSettingsCache[item]);
+        
     }
 });
 function getSetting (name) {
@@ -17,12 +20,17 @@ function getSetting (name) {
     });
 }
 
+// TODO: Speed this up by removing promises as much as possible
+
 exports.getDomainSettingsForDomain = function (domain) {
-    return getSetting("domain[" + domain + "].settings.enableUserAgentHeader").then(function (enableUserAgentHeader) {
-        return getSetting("domain[" + domain + "].settings.enableFirePHPHeader").then(function (enableFirePHPHeader) {            
-            return Promise.resolve({
-                "enableUserAgentHeader": enableUserAgentHeader,
-                "enableFirePHPHeader": enableFirePHPHeader
+    return getSetting("domain[" + domain + "].settings.enabled").then(function (enabled) {
+        return getSetting("domain[" + domain + "].settings.enableUserAgentHeader").then(function (enableUserAgentHeader) {            
+            return getSetting("domain[" + domain + "].settings.enableFirePHPHeader").then(function (enableFirePHPHeader) {            
+                return Promise.resolve({
+                    "enabled": enabled,
+                    "enableUserAgentHeader": enableUserAgentHeader,
+                    "enableFirePHPHeader": enableFirePHPHeader
+                });
             });
         });
     });
@@ -31,15 +39,18 @@ exports.getDomainSettingsForDomain = function (domain) {
 exports.isEnabledForDomain = function (domain) {
     return exports.getDomainSettingsForDomain(domain).then(function (settings) {
         return (
-            settings.enableUserAgentHeader ||
-            settings.enableFirePHPHeader
+            settings.enabled &&
+            (
+                settings.enableUserAgentHeader ||
+                settings.enableFirePHPHeader
+            )
         );
     });
 }    
 
 exports.getDomainSettingsForRequest = function (request) {
     return exports.getDomainSettingsForDomain(request.hostname).then(function (settings) {
-        console.log("Domain settings for '" + request.hostname + "':", settings);
+//        console.log("Domain settings for '" + request.hostname + "':", settings);
         return settings;
     });
 }

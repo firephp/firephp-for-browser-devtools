@@ -63,10 +63,17 @@ function do_build {
                                                 "@menu": {}
                                             },
                                             "settings": {
-                                                "@settings": {}
+                                                "@enabler": {}
                                             },
                                             "inspector": {
                                                 "@inspector": {}
+                                            },
+                                            "manage": {
+                                                "@manage": {
+                                                    "settings": {
+                                                        "@settings": {}
+                                                    }
+                                                }
                                             }
                                         }
                                     },
@@ -74,9 +81,11 @@ function do_build {
                                         "layout": "$__DIRNAME__/src/layout.rep.js",
                                         "menu": "$__DIRNAME__/src/menu.rep.js",
                                         "settings": "$__DIRNAME__/src/settings.rep.js",
+                                        "manage": "$__DIRNAME__/src/manage.rep.js",
                                         "inspector": "$__DIRNAME__/src/inspector.rep.js",
                                         "fireconsole": "$__DIRNAME__/node_modules/fireconsole.rep.js/src/fireconsole.rep.js",
-                                        "console": "$__DIRNAME__/src/console.rep.js"                                        
+                                        "console": "$__DIRNAME__/src/console.rep.js",
+                                        "enabler": "$__DIRNAME__/src/enabler.rep.js"
                                     }
                                 }
                             }

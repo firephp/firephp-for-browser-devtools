@@ -1,14 +1,35 @@
 
 exports.main = function (JSONREP, node) {    
+
+    var api = {
+        currentContext: null
+    };
+
+    if (typeof browser !== "undefined") {
         
+        browser.runtime.onMessage.addListener(function (message) {
+
+            if (message.to === "message-listener") {
+                if (message.event === "currentContext") {
+                    api.currentContext = message.context;
+                }
+            }
+
+            if (api.onMessage) {
+                api.onMessage(message);
+            }
+        });
+    }
+
+
     return JSONREP.makeRep({
         "config": {
-            "node": node
+            "node": node,
+            "api": api
         },
         "code": (riotjs:makeRep () >>>
 
             <div>
-                <h2>{ hostname }</h2>
                 <ul class="settings">
                     <li><input type="checkbox" name="settings.enableUserAgentHeader" onchange={syncCheckbox}/> Enable UserAgent Header</li>
                     <li><input type="checkbox" name="settings.enableFirePHPHeader" onchange={syncCheckbox}/> Enable FirePHP Header</li>
@@ -38,7 +59,7 @@ exports.main = function (JSONREP, node) {
 
                 var tag = this;
 
-                tag.hostname = "";
+                tag.hostname = opts.config.api.currentContext.hostname;
 
                 if (typeof browser !== "undefined") {
 
@@ -51,10 +72,16 @@ exports.main = function (JSONREP, node) {
                     function setSettingForHostname (hostname, name, value) {
                         var obj = {};
                         obj["domain[" + hostname + "]." + name] = value;
-                        return browser.storage.local.set(obj);
+                        return browser.storage.local.set(obj).then(function () {    
+                            browser.runtime.sendMessage({
+                                to: "broadcast",
+                                event: "currentContext"
+                            });
+                            return null;
+                        });
                     }
 
-                    browser.runtime.onMessage.addListener(function (message) {
+                    opts.config.api.onMessage = function (message) {                        
                         if (message.to === "message-listener") {
                             if (
                                 message.event === "currentContext" &&
@@ -64,7 +91,7 @@ exports.main = function (JSONREP, node) {
                                 tag.update();
                             }
                         }
-                    });
+                    }
 
                     tag.on("mount", tag.update);
                     tag.on("updated", function () {

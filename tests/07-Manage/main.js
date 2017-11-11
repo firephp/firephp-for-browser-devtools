@@ -17,15 +17,10 @@ describe("Suite", function() {
             "^/": {
                 "@github.com~jsonrep~jsonrep#s1": {
                     "page": {
-                        "@manage": {
-                            "settings": {
-                                "@settings": {}
-                            }
-                        }
+                        "@manage": {}
                     },
                     "reps": {
-                        "manage": __dirname + "/../../src/manage.rep.js",
-                        "settings": __dirname + "/../../src/settings.rep.js"
+                        "manage": __dirname + "/../../src/manage.rep.js"
                     }
                 }
             },

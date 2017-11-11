@@ -9,6 +9,8 @@ exports.main = function (JSONREP, node) {
 
             <div class="menu">
                 <button onclick={triggerClear}>Clear</button>
+                &nbsp;
+                <button onclick={triggerManage}>Manage</button>
             </div>
 
             <style>
@@ -34,6 +36,14 @@ exports.main = function (JSONREP, node) {
                             event: "clear"
                         });
                     }
+
+                    tag.triggerManage = function (event) {
+
+                        browser.runtime.sendMessage({
+                            to: "broadcast",
+                            event: "manage"
+                        });
+                    }                        
                 }
 
             </script>

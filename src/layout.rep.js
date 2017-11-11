@@ -60,6 +60,10 @@ exports.main = function (JSONREP, node) {
                             </tr>
                         </table>
                     </div>
+                    <div class="manage">
+                        <button class="close-button">Close</button>
+                        %%%variables.panels.manage%%%
+                    </div>
                     <div class="uninitialized">
                         <p>Reload to initialize FirePHP</p>
                     </div>
@@ -68,7 +72,8 @@ exports.main = function (JSONREP, node) {
             css: (css () >>>
 
                 BODY {
-                    background-color: #ffffff;                    
+                    background-color: #ffffff;
+                    overflow: hidden;
                 }
 
                 :scope.views {
@@ -105,6 +110,15 @@ exports.main = function (JSONREP, node) {
                     overflow: auto;
                 }
 
+                :scope .manage {
+                    height: 100%;
+                    padding: 20px;
+                }
+
+                :scope .manage > .close-button {
+                    display: none;
+                }
+                
                 :scope .uninitialized {
                     text-align: center;
                     padding-top: 50px;
@@ -120,28 +134,96 @@ exports.main = function (JSONREP, node) {
             on: {
                 mount: function (el) {
 
-                    WINDOW.document.body.style.overflow = "hidden";
+                    var currentContext = null;
+                    var forceManage = false;
+
+                    function getSettingForHostname (hostname, name) {
+                        var key = "domain[" + hostname + "]." + name;
+                        return browser.storage.local.get(key).then(function (value) {
+                            return (value[key] || false);
+                        });
+                    }
+
+                    function isEnabledForHostname (hostname) {
+                        return getSettingForHostname(hostname, "settings.enableUserAgentHeader").then(function (enableUserAgentHeader) {
+                            return getSettingForHostname(hostname, "settings.enableFirePHPHeader").then(function (enableFirePHPHeader) {
+                                return (
+                                    enableUserAgentHeader ||
+                                    enableFirePHPHeader                            
+                                );
+                            });                            
+                        });
+                    }
+
+                    function sync () {   
+
+                        if (currentContext) {
+
+                            console.log("SYNC LAYOUT", "forceManage", forceManage);          
+
+                            isEnabledForHostname(currentContext.hostname).then(function (enabled) {
+                                
+                                if (forceManage) {
+                                    el.querySelector("DIV.manage").style.display = "block";
+
+                                    if (enabled) {
+                                        el.querySelector("DIV.manage > BUTTON.close-button").style.display = "inline-block";
+                                    } else {
+                                        el.querySelector("DIV.manage > BUTTON.close-button").style.display = "none";
+                                    }
+                                    el.querySelector("DIV.uninitialized").style.display = "none";
+                                    el.querySelector("DIV.ui").style.display = "none";
+
+                                } else {
+                                    el.querySelector("DIV.manage > BUTTON.close-button").style.display = "none";
+
+                                    if (enabled) {
+                                        el.querySelector("DIV.manage").style.display = "none";
+                                        el.querySelector("DIV.uninitialized").style.display = "none";
+                                        el.querySelector("DIV.ui").style.display = "block";
+                                    } else {
+                                        el.querySelector("DIV.manage").style.display = "block";
+                                        el.querySelector("DIV.uninitialized").style.display = "none";
+                                        el.querySelector("DIV.ui").style.display = "none";
+                                    }
+                                    return null;
+                                }                            
+                            }).catch(function (err) {
+                                console.error(err);
+                            });
+                        } else {
+                            el.querySelector("DIV.ui").style.display = "none";
+                            el.querySelector("DIV.manage").style.display = "none";
+                            el.querySelector("DIV.uninitialized").style.display = "block";
+                        }
+                    }
+
+                    el.querySelector("DIV.manage > BUTTON.close-button").addEventListener("click", function () {
+                        forceManage = false;
+                        sync();
+                    }, false);
 
                     if (typeof browser !== "undefined") {
 
                         browser.runtime.onMessage.addListener(function (message) {
                             if (message.to === "message-listener") {
-                                if (
-                                    message.event === "currentContext"
-                                ) {
-                                    if (message.context) {
-                                        el.querySelector("DIV.uninitialized").setAttribute("style", "display: none;");
-                                        el.querySelector("DIV.ui").removeAttribute("style");
-                                    } else {
-                                        el.querySelector("DIV.ui").setAttribute("style", "display: none;");
-                                        el.querySelector("DIV.uninitialized").removeAttribute("style");
-                                    }
+                                if (message.event === "currentContext") {
+                                    currentContext = message.context;
+                                    sync();
+                                } else
+                                if (message.event === "manage") {
+                                    forceManage = true;
+                                    sync();
                                 }
                             }
                         });
+
+                        sync();
+
                     } else {
-                        el.querySelector("DIV.uninitialized").setAttribute("style", "display: none;");
-                        el.querySelector("DIV.ui").removeAttribute("style");        
+                        el.querySelector("DIV.uninitialized").style.display = "none";
+                        el.querySelector("DIV.manage").style.display = "none";
+                        el.querySelector("DIV.ui").style.display = "block";
                     }
                 }
             }
