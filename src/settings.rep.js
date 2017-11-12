@@ -59,7 +59,7 @@ exports.main = function (JSONREP, node) {
 
                 var tag = this;
 
-                tag.hostname = opts.config.api.currentContext.hostname;
+                tag.hostname = ( opts.config.api.currentContext && opts.config.api.currentContext.hostname) || "";
 
                 if (typeof browser !== "undefined") {
 
