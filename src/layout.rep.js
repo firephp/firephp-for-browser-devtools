@@ -80,7 +80,7 @@ exports.main = function (JSONREP, node) {
                         %%%variables.panels.manage%%%
                     </div>
                     <div class="uninitialized">
-                        <p>Reload to initialize FirePHP</p>
+                        <p><button action="reload">Reload</button> to initialize FirePHP</p>
                     </div>
                 </div>
             <<<),
@@ -145,6 +145,16 @@ exports.main = function (JSONREP, node) {
                     var currentContext = null;
                     var forceManage = false;
 
+                    var persistLogs = false;
+                    browser.storage.onChanged.addListener(function (changes, area) {
+                        if (changes["persist-on-navigate"]) {
+                            persistLogs = changes["persist-on-navigate"].newValue;
+                        }
+                    });
+                    browser.storage.local.get("persist-on-navigate").then(function (value) {
+                        persistLogs = value["persist-on-navigate"];
+                    });
+
                     function getSettingForHostname (hostname, name) {
                         var key = "domain[" + hostname + "]." + name;
                         return browser.storage.local.get(key).then(function (value) {
@@ -153,8 +163,8 @@ exports.main = function (JSONREP, node) {
                     }
 
                     function isEnabledForHostname (hostname) {
-                        return getSettingForHostname(hostname, "settings.enableUserAgentHeader").then(function (enableUserAgentHeader) {
-                            return getSettingForHostname(hostname, "settings.enableFirePHPHeader").then(function (enableFirePHPHeader) {
+                        return getSettingForHostname(hostname, "enableUserAgentHeader").then(function (enableUserAgentHeader) {
+                            return getSettingForHostname(hostname, "enableFirePHPHeader").then(function (enableFirePHPHeader) {
                                 return (
                                     enableUserAgentHeader ||
                                     enableFirePHPHeader                            
@@ -166,8 +176,6 @@ exports.main = function (JSONREP, node) {
                     function sync () {   
 
                         if (currentContext) {
-
-                            console.log("SYNC LAYOUT", "forceManage", forceManage);          
 
                             isEnabledForHostname(currentContext.hostname).then(function (enabled) {
                                 
@@ -185,7 +193,10 @@ exports.main = function (JSONREP, node) {
                                 } else {
                                     el.querySelector("DIV.manage > BUTTON.close-button").style.display = "none";
 
-                                    if (enabled) {
+                                    if (
+                                        enabled ||
+                                        persistLogs
+                                    ) {
                                         el.querySelector("DIV.manage").style.display = "none";
                                         el.querySelector("DIV.uninitialized").style.display = "none";
                                         el.querySelector("DIV.ui").style.display = "block";
@@ -209,6 +220,16 @@ exports.main = function (JSONREP, node) {
                     el.querySelector("DIV.manage > BUTTON.close-button").addEventListener("click", function () {
                         forceManage = false;
                         sync();
+                    }, false);
+
+                    el.querySelector('BUTTON[action="reload"]').addEventListener("click", function () {
+                        browser.runtime.sendMessage({
+                            to: "background",
+                            event: "reload",
+                            context: {
+                                tabId: browser.devtools.inspectedWindow.tabId
+                            }
+                        });                        
                     }, false);
 
                     if (typeof browser !== "undefined") {

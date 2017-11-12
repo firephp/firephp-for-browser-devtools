@@ -11,6 +11,8 @@ exports.main = function (JSONREP, node) {
                 <button onclick={triggerClear}>Clear</button>
                 &nbsp;
                 <button onclick={triggerManage}>Manage</button>
+                &nbsp;
+                <input type="checkbox" name="settings.persist-on-navigate" onchange={notifyPersistChange}/>Persist
             </div>
 
             <style>
@@ -19,6 +21,7 @@ exports.main = function (JSONREP, node) {
                     padding: 3px;
                     padding-left: 10px;
                     padding-right: 10px;
+                    white-space: nowrap;
                 }
                 
             </style>
@@ -49,7 +52,21 @@ exports.main = function (JSONREP, node) {
                                 tabId: browser.devtools.inspectedWindow.tabId
                             }
                         });
-                    }                        
+                    }
+                    
+                    tag.notifyPersistChange = function (event) {
+
+                        browser.storage.local.set({
+                            "persist-on-navigate": event.target.checked
+                        });                       
+                    }
+
+                    tag.on("mount", function () {
+
+                        browser.storage.local.get("persist-on-navigate").then(function (value) {
+                            tag.root.querySelector('[name="settings.persist-on-navigate"]').checked = value["persist-on-navigate"] || false;
+                        });
+                    });                  
                 }
 
             </script>

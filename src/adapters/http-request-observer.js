@@ -46,17 +46,20 @@ exports.for = function (API) {
                 return {};
             }
 
-            var headers = [];
-            Object.keys(changes.requestHeaders).forEach(function (name) {
-                headers.push({
-                    name: name,
-                    value: changes.requestHeaders[name]
-                });
-            });
+            var ret = {};
 
-            return {
-                requestHeaders: headers
-            };    
+            if (changes.requestHeaders) {
+                var headers = [];
+                Object.keys(changes.requestHeaders).forEach(function (name) {
+                    headers.push({
+                        name: name,
+                        value: changes.requestHeaders[name]
+                    });
+                });
+                ret.requestHeaders = headers;
+            }
+
+            return ret;    
         });
     }
 

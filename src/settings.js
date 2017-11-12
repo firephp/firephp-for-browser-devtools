@@ -4,14 +4,14 @@ const BROWSER = browser;
 var domainSettingsCache = {};
 BROWSER.storage.onChanged.addListener(function (changes, area) {
     for (var item of Object.keys(changes)) {
-        if (!/^domain\[.+\]\.settings\..+$/.test(item)) continue;
+        if (!/^domain\[.+\]\..+$/.test(item)) continue;
         domainSettingsCache[item] = changes[item].newValue;
 
 //console.log("[background] Updated domain settings '" + item + "':", domainSettingsCache[item]);
         
     }
 });
-function getSetting (name) {
+exports.getSetting = function (name) {
     function get () {
         return BROWSER.storage.local.get(name).then(function (value) {
             return (domainSettingsCache[name] = value[name]);
@@ -23,13 +23,17 @@ function getSetting (name) {
     }
     return get();
 }
+exports.setSetting = function (name, value) {
+    return BROWSER.storage.local.set(name, value);
+}
+
 
 // TODO: Speed this up by removing promises as much as possible
 
 exports.getDomainSettingsForDomain = function (domain) {
-    return getSetting("domain[" + domain + "].settings.enabled").then(function (enabled) {
-        return getSetting("domain[" + domain + "].settings.enableUserAgentHeader").then(function (enableUserAgentHeader) {            
-            return getSetting("domain[" + domain + "].settings.enableFirePHPHeader").then(function (enableFirePHPHeader) {            
+    return exports.getSetting("domain[" + domain + "].enabled").then(function (enabled) {
+        return exports.getSetting("domain[" + domain + "].enableUserAgentHeader").then(function (enableUserAgentHeader) {            
+            return exports.getSetting("domain[" + domain + "].enableFirePHPHeader").then(function (enableFirePHPHeader) {            
                 return Promise.resolve({
                     "enabled": enabled,
                     "enableUserAgentHeader": enableUserAgentHeader,

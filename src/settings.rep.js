@@ -31,8 +31,8 @@ exports.main = function (JSONREP, node) {
 
             <div>
                 <ul class="settings">
-                    <li><input type="checkbox" name="settings.enableUserAgentHeader" onchange={syncCheckbox}/> Enable UserAgent Header</li>
-                    <li><input type="checkbox" name="settings.enableFirePHPHeader" onchange={syncCheckbox}/> Enable FirePHP Header</li>
+                    <li><input type="checkbox" name="enableUserAgentHeader" onchange={syncCheckbox}/> Enable UserAgent Header</li>
+                    <li><input type="checkbox" name="enableFirePHPHeader" onchange={syncCheckbox}/> Enable FirePHP Header</li>
                 </ul>
             </div>
 
@@ -107,7 +107,6 @@ exports.main = function (JSONREP, node) {
                         $('INPUT[type="checkbox"]', tag.root).each(function () {
                             var el = $(this);
                             var name = el.attr("name");
-                            if (!/^settings\./.test(name)) return;                                
                             getSettingForHostname(tag.hostname, name).then(function (enabled) {
                                 el.get(0).checked = enabled;
                                 return null;

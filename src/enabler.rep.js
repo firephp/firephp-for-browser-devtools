@@ -95,7 +95,7 @@ exports.main = function (JSONREP, node) {
 
                                 getSettingForHostname(
                                     opts.config.api.currentContext.hostname,
-                                    "settings.enabled"
+                                    "enabled"
                                 ).then(function (enabled) {
 
                                     tag.enabled = enabled;
@@ -114,7 +114,7 @@ exports.main = function (JSONREP, node) {
 
                         return setSettingForHostname(
                             opts.config.api.currentContext.hostname,
-                            "settings.enabled",
+                            "enabled",
                             true
                         ).then(function () {
                             tag.update();
@@ -137,7 +137,7 @@ exports.main = function (JSONREP, node) {
 
                         return setSettingForHostname(
                             opts.config.api.currentContext.hostname,
-                            "settings.enabled",
+                            "enabled",
                             false
                         ).then(function () {
                             tag.update();

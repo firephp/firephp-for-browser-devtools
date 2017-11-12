@@ -22,12 +22,40 @@ exports.main = function (JSONREP, node) {
                 mount: function (el) {
 
                     var consoles = {};
+                    var lastRequestConsole = null;
+                    var persistentConsole = null;
+                    
+                    var persistLogs = false;
+                    BROWSER.storage.onChanged.addListener(function (changes, area) {
+                        if (changes["persist-on-navigate"]) {
+                            persistLogs = changes["persist-on-navigate"].newValue;
+                            if (
+                                persistLogs &&
+                                !persistentConsole
+                            ) {
+                                persistentConsole = lastRequestConsole;
+                            } else
+                            if (
+                                !persistLogs &&
+                                persistentConsole
+                            ) {
+                                persistentConsole = null;
+                            }
+                        }
+                    });
+                    BROWSER.storage.local.get("persist-on-navigate").then(function (value) {
+                        persistLogs = value["persist-on-navigate"];
+                    });                    
+
 
                     function makeKeyForContext (context) {
                         return context.tabId + ":" + context.url;
                     }
 
                     function getConsoleForContext (context) {
+                        if (persistentConsole) {
+                            return persistentConsole;
+                        }
                         var key = makeKeyForContext(context);
                         if (!consoles[key]) {
                             consoles[key] = WINDOW.FC.consoleForId(key);
@@ -65,8 +93,16 @@ exports.main = function (JSONREP, node) {
                         if (message.to === "message-listener") {
 
                             if (message.response) {
+
+                                lastRequestConsole = getConsoleForContext(message.context);
+                                if (
+                                    persistLogs &&
+                                    !persistentConsole
+                                ) {
+                                    persistentConsole = lastRequestConsole;
+                                }
                                 
-                                var panelEl = getConsoleForContext(message.context).getPanelEl();
+                                var panelEl = lastRequestConsole.getPanelEl();
                                 
                                 var el = WINDOW.document.createElement('div');
                                 el.setAttribute("class", "request");
@@ -103,6 +139,10 @@ exports.main = function (JSONREP, node) {
                                 message.event === "currentContext" &&
                                 message.context
                             ) {
+                                if (persistentConsole) {
+                                    return;
+                                }
+
                                 var key = makeKeyForContext(message.context);
                                 
                                 Object.keys(consoles).forEach(function (id) {

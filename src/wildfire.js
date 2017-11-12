@@ -4,11 +4,10 @@ const EVENTS = require("eventemitter2");
 
 var API = module.exports = new EVENTS();
 
-API.VERBOSE = true;
-
 API.console = console;
 API.BROWSER = browser;
 API.WILDFIRE = require("wildfire-for-js");
+
 
 const REQUEST_OBSERVER = require("./adapters/http-request-observer").for(API);
 const RESPONSE_OBSERVER = require("./adapters/http-response-observer").for(API);
