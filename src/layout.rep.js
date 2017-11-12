@@ -49,9 +49,7 @@ exports.main = function (JSONREP, node) {
                         <table class="layout" height="100%" border="0" cellpadding="0" cellspacing="0">
                             <tr>
                                 <td class="console-panel" width="100%" height="100%" rowspan="2">
-                                    <div>
-                                        %%%variables.panels.console%%%
-                                    </div>
+                                    %%%variables.panels.console%%%
                                 </td>
                             </tr>
                             <tr>
@@ -105,13 +103,6 @@ exports.main = function (JSONREP, node) {
 
                 :scope .layout TD {
                     vertical-align: top;
-                }
-
-                :scope .layout TD.console-panel > DIV {
-                    overflow-x: hidden;
-                    overflow-y: auto;
-                    border-right: 1px solid #dcdcdc;
-                    height: 100vh;
                 }
 
                 :scope .layout TD.menu-panel {

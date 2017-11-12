@@ -7,7 +7,17 @@ exports.main = function (JSONREP, node) {
 
     return JSONREP.markupNode(node).then(function (code) {
 
-        return JSONREP.makeRep('<div>' + code + '</div>', {
+        return JSONREP.makeRep('<div class="console">' + code + '</div>', {
+            css: (css () >>>
+
+                :scope.console {
+                    overflow-x: hidden;
+                    overflow-y: auto;
+                    border-right: 1px solid #dcdcdc;
+                    height: 100vh;
+                }                  
+
+            <<<),
             on: {
                 mount: function (el) {
 
@@ -24,6 +34,24 @@ exports.main = function (JSONREP, node) {
                         }
                         return consoles[key];
                     }
+
+
+                    var isScrolledToBottom = false;
+                    function syncScrolledToBottom () {
+                        if (el.scrollTop === (el.scrollHeight - el.offsetHeight)) {
+                            isScrolledToBottom = true;
+                        } else {
+                            isScrolledToBottom = false;
+                        }
+                    }
+                    el.onscroll = syncScrolledToBottom;
+                    function scrollIfBottom () {
+                        if (isScrolledToBottom) {
+                            el.scrollTop = el.scrollHeight;
+                        }
+                        syncScrolledToBottom();
+                    }
+
 
                     BROWSER.runtime.onMessage.addListener(function (message) {
 
@@ -53,12 +81,13 @@ exports.main = function (JSONREP, node) {
                                 el.innerHTML = message.context.url;
                                 
                                 panelEl.appendChild(el);
-
+                                scrollIfBottom();
                             } else                                
                             if (message.message) {
                                 message.message.context = message.context;
 
                                 getConsoleForContext(message.context).getAPI().log(message.message);
+                                scrollIfBottom();
                             } else
                             if (message.event === "clear") {
 
@@ -67,7 +96,8 @@ exports.main = function (JSONREP, node) {
                                     if (consoles[id].isShowing()) {
                                         consoles[id].getAPI().clear();
                                     }
-                                });                                
+                                });
+                                scrollIfBottom();
                             } else
                             if (
                                 message.event === "currentContext" &&
