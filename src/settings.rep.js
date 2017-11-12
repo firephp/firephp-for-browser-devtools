@@ -81,7 +81,15 @@ exports.main = function (JSONREP, node) {
                         });
                     }
 
-                    opts.config.api.onMessage = function (message) {                        
+                    opts.config.api.onMessage = function (message) {
+
+                        if (
+                            message.context &&
+                            message.context.tabId != browser.devtools.inspectedWindow.tabId
+                        ) {
+                            return;
+                        }
+
                         if (message.to === "message-listener") {
                             if (
                                 message.event === "currentContext" &&

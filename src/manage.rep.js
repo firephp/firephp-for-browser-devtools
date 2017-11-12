@@ -69,6 +69,14 @@ exports.main = function (JSONREP, node) {
                     
                     if (typeof browser !== "undefined") {
                         browser.runtime.onMessage.addListener(function (message) {
+
+                            if (
+                                message.context &&
+                                message.context.tabId != browser.devtools.inspectedWindow.tabId
+                            ) {
+                                return;
+                            }
+    
                             if (message.to === "message-listener") {
                                 if (message.event === "currentContext") {
 

@@ -1,59 +1,32 @@
 
 exports.for = function (API) {
-
-    var requestIndex = 0;
     
-    function onRequest (request) {
-        
-//        console.log("INTERCEPT RESPONSE:", request);
+    function onHeadersReceived (response) {
+        if (API.VERBOSE) console.log("[http-response-observer] onHeadersReceived (response):", response);
 
-        var requestId = null;
-        var contentType = "";
-        
-/*
-            visitHeader: function(name, value) {
-                requestHeaders.push({name: name, value: value});
-                if(name.toLowerCase()=="x-request-id") {
-                    requestId = value;
-                }
-            }
-        var responseHeaders = [],
-            contentType = false;
-            visitHeader: function(name, value) {
-                responseHeaders.push({name: name, value: value});
-                if (name.toLowerCase() == "content-type")
-                    contentType = value;
-            }
-*/
-
-        requestIndex += 1;
-
-        var response = {
+        API.emit("http.response", {
             "request": {
-                "id": requestId || "id:" + request.url + ":" + requestIndex,
-                "url": request.url,
-                "hostname": request.url,
-                "port": request.url,
-                "method": request.method,
-                "headers": [],
+                "id": response.requestId,
+                //"url": response.url,
+                //"hostname": response.url,
+                //"port": response.url,
+                //"method": response.method,
+                //"headers": [],
                 "context": {
-                    tabId: request.tabId,
-                    url: request.url,
-                    hostname: request.url.replace(/^[^:]+:\/\/([^:\/]+)(:\d+)?\/.*?$/, "$1")
+                    frameId: response.frameId,
+                    tabId: response.tabId,
+                    url: response.url,
+                    hostname: response.url.replace(/^[^:]+:\/\/([^:\/]+)(:\d+)?\/.*?$/, "$1"),
+                    requestId: response.requestId
                 }
             },
-            "status": request.statusCode,
-            "contentType": contentType,
-            "headers": request.responseHeaders
-        };
-
-//console.log("intercepted response", response);
-
-        API.emit("http.response", response);
+            "status": response.statusCode,
+            //"contentType": contentType,
+            "headers": response.responseHeaders
+        });
     }
-
     API.BROWSER.webRequest.onHeadersReceived.addListener(
-        onRequest,
+        onHeadersReceived,
         {
             urls: [
                 "<all_urls>"
@@ -63,10 +36,8 @@ exports.for = function (API) {
             "responseHeaders"
         ]
     );
-
     API.on("destroy", function () {
-
-        API.BROWSER.webRequest.onHeadersReceived.removeListener(onRequest);
+        API.BROWSER.webRequest.onHeadersReceived.removeListener(onHeadersReceived);
     });
 
     return {};

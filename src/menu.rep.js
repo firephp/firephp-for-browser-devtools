@@ -33,7 +33,10 @@ exports.main = function (JSONREP, node) {
 
                         browser.runtime.sendMessage({
                             to: "broadcast",
-                            event: "clear"
+                            event: "clear",
+                            context: {
+                                tabId: browser.devtools.inspectedWindow.tabId
+                            }
                         });
                     }
 
@@ -41,7 +44,10 @@ exports.main = function (JSONREP, node) {
 
                         browser.runtime.sendMessage({
                             to: "broadcast",
-                            event: "manage"
+                            event: "manage",
+                            context: {
+                                tabId: browser.devtools.inspectedWindow.tabId
+                            }
                         });
                     }                        
                 }

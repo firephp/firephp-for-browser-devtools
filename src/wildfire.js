@@ -3,6 +3,9 @@ const EVENTS = require("eventemitter2");
 
 
 var API = module.exports = new EVENTS();
+
+API.VERBOSE = true;
+
 API.console = console;
 API.BROWSER = browser;
 API.WILDFIRE = require("wildfire-for-js");
@@ -234,8 +237,11 @@ API.on("http.response", function (response) {
 //console.log("RESPONSE SETTINGS !!!!", settings);
 
     if (
-        !forceEnabled &&
-        !settings.enabled
+        !settings ||
+        (
+            !forceEnabled &&
+            !settings.enabled
+        )
     ) {
         return;
     }

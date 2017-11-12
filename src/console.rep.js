@@ -26,7 +26,14 @@ exports.main = function (JSONREP, node) {
                     }
 
                     BROWSER.runtime.onMessage.addListener(function (message) {
-                        
+
+                        if (
+                            message.context &&
+                            message.context.tabId != BROWSER.devtools.inspectedWindow.tabId
+                        ) {
+                            return;
+                        }
+
                         if (message.to === "message-listener") {
 
                             if (message.response) {

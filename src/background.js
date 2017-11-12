@@ -2,13 +2,15 @@
 const BROWSER = browser;
 const WILDFIRE = exports.WILDFIRE = require("./wildfire");
 
-const VERBOSE = false;
+WILDFIRE.VERBOSE = true;
 
 
 WILDFIRE.once("error", function (err) {
     console.error(err);
 });
 
+
+var windowIdByFrameId = {};
 
 function broadcastForContext (context, message) {
     if (context) {
@@ -18,20 +20,27 @@ function broadcastForContext (context, message) {
         ) {
             context.hostname = context.url.replace(/^[^:]+:\/\/([^:\/]+)(:\d+)?\/.*?$/, "$1");
         }
+        if (
+            typeof context.windowId === "undefined" &&
+            typeof context.frameId !== "undefined" &&
+            typeof windowIdByFrameId["" + context.frameId] !== "undefined"
+        ) {
+            context.windowId = windowIdByFrameId["" + context.frameId];
+        }
         message.context = context;
     }
     message.to = "message-listener";
     //console.log("SEND RT MESSAGE", message, JSON.stringify(message.context));
 
     return BROWSER.runtime.sendMessage(message).catch(function (err) {
-        if (VERBOSE) console.log("WARNING", err);
+        if (WILDFIRE.VERBOSE) console.log("WARNING", err);
     });
 }
 
 
 WILDFIRE.on("response", function (response) {
-    
-//    console.log("RECEIVED FIREPHP MESSAGE!!5555!", message);
+
+    if (WILDFIRE.VERBOSE) console.log("[background] WILDFIRE.on -| response (response):", response);
 
     broadcastForContext(response.context, {
         // TODO: Pass along specific properties
@@ -42,7 +51,7 @@ WILDFIRE.on("response", function (response) {
 
 WILDFIRE.on("message.firephp", function (message) {
     
-//    console.log("RECEIVED FIREPHP MESSAGE!!5555!", message);
+    if (WILDFIRE.VERBOSE) console.log("[background] WILDFIRE.on -| message.firephp (message):", message);
 
     broadcastForContext(message.context, {
         message: {
@@ -61,31 +70,15 @@ var broadcastCurrentContext = false;
 
 BROWSER.runtime.onMessage.addListener(function (message) {
 
-    if (VERBOSE) console.log("BACKGROUND MESSAGE", message);
+    if (WILDFIRE.VERBOSE) console.log("[background] BROWSER.runtime -| onMessage (message):", message);
 
     if (message.to === "broadcast") {
         if (message.event === "currentContext") {
-            broadcastForContext(currentContext, message);
+            broadcastForContext(message.context || currentContext, message);
         } else {
-            broadcastForContext(null, message);
+            broadcastForContext(message.context || null, message);
         }
     }
-
-/*
-    
-    if (message.to === "background") {
-        if (message.event === "broadcastCurrentContext") {
-
-            if (!broadcastCurrentContext) {
-
-            }
-
-            broadcastForContext(currentContext, {
-                event: "currentContext"
-            });
-        }
-    }
-*/
 });
 
 BROWSER.webNavigation.onBeforeNavigate.addListener(function (details) {
@@ -94,12 +87,14 @@ BROWSER.webNavigation.onBeforeNavigate.addListener(function (details) {
         return;
     }
 
+    if (WILDFIRE.VERBOSE) console.log("[background] BROWSER.webNavigation -| onBeforeNavigate (details):", details);
+    
     currentContext = {
-        url: details.url,
-        tabId: details.tabId
+        windowId: details.windowId,
+        frameId: details.frameId,
+        tabId: details.tabId,
+        url: details.url
     };
-
-    if (VERBOSE) console.log("onBeforeNavigate", currentContext, details);
 
     broadcastForContext(currentContext, {
         event: "currentContext"
@@ -116,12 +111,14 @@ BROWSER.webNavigation.onDOMContentLoaded.addListener(function (details) {
         return;        
     }
     
+    if (WILDFIRE.VERBOSE) console.log("[background] BROWSER.webNavigation -| onDOMContentLoaded (details):", details);
+    
     currentContext = {
-        url: details.url,
-        tabId: details.tabId
+        windowId: details.windowId,
+        frameId: details.frameId,
+        tabId: details.tabId,
+        url: details.url
     };
-
-    if (VERBOSE) console.log("onDOMContentLoaded", currentContext);
     
     broadcastForContext(currentContext, {
         event: "currentContext"
@@ -132,16 +129,18 @@ BROWSER.webNavigation.onDOMContentLoaded.addListener(function (details) {
     ]
 });
 
-browser.webNavigation.onCommitted.addListener(function (details) {
+BROWSER.webNavigation.onCommitted.addListener(function (details) {
 
+    if (WILDFIRE.VERBOSE) console.log("[background] BROWSER.webNavigation -| onCommitted (details):", details);
+    
     broadcastCurrentContext = true;
-
+    
     currentContext = {
-        url: details.url,
-        tabId: details.tabId
+        windowId: details.windowId,
+        frameId: details.frameId,
+        tabId: details.tabId,        
+        url: details.url
     };
-
-    if (VERBOSE) console.log("onCommitted", currentContext);
     
     broadcastForContext(currentContext, {
         event: "currentContext"
@@ -152,31 +151,34 @@ browser.webNavigation.onCommitted.addListener(function (details) {
     ]
 });
 
-browser.tabs.onActivated.addListener(function (info) {
+BROWSER.tabs.onActivated.addListener(function (details) {
 
     if (!broadcastCurrentContext) {
         return;        
     }
+
+    if (WILDFIRE.VERBOSE) console.log("[background] BROWSER.tabs -| onActivated (details):", details);
     
-    BROWSER.tabs.get(info.tabId).then(function (tab) {
+    BROWSER.tabs.get(details.tabId).then(function (tab) {
 
         currentContext = {
-            url: tab.url,
-            tabId: info.tabId
+            windowId: details.windowId,
+            tabId: details.tabId,
+            url: tab.url
         };
-
-        if (VERBOSE) console.log("tabs.onActivated", currentContext);
         
         return broadcastForContext(currentContext, {
             event: "currentContext"
         });
     }).catch(function (err) {
-        if (VERBOSE) console.error(err);
+        if (WILDFIRE.VERBOSE) console.error(err);
     });
 });
 
-browser.tabs.onRemoved.addListener(function (tabId) {
+BROWSER.tabs.onRemoved.addListener(function (tabId) {
 
+    if (WILDFIRE.VERBOSE) console.log("[background] BROWSER.tabs -| onRemoved (tabId):", tabId);
+    
     if (
         currentContext &&
         currentContext.tabId == tabId
