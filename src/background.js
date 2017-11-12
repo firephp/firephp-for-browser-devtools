@@ -10,6 +10,10 @@ WILDFIRE.once("error", function (err) {
 });
 
 
+// TODO: Emit destroy when unloaded to proactively cleanup. Do we need to do that?
+//WILDFIRE.emit("destroy");
+
+
 var windowIdByFrameId = {};
 
 function broadcastForContext (context, message) {
@@ -68,7 +72,7 @@ var currentContext = null;
 var broadcastCurrentContext = false;
 
 
-BROWSER.runtime.onMessage.addListener(function (message) {
+function webRequest_onBeforeSendHeaders (message) {
 
     if (WILDFIRE.VERBOSE) console.log("[background] BROWSER.runtime -| onMessage (message):", message);
 
@@ -81,14 +85,19 @@ BROWSER.runtime.onMessage.addListener(function (message) {
     } else
     if (message.to === "background") {
         if (message.event === "reload") {
-            BROWSER.tabs.reload(message.context.tabId, {
+            browser.tabs.reload(message.context.tabId, {
                 bypassCache: true
             });
         }
     }
+}
+BROWSER.runtime.onMessage.addListener(webRequest_onBeforeSendHeaders);
+WILDFIRE.on("destroy", function () {
+    BROWSER.runtime.onMessage.removeListener(webRequest_onBeforeSendHeaders);
 });
 
-BROWSER.webNavigation.onBeforeNavigate.addListener(function (details) {
+
+function webNavigation_onBeforeNavigate (details) {
 
     if (!broadcastCurrentContext) {
         return;
@@ -106,13 +115,19 @@ BROWSER.webNavigation.onBeforeNavigate.addListener(function (details) {
     broadcastForContext(currentContext, {
         event: "currentContext"
     });
-}, {
+}
+BROWSER.webNavigation.onBeforeNavigate.addListener(webNavigation_onBeforeNavigate, {
     url: [
         {}
     ]
 });
+WILDFIRE.on("destroy", function () {
+    BROWSER.webNavigation.onBeforeNavigate.removeListener(webNavigation_onBeforeNavigate);
+});
 
-BROWSER.webNavigation.onDOMContentLoaded.addListener(function (details) {
+
+
+function webNavigation_onDOMContentLoaded (details) {
 
     if (!broadcastCurrentContext) {
         return;        
@@ -130,13 +145,19 @@ BROWSER.webNavigation.onDOMContentLoaded.addListener(function (details) {
     broadcastForContext(currentContext, {
         event: "currentContext"
     });
-}, {
+}
+BROWSER.webNavigation.onDOMContentLoaded.addListener(webNavigation_onDOMContentLoaded, {
     url: [
         {}
     ]
 });
+WILDFIRE.on("destroy", function () {
+    BROWSER.webNavigation.onDOMContentLoaded.removeListener(webNavigation_onDOMContentLoaded);
+});
 
-BROWSER.webNavigation.onCommitted.addListener(function (details) {
+
+
+function webNavigation_onCommitted (details) {
 
     if (WILDFIRE.VERBOSE) console.log("[background] BROWSER.webNavigation -| onCommitted (details):", details);
     
@@ -152,13 +173,18 @@ BROWSER.webNavigation.onCommitted.addListener(function (details) {
     broadcastForContext(currentContext, {
         event: "currentContext"
     });
-}, {
+}
+BROWSER.webNavigation.onCommitted.addListener(webNavigation_onCommitted, {
     url: [
         {}
     ]
 });
+WILDFIRE.on("destroy", function () {
+    BROWSER.webNavigation.onCommitted.removeListener(webNavigation_onCommitted);
+});
 
-BROWSER.tabs.onActivated.addListener(function (details) {
+
+function tabs_onActivated (details) {
 
     if (!broadcastCurrentContext) {
         return;        
@@ -180,9 +206,14 @@ BROWSER.tabs.onActivated.addListener(function (details) {
     }).catch(function (err) {
         if (WILDFIRE.VERBOSE) console.error(err);
     });
+}
+BROWSER.tabs.onActivated.addListener(tabs_onActivated);
+WILDFIRE.on("destroy", function () {
+    BROWSER.tabs.onActivated.removeListener(tabs_onActivated);
 });
 
-BROWSER.tabs.onRemoved.addListener(function (tabId) {
+
+function tabs_onRemoved (tabId) {
 
     if (WILDFIRE.VERBOSE) console.log("[background] BROWSER.tabs -| onRemoved (tabId):", tabId);
     
@@ -198,4 +229,8 @@ BROWSER.tabs.onRemoved.addListener(function (tabId) {
     }, {
         event: "destroyContext"
     });
+}
+BROWSER.tabs.onRemoved.addListener(tabs_onRemoved);
+WILDFIRE.on("destroy", function () {
+    BROWSER.tabs.onRemoved.removeListener(tabs_onRemoved);
 });
