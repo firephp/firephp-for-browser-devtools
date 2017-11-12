@@ -74,9 +74,16 @@ BROWSER.runtime.onMessage.addListener(function (message) {
 
     if (message.to === "broadcast") {
         if (message.event === "currentContext") {
-            broadcastForContext(message.context || currentContext, message);
+            broadcastForContext(currentContext, message);
         } else {
             broadcastForContext(message.context || null, message);
+        }
+    } else
+    if (message.to === "background") {
+        if (message.event === "reload") {
+            BROWSER.tabs.reload(message.context.tabId, {
+                bypassCache: true
+            });
         }
     }
 });

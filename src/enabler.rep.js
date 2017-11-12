@@ -118,6 +118,15 @@ exports.main = function (JSONREP, node) {
                             true
                         ).then(function () {
                             tag.update();
+
+                            browser.runtime.sendMessage({
+                                to: "background",
+                                event: "reload",
+                                context: {
+                                    tabId: browser.devtools.inspectedWindow.tabId
+                                }
+                            });
+
                             return null;
                         }).catch(function (err) {
                             console.error(err);
