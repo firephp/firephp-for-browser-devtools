@@ -1,6 +1,23 @@
 
 const WINDOW = window;
 
+
+/*
+// TODO: This should not be needed once `inspector` issue is fixed.
+// @see https://github.com/firephp/firephp-for-firefox-devtools/issues/26
+
+// Ensure UI shows up within first 2 seconds. If not reload the page.
+setTimeout(function () {
+
+    var el = WINDOW.document.querySelector(".layout-views");
+    if (!el) {
+        console.log("WARNING: Reloading UI as '.layout-views' not found after 2 seconds.");
+        window.location.reload();
+    }
+}, 2000);
+*/
+
+
 exports.main = function (JSONREP, node) {
 
     var panels = {};
@@ -27,7 +44,7 @@ exports.main = function (JSONREP, node) {
                 panels: panels
             },
             html: (html (variables) >>>
-                <div class="views">
+                <div class="layout-views">
                     <div class="ui" style="display: none;">
                         <table class="layout" height="100%" border="0" cellpadding="0" cellspacing="0">
                             <tr>
@@ -76,12 +93,12 @@ exports.main = function (JSONREP, node) {
                     overflow: hidden;
                 }
 
-                :scope.views {
+                :scope.layout-views {
                     height: 100%;
                 }
                 
-                :scope.views,
-                :scope.views TABLE {
+                :scope.layout-views,
+                :scope.layout-views TABLE {
                     font-family: Monaco;
                     font-size: 12px;
                 }
