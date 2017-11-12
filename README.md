@@ -23,7 +23,7 @@ Install
 
 **NOTE:** These downloads do **NOT** auto-update!
 
-  1. Download latest: [dist/firephp.xpi](https://github.com/firephp/firephp-for-firefox-devtools/raw/master/dist/firephp.xpi) ([release history](https://github.com/firephp/firephp-for-firefox-devtools/wiki))
+  1. Download latest: [dist/firephp.xpi](https://github.com/firephp/firephp-for-firefox-devtools/raw/master/dist/firephp.xpi) ([release history & known issues](https://github.com/firephp/firephp-for-firefox-devtools/wiki))
   2. Drag into Firefox
 
 
