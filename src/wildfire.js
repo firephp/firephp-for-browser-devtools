@@ -159,7 +159,7 @@ REQUEST_OBSERVER.register(function (request) {
 
     return SETTINGS.getDomainSettingsForRequest(request).then(function (settings) {
 
-//console.log("REQUEST SETTINGS !!!!", settings);
+        if (API.VERBOSE) console.log("[wildfire] request domain settings for '" + request.hostname + "':", settings);
 
         hostnameSettings[request.hostname] = settings;
         
@@ -230,11 +230,9 @@ API.on("http.response", function (response) {
         return;
     }
 
-//console.log("RESPONSE IN EXTENSION2345!!!", response.request);
-
     var settings = hostnameSettings[response.request.context.hostname];
 
-//console.log("RESPONSE SETTINGS !!!!", settings);
+    if (API.VERBOSE) console.log("[wildfire] response domain settings for '" + response.request.context.hostname + "':", settings);
 
     if (
         !settings ||
