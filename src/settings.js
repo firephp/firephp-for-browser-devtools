@@ -12,12 +12,16 @@ BROWSER.storage.onChanged.addListener(function (changes, area) {
     }
 });
 function getSetting (name) {
+    function get () {
+        return BROWSER.storage.local.get(name).then(function (value) {
+            return (domainSettingsCache[name] = value[name]);
+        });
+    }
     if (typeof domainSettingsCache[name] === "undefined") {
+        get();
         return Promise.resolve(false);
     }
-    return BROWSER.storage.local.get(name).then(function (value) {
-        return (domainSettingsCache[name] = value[name] || false);
-    });
+    return get();
 }
 
 // TODO: Speed this up by removing promises as much as possible
