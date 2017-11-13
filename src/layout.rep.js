@@ -97,8 +97,8 @@ exports.main = function (JSONREP, node) {
                 
                 :scope.layout-views,
                 :scope.layout-views TABLE {
-                    font-family: Monaco;
-                    font-size: 12px;
+                    font-family: Lucida Grande, Tahoma, sans-serif;
+                    font-size: 11px;
                 }
 
                 :scope .layout TD {

@@ -36,7 +36,7 @@ exports.main = function (JSONREP, node) {
                     var currentContext = null;
                     
                     function makeKeyForContext (context) {
-                        return context.tabId + ":" + context.url;
+                        return context.tabId + ":" + (context.url || "");
                     }
 
                     function getPanel () {
@@ -105,6 +105,21 @@ exports.main = function (JSONREP, node) {
                         showPanel();
                     });
 
+                    WINDOW.FC.on("inspectNode", function (info) {
+
+                        hidePanel();
+
+                        currentContext = info.message.context;
+                        
+                        currentContext = {
+                            tabId: browser.devtools.inspectedWindow.tabId
+                        };
+                        
+                        WINDOW.FC.renderMessageInto(getPanel(), info.message);
+                        
+                        showPanel();
+                    });
+                        
                     WINDOW.FC.on("inspectFile", function (info) {
 
                         console.log("EVENT:inspectFile", info);
