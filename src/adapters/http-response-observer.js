@@ -1,9 +1,26 @@
 
 exports.for = function (API) {
-    
+
+    // TODO: Clear old records
+    var topUrlByFrameId = {};
+
     function onHeadersReceived (response) {
         if (API.VERBOSE) console.log("[http-response-observer] onHeadersReceived (response):", response);
 
+        var topUrl = response.documentUrl || response.url;
+        if (response.parentFrameId !== -1) {
+            topUrl = topUrlByFrameId["" + response.parentFrameId] || null;
+        }
+
+        if (
+            response.type === "main_frame" ||
+            response.type === "sub_frame"
+        ) {
+            topUrlByFrameId["" + response.frameId] = topUrl;
+        }
+
+//console.log("topUrlByFrameId :::", topUrlByFrameId);
+        
         API.emit("http.response", {
             "request": {
                 "id": response.requestId,
@@ -17,7 +34,10 @@ exports.for = function (API) {
                     tabId: response.tabId,
                     url: response.url,
                     hostname: response.url.replace(/^[^:]+:\/\/([^:\/]+)(:\d+)?\/.*?$/, "$1"),
-                    requestId: response.requestId
+                    requestId: response.requestId,
+                    requestType: response.type,
+                    documentUrl: response.documentUrl,
+                    topUrl: topUrl
                 }
             },
             "status": response.statusCode,

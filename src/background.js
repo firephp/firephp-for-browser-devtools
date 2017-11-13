@@ -134,7 +134,11 @@ function webNavigation_onDOMContentLoaded (details) {
     }
     
     if (WILDFIRE.VERBOSE) console.log("[background] BROWSER.webNavigation -| onDOMContentLoaded (details):", details);
-    
+
+    if (details.parentFrameId !== -1) {
+        return;
+    }
+
     currentContext = {
         windowId: details.windowId,
         frameId: details.frameId,

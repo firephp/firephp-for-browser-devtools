@@ -103,6 +103,8 @@ httpHeaderChannel.setNoReceiverCallback(function(id) {
 httpHeaderChannel.addListener({
     afterChannelOpen: function (context) {
 
+        if (API.VERBOSE) console.log("[wildfire] httpHeaderChannel -| afterChannelOpen (context):", context);
+
         API.emit("response", {
             context: context.context
         });

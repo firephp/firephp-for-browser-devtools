@@ -49,7 +49,14 @@ exports.main = function (JSONREP, node) {
 
 
                     function makeKeyForContext (context) {
-                        return context.tabId + ":" + context.url;
+                        //if (
+                        //    typeof context.requestType === "undefined" ||
+                        //    context.requestType === "main_frame"
+                        //) {
+                        //    return context.tabId + ":" + context.url;
+                        //} else {
+                            return context.tabId + ":" + (context.topUrl || context.url);
+                        //}
                     }
 
                     function getConsoleForContext (context) {
@@ -80,6 +87,7 @@ exports.main = function (JSONREP, node) {
                         syncScrolledToBottom();
                     }
 
+                    var lastConsoleId = null;
 
                     BROWSER.runtime.onMessage.addListener(function (message) {
 
@@ -95,15 +103,18 @@ exports.main = function (JSONREP, node) {
                             if (message.response) {
 
                                 lastRequestConsole = getConsoleForContext(message.context);
-                                if (
-                                    persistLogs &&
-                                    !persistentConsole
-                                ) {
-                                    persistentConsole = lastRequestConsole;
+                                if (persistLogs) {
+                                    if (!persistentConsole) {
+                                        persistentConsole = lastRequestConsole;
+                                    }
+                                } else {
+                                    if (message.context.requestType === "main_frame") {
+                                        lastRequestConsole.getAPI().clear();
+                                    }
                                 }
-                                
+
                                 var panelEl = lastRequestConsole.getPanelEl();
-                                
+
                                 var el = WINDOW.document.createElement('div');
                                 el.setAttribute("class", "request");
                                 el.setAttribute("style", [
@@ -141,12 +152,17 @@ exports.main = function (JSONREP, node) {
                             ) {
                                 if (persistentConsole) {
                                     return;
-                                }
-
+                                }                                
                                 var key = makeKeyForContext(message.context);
-                                
                                 Object.keys(consoles).forEach(function (id) {
-                                    if (id === key) {
+                                    if (
+                                        (
+                                            persistLogs &&
+                                            id.split(":")[0] == message.context.tabId
+                                        ) ||
+                                        id === key
+                                    ) {
+                                        lastConsoleId = id;
                                         consoles[id].show();
                                     } else {
                                         consoles[id].hide();
@@ -156,7 +172,7 @@ exports.main = function (JSONREP, node) {
                             if (message.event === "destroyContext") {
 
                                 Object.keys(consoles).forEach(function (id) {
-                                    if (id.replace(/^([^:]+):.+$/, "$1") == message.context.tabId) {
+                                    if (id.split(":")[0] == message.context.tabId) {
                                         WINDOW.FC.destroyConsoleForId(id);
                                         delete consoles[id];
                                     }
