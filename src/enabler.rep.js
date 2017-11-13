@@ -38,16 +38,26 @@ exports.main = function (JSONREP, node) {
                     height: 20px;
                     border: 2px;
                     font-weight: bold;
+                    cursor: pointer;
+                    background-color: white;
+                    padding: 3px;
+                    height: auto;
                 }
 
                 :scope BUTTON.enable {
-                    color: #005007;
-                    background-color: red;
+                    color: #007200;
+                    border-top: 2px solid #ff5151;
+                    border-bottom: 2px solid #ff5151;
+                    border-left: 10px solid #ff5151;
+                    border-right: 10px solid #ff5151;
                 }
 
                 :scope BUTTON.disable {
-                    color: red;
-                    background-color: #005007;
+                    color: #900;
+                    border-top: 2px solid #05c600;
+                    border-bottom: 2px solid #05c600;
+                    border-left: 10px solid #05c600;
+                    border-right: 10px solid #05c600;
                 }
                 
             </style>

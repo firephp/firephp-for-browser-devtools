@@ -125,6 +125,7 @@ exports.main = function (JSONREP, node) {
 
                 :scope .manage > .close-button {
                     display: none;
+                    cursor: pointer;
                 }
                 
                 :scope .uninitialized {
@@ -137,7 +138,12 @@ exports.main = function (JSONREP, node) {
                     font-size: 16px;
                     color: #dcdcdc;
                 }
-
+                :scope .uninitialized BUTTON {
+                    font-size: 16px;
+                    color: #dcdcdc;
+                    cursor: pointer;
+                }
+                    
             <<<),
             on: {
                 mount: function (el) {

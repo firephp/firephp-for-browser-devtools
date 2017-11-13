@@ -17,11 +17,16 @@ exports.main = function (JSONREP, node) {
 
             <style>
 
-                :scope DIV.menu {
-                    padding: 3px;
+                :scope .menu {
+                    padding: 5px;
                     padding-left: 10px;
                     padding-right: 10px;
                     white-space: nowrap;
+                }
+
+                :scope .menu > BUTTON {
+                    cursor: pointer;
+                    width: auto;
                 }
                 
             </style>
