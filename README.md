@@ -5,7 +5,7 @@ FirePHP for Firefox Developer Tools
 
 This project holds the [FirePHP Tool](http://firephp.org) in the form of a [Mozilla Web Extension](https://developer.mozilla.org/en-US/Add-ons/WebExtensions) which is compatible with the latest *Multiprocess Firefox Browser*.
 
-> FirePHP is a logging system that can display PHP variables in the browser as an application is navigated. All communication is out of band to the application which means the logging data will not interfere with the normal functioning of the application.
+> FirePHP is a logging system that can display PHP variables in a browser as an application is navigated. All communication is out of band to the application which means the logging data will not interfere with the normal functioning of the application.
 
 On the **server** you need one of the following **PHP libraries**:
 
