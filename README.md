@@ -26,6 +26,12 @@ Install
   1. Download latest: [dist/firephp.xpi](https://github.com/firephp/firephp-for-firefox-devtools/raw/master/dist/firephp.xpi) ([release history & known issues](https://github.com/firephp/firephp-for-firefox-devtools/wiki))
   2. Drag into Firefox
 
+Preview
+-------
+
+![Panel](https://rawgit.com/firephp/firephp-for-firefox-devtools/master/src/skin/PanelScreenshot.png "Panel")
+
+![Code](https://rawgit.com/firephp/firephp-for-firefox-devtools/master/src/skin/CodeScreenshot.png "Code")
 
 Provenance
 ==========
