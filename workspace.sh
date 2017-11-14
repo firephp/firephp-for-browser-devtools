@@ -11,6 +11,7 @@ function do_build {
     CALL_webext run {
         "manifest": {
             "name": "FirePHP",
+            "version": "1.0.0",
             "description": "Log any PHP variable to a Firefox Developer Tools Panel.",
             "applications": {
                 "gecko": {
