@@ -12,10 +12,10 @@ function do_build {
         "manifest": {
             "name": "FirePHP",
             "version": "1.0.0",
-            "description": "Log any PHP variable to a Firefox Developer Tools Panel.",
+            "description": "Log from PHP to a devtools panel.",
             "applications": {
                 "gecko": {
-                    "id": "firephp-for-firefox-devtools-1@firephp.org",
+                    "id": "FirePHPExtension-Build@firephp.org",
                     "strict_min_version": "42.0"
                 }
             },            
