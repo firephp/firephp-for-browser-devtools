@@ -21,6 +21,12 @@ On the **server** you need one of the following **PHP libraries**:
 Install
 -------
 
+### Production
+
+Install from: [addons.mozilla.org/en-US/firefox/addon/firephp](https://addons.mozilla.org/en-US/firefox/addon/firephp/)
+
+### Development
+
 **NOTE:** These downloads do **NOT** auto-update!
 
   1. Download latest: [dist/firephp.xpi](https://github.com/firephp/firephp-for-firefox-devtools/raw/master/dist/firephp.xpi) ([release history & known issues](https://github.com/firephp/firephp-for-firefox-devtools/wiki))
