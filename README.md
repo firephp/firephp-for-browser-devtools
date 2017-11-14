@@ -29,9 +29,7 @@ Install
 Preview
 -------
 
-![Panel](https://rawgit.com/firephp/firephp-for-firefox-devtools/master/src/skin/PanelScreenshot.png | width=200)
-
-![Code](https://rawgit.com/firephp/firephp-for-firefox-devtools/master/src/skin/CodeScreenshot.png | width=200)
+<img src="https://rawgit.com/firephp/firephp-for-firefox-devtools/master/src/skin/PanelScreenshot.png" alt="Panel" width="300"> &nbsp; <img src="https://rawgit.com/firephp/firephp-for-firefox-devtools/master/src/skin/CodeScreenshot.png" alt="Code" width="300">
 
 Provenance
 ==========
