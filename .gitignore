@@ -5,3 +5,4 @@
 node_modules/
 .rt/
 ~.rt_*
+/dist/firephp.zip

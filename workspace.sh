@@ -174,4 +174,17 @@ elif [ "$ARGS_1" == "sign" ]; then
     fi
 
     do_sign
+
+elif [ "$ARGS_1" == "unbundle" ]; then
+
+    if [ ! -e "dist/firephp.xpi" ]; then
+        BO_exit_error "No xpi file to unbundle found! Run 'sign' first."
+    fi
+    rm -Rf "dist/firephp.raw" || true
+    rm -Rf "dist/firephp.zip" || true
+    cp "dist/firephp.xpi" "dist/firephp.zip"
+    unzip "dist/firephp.zip" -d "dist/firephp.raw/"
+    rm -Rf "dist/firephp.zip" || true
+
+    echo "Unbundled source is in: dist/firephp.raw/"
 fi

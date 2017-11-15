@@ -1,0 +1,28 @@
+{
+    "manifest_version": 2,
+    "description": "Log any PHP variable to a Firefox Developer Tools Panel.",
+    "name": "FirePHP",
+    "version": "0.1.0pre_1510567604",
+    "applications": {
+        "gecko": {
+            "id": "firephp-for-firefox-devtools-1@firephp.org",
+            "strict_min_version": "42.0"
+        }
+    },
+    "icons": {
+        "48": "skin/__icon_48.png"
+    },
+    "permissions": [
+        "tabs",
+        "storage",
+        "webRequest",
+        "webNavigation",
+        "webRequestBlocking",
+        "<all_urls>"
+    ],
+    "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self'; img-src 'self'",
+    "devtools_page": "devtools-page.html",
+    "background": {
+        "page": "background.html"
+    }
+}
