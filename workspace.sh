@@ -175,6 +175,11 @@ if [ "$ARGS_1" == "build" ]; then
 
     BO_cecho "Built extension can be found in: dist/firephp.build/" YELLOW BOLD
 
+elif [ "$ARGS_1" == "run" ]; then
+
+    export BO_TEST_FLAG_DEV=1
+    do_run
+
 elif [ "$ARGS_1" == "sign" ]; then
 
     if [ "$ARGS_OPT_dev" == "true" ]; then

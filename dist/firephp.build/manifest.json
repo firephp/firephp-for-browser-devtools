@@ -3,7 +3,6 @@
     "description": "Log from PHP to a devtools panel.",
     "name": "FirePHP",
     "version": "1.0.0",
-    "dist": "/dl/source/github.com~firephp~firephp-for-firefox-devtools/dist/firephp.build",
     "applications": {
         "gecko": {
             "id": "FirePHPExtension-Build@firephp.org",
