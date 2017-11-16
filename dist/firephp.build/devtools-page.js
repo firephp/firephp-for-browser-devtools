@@ -37,7 +37,7 @@ panels.on("set", function (name, value) {
     
 console.log("INIT PANEL", url);
         });
-
+    
         panel.onHidden.addListener(function () {
     
 console.log("CLOSE PANEL", url);

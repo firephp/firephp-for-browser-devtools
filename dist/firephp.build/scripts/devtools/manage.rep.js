@@ -45,7 +45,7 @@ exports.main = function (JSONREP, node) {
                                 this.on('mount', this.set);
                             });
 
-                            riot.tag2('tag_6a87135459b165291624b5f5a659a1fe32fc29fa', '<div class="manage-panel"> <h2>Settings for: {hostname}</h2> <raw html="{settingsCode}"></raw> <h2>FirePHP</h2> <p><i>FirePHP is <a target="_blank" href="https://github.com/firephp/firephp-for-firefox-devtools">Open Source with code on Github</a></i></p> <ul> <li><a target="_blank" href="https://github.com/firephp/firephp-for-firefox-devtools/issues">Report an Issue or Suggest a Feature</a></li> <li>Server Libraries: <ul> <li><b>FirePHPCore</b> - <a target="_blank" href="https://github.com/firephp/firephp-core">github.com/firephp/firephp-core</a></li> </ul> </li> </ul> </div>', 'tag_6a87135459b165291624b5f5a659a1fe32fc29fa DIV.manage-panel,[data-is="tag_6a87135459b165291624b5f5a659a1fe32fc29fa"] DIV.manage-panel{ padding: 10px; } tag_6a87135459b165291624b5f5a659a1fe32fc29fa DIV.manage-panel > P,[data-is="tag_6a87135459b165291624b5f5a659a1fe32fc29fa"] DIV.manage-panel > P{ padding-left: 10px; padding-right: 10px; } tag_6a87135459b165291624b5f5a659a1fe32fc29fa LI,[data-is="tag_6a87135459b165291624b5f5a659a1fe32fc29fa"] LI{ margin-top: 5px; }', '', function (opts) {
+                            riot.tag2('tag_ca0140b07978da1dd5e836c5d95b3b6c1fb90080', '<div class="manage-panel"> <h2>Settings for: {hostname}</h2> <raw html="{settingsCode}"></raw> <h2>FirePHP</h2> <p><i>FirePHP is <a target="_blank" href="https://github.com/firephp/firephp-for-firefox-devtools">Open Source with code on Github</a></i></p> <ul> <li><a target="_blank" href="https://github.com/firephp/firephp-for-firefox-devtools/issues">Report an Issue or Suggest a Feature</a></li> <li>Server Libraries: <ul> <li><b>FirePHPCore</b> - <a target="_blank" href="https://github.com/firephp/firephp-core">github.com/firephp/firephp-core</a></li> </ul> </li> </ul> </div>', 'tag_ca0140b07978da1dd5e836c5d95b3b6c1fb90080 DIV.manage-panel,[data-is="tag_ca0140b07978da1dd5e836c5d95b3b6c1fb90080"] DIV.manage-panel{ padding: 10px; } tag_ca0140b07978da1dd5e836c5d95b3b6c1fb90080 DIV.manage-panel > P,[data-is="tag_ca0140b07978da1dd5e836c5d95b3b6c1fb90080"] DIV.manage-panel > P{ padding-left: 10px; padding-right: 10px; } tag_ca0140b07978da1dd5e836c5d95b3b6c1fb90080 LI,[data-is="tag_ca0140b07978da1dd5e836c5d95b3b6c1fb90080"] LI{ margin-top: 5px; }', '', function (opts) {
 
                                 var tag = this;
                                 var currentContext = null;
@@ -61,30 +61,28 @@ exports.main = function (JSONREP, node) {
                                     }, 0);
                                 });
 
-                                if (typeof browser !== "undefined") {
-                                    browser.runtime.onMessage.addListener(function (message) {
+                                browser.runtime.onMessage.addListener(function (message) {
 
-                                        if (message.context && message.context.tabId != browser.devtools.inspectedWindow.tabId) {
-                                            return;
-                                        }
+                                    if (message.context && message.context.tabId != browser.devtools.inspectedWindow.tabId) {
+                                        return;
+                                    }
 
-                                        if (message.to === "message-listener") {
-                                            if (message.event === "currentContext") {
+                                    if (message.to === "message-listener") {
+                                        if (message.event === "currentContext") {
 
-                                                currentContext = message.context;
-                                                if (currentContext) {
-                                                    tag.hostname = currentContext.hostname;
-                                                } else {
-                                                    tag.hostname = "";
-                                                }
-                                                tag.update();
+                                            currentContext = message.context;
+                                            if (currentContext) {
+                                                tag.hostname = currentContext.hostname;
+                                            } else {
+                                                tag.hostname = "";
                                             }
+                                            tag.update();
                                         }
-                                    });
-                                }
+                                    }
+                                });
                             });
 
-                            riot.mount(el, 'tag_6a87135459b165291624b5f5a659a1fe32fc29fa', context);
+                            riot.mount(el, 'tag_ca0140b07978da1dd5e836c5d95b3b6c1fb90080', context);
                         }
                     }
                 };

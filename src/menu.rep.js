@@ -35,44 +35,41 @@ exports.main = function (JSONREP, node) {
 
                 var tag = this;
 
-                if (typeof browser !== "undefined") {
+                tag.triggerClear = function (event) {
 
-                    tag.triggerClear = function (event) {
-
-                        browser.runtime.sendMessage({
-                            to: "broadcast",
-                            event: "clear",
-                            context: {
-                                tabId: browser.devtools.inspectedWindow.tabId
-                            }
-                        });
-                    }
-
-                    tag.triggerManage = function (event) {
-
-                        browser.runtime.sendMessage({
-                            to: "broadcast",
-                            event: "manage",
-                            context: {
-                                tabId: browser.devtools.inspectedWindow.tabId
-                            }
-                        });
-                    }
-                    
-                    tag.notifyPersistChange = function (event) {
-
-                        browser.storage.local.set({
-                            "persist-on-navigate": event.target.checked
-                        });                       
-                    }
-
-                    tag.on("mount", function () {
-
-                        browser.storage.local.get("persist-on-navigate").then(function (value) {
-                            tag.root.querySelector('[name="settings.persist-on-navigate"]').checked = value["persist-on-navigate"] || false;
-                        });
-                    });                  
+                    browser.runtime.sendMessage({
+                        to: "broadcast",
+                        event: "clear",
+                        context: {
+                            tabId: browser.devtools.inspectedWindow.tabId
+                        }
+                    });
                 }
+
+                tag.triggerManage = function (event) {
+
+                    browser.runtime.sendMessage({
+                        to: "broadcast",
+                        event: "manage",
+                        context: {
+                            tabId: browser.devtools.inspectedWindow.tabId
+                        }
+                    });
+                }
+                
+                tag.notifyPersistChange = function (event) {
+
+                    browser.storage.local.set({
+                        "persist-on-navigate": event.target.checked
+                    });                       
+                }
+
+                tag.on("mount", function () {
+
+                    browser.storage.local.get("persist-on-navigate").then(function (value) {
+                        tag.root.querySelector('[name="settings.persist-on-navigate"]').checked = value["persist-on-navigate"] || false;
+                    });
+                });
 
             </script>
 

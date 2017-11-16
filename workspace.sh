@@ -5,11 +5,11 @@ depend {
 }
 
 
-
-function do_build {
+function do_run {
 
     CALL_webext run {
         "manifest": {
+            "dist": "$__DIRNAME__/dist/firephp.build",
             "name": "FirePHP",
             "version": "1.0.0",
             "description": "Log from PHP to a devtools panel.",
@@ -133,7 +133,7 @@ function do_build {
         "files": {
             "/dist/resources/insight.renderers.default/*": "$__DIRNAME__/node_modules/fireconsole.rep.js/node_modules/insight.renderers.default/resources"
         }
-    }
+    } "$@"
 
 }
 
@@ -150,13 +150,30 @@ function do_sign {
     popd > /dev/null
 }
 
+function do_extract {
+
+    if [ ! -e "dist/firephp.xpi" ]; then
+        BO_exit_error "No xpi file to unbundle found! Run 'sign' first."
+    fi
+    rm -Rf "dist/firephp.xpi.extracted" || true
+    rm -Rf "dist/firephp.zip" || true
+    cp "dist/firephp.xpi" "dist/firephp.zip"
+    unzip "dist/firephp.zip" -d "dist/firephp.xpi.extracted/"
+    rm -Rf "dist/firephp.zip" || true
+
+    BO_cecho "Extracted extension can be found in: dist/firephp.extracted/" YELLOW BOLD
+
+}
+
 
 BO_parse_args "ARGS" "$@"
 
 
 if [ "$ARGS_1" == "build" ]; then
 
-    do_build
+    do_run "--build-only"
+
+    BO_cecho "Built extension can be found in: dist/firephp.build/" YELLOW BOLD
 
 elif [ "$ARGS_1" == "sign" ]; then
 
@@ -165,7 +182,7 @@ elif [ "$ARGS_1" == "sign" ]; then
     fi
 
     if [ "$ARGS_OPT_skip_build" != "true" ]; then
-        do_build
+        do_run "--build-only"
     fi
 
     if [ "$ARGS_OPT_dev" == "true" ]; then
@@ -174,17 +191,5 @@ elif [ "$ARGS_1" == "sign" ]; then
     fi
 
     do_sign
-
-elif [ "$ARGS_1" == "unbundle" ]; then
-
-    if [ ! -e "dist/firephp.xpi" ]; then
-        BO_exit_error "No xpi file to unbundle found! Run 'sign' first."
-    fi
-    rm -Rf "dist/firephp.raw" || true
-    rm -Rf "dist/firephp.zip" || true
-    cp "dist/firephp.xpi" "dist/firephp.zip"
-    unzip "dist/firephp.zip" -d "dist/firephp.raw/"
-    rm -Rf "dist/firephp.zip" || true
-
-    echo "Unbundled source is in: dist/firephp.raw/"
+    do_extract
 fi

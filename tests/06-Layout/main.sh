@@ -32,7 +32,8 @@ CALL_webext run {
                                         "settings": {
                                             "@settings": {}
                                         },
-                                        "inspector": "Inspector"
+                                        "inspector": "Inspector",
+                                        "manage": "Manage"
                                     }
                                 },
                                 "reps": {
@@ -59,7 +60,8 @@ CALL_webext run {
                         "settings": {
                             "@settings": {}
                         },
-                        "inspector": "Inspector"
+                        "inspector": "Inspector",
+                        "manage": "Manage"
                     }
                 },
                 "reps": {

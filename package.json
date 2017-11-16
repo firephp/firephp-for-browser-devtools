@@ -9,6 +9,7 @@
     "fireconsole.rep.js": "^0.0.2"
   },
   "scripts": {
-    "test": "BO_ROOT_SCRIPT_PATH=$(pwd)/node_modules/bash.origin/bash.origin bash.origin.test tests"
+    "test": "BO_ROOT_SCRIPT_PATH=$(pwd)/node_modules/bash.origin/bash.origin bash.origin.test tests",
+    "build": "BO_ROOT_SCRIPT_PATH=$(pwd)/node_modules/bash.origin/bash.origin ./workspace.sh build"
   }
 }

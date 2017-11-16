@@ -27,7 +27,7 @@ exports.main = function (JSONREP, node) {
                     var key = makeKeyForContext(currentContext);
                     var panelEl = el.querySelector('.viewer > DIV[context="' + key + '"]');
                     if (!panelEl) {
-                        panelEl = WINDOW.document.createElement('div');
+                        panelEl = window.document.createElement('div');
                         panelEl.setAttribute("context", key);
                         panelEl.style.display = "none";
                         el.querySelector('.viewer').appendChild(panelEl);
@@ -75,7 +75,7 @@ exports.main = function (JSONREP, node) {
                     el.querySelector(".close").style.display = "none";
                 }
 
-                WINDOW.FC.on("inspectMessage", function (info) {
+                window.FC.on("inspectMessage", function (info) {
 
                     hidePanel();
 
@@ -83,12 +83,12 @@ exports.main = function (JSONREP, node) {
 
                     //console.log("INSPECT MESSAGE!!", info.message);
 
-                    WINDOW.FC.renderMessageInto(getPanel(), info.message);
+                    window.FC.renderMessageInto(getPanel(), info.message);
 
                     showPanel();
                 });
 
-                WINDOW.FC.on("inspectNode", function (info) {
+                window.FC.on("inspectNode", function (info) {
 
                     hidePanel();
 
@@ -98,12 +98,12 @@ exports.main = function (JSONREP, node) {
                         tabId: browser.devtools.inspectedWindow.tabId
                     };
 
-                    WINDOW.FC.renderMessageInto(getPanel(), info.message);
+                    window.FC.renderMessageInto(getPanel(), info.message);
 
                     showPanel();
                 });
 
-                WINDOW.FC.on("inspectFile", function (info) {
+                window.FC.on("inspectFile", function (info) {
 
                     console.log("EVENT:inspectFile", info);
                 });

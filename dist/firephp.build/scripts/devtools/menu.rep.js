@@ -42,51 +42,48 @@ exports.main = function (JSONREP, node) {
                             this.on('mount', this.set);
                         });
 
-                        riot.tag2('tag_10a50c60eee359eca47377d831cfd985c04beda0', '<div class="menu"> <button onclick="{triggerClear}">Clear</button> &nbsp; <button onclick="{triggerManage}">Manage</button> &nbsp; <input type="checkbox" name="settings.persist-on-navigate" onchange="{notifyPersistChange}">Persist </div>', 'tag_10a50c60eee359eca47377d831cfd985c04beda0 .menu,[data-is="tag_10a50c60eee359eca47377d831cfd985c04beda0"] .menu{ padding: 5px; padding-left: 10px; padding-right: 10px; white-space: nowrap; } tag_10a50c60eee359eca47377d831cfd985c04beda0 .menu > BUTTON,[data-is="tag_10a50c60eee359eca47377d831cfd985c04beda0"] .menu > BUTTON{ cursor: pointer; width: auto; }', '', function (opts) {
+                        riot.tag2('tag_71d8ccfd7f4532f1b4d88f8f00c527eb65b88ad2', '<div class="menu"> <button onclick="{triggerClear}">Clear</button> &nbsp; <button onclick="{triggerManage}">Manage</button> &nbsp; <input type="checkbox" name="settings.persist-on-navigate" onchange="{notifyPersistChange}">Persist </div>', 'tag_71d8ccfd7f4532f1b4d88f8f00c527eb65b88ad2 .menu,[data-is="tag_71d8ccfd7f4532f1b4d88f8f00c527eb65b88ad2"] .menu{ padding: 5px; padding-left: 10px; padding-right: 10px; white-space: nowrap; } tag_71d8ccfd7f4532f1b4d88f8f00c527eb65b88ad2 .menu > BUTTON,[data-is="tag_71d8ccfd7f4532f1b4d88f8f00c527eb65b88ad2"] .menu > BUTTON{ cursor: pointer; width: auto; }', '', function (opts) {
 
                             var tag = this;
 
-                            if (typeof browser !== "undefined") {
+                            tag.triggerClear = function (event) {
 
-                                tag.triggerClear = function (event) {
-
-                                    browser.runtime.sendMessage({
-                                        to: "broadcast",
-                                        event: "clear",
-                                        context: {
-                                            tabId: browser.devtools.inspectedWindow.tabId
-                                        }
-                                    });
-                                };
-
-                                tag.triggerManage = function (event) {
-
-                                    browser.runtime.sendMessage({
-                                        to: "broadcast",
-                                        event: "manage",
-                                        context: {
-                                            tabId: browser.devtools.inspectedWindow.tabId
-                                        }
-                                    });
-                                };
-
-                                tag.notifyPersistChange = function (event) {
-
-                                    browser.storage.local.set({
-                                        "persist-on-navigate": event.target.checked
-                                    });
-                                };
-
-                                tag.on("mount", function () {
-
-                                    browser.storage.local.get("persist-on-navigate").then(function (value) {
-                                        tag.root.querySelector('[name="settings.persist-on-navigate"]').checked = value["persist-on-navigate"] || false;
-                                    });
+                                browser.runtime.sendMessage({
+                                    to: "broadcast",
+                                    event: "clear",
+                                    context: {
+                                        tabId: browser.devtools.inspectedWindow.tabId
+                                    }
                                 });
-                            }
+                            };
+
+                            tag.triggerManage = function (event) {
+
+                                browser.runtime.sendMessage({
+                                    to: "broadcast",
+                                    event: "manage",
+                                    context: {
+                                        tabId: browser.devtools.inspectedWindow.tabId
+                                    }
+                                });
+                            };
+
+                            tag.notifyPersistChange = function (event) {
+
+                                browser.storage.local.set({
+                                    "persist-on-navigate": event.target.checked
+                                });
+                            };
+
+                            tag.on("mount", function () {
+
+                                browser.storage.local.get("persist-on-navigate").then(function (value) {
+                                    tag.root.querySelector('[name="settings.persist-on-navigate"]').checked = value["persist-on-navigate"] || false;
+                                });
+                            });
                         });
 
-                        riot.mount(el, 'tag_10a50c60eee359eca47377d831cfd985c04beda0', context);
+                        riot.mount(el, 'tag_71d8ccfd7f4532f1b4d88f8f00c527eb65b88ad2', context);
                     }
                 }
             };

@@ -1,11 +1,12 @@
 {
     "manifest_version": 2,
-    "description": "Log any PHP variable to a Firefox Developer Tools Panel.",
+    "description": "Log from PHP to a devtools panel.",
     "name": "FirePHP",
-    "version": "0.1.0pre_1510567604",
+    "version": "1.0.0",
+    "dist": "/dl/source/github.com~firephp~firephp-for-firefox-devtools/dist/firephp.build",
     "applications": {
         "gecko": {
-            "id": "firephp-for-firefox-devtools-1@firephp.org",
+            "id": "FirePHPExtension-Build@firephp.org",
             "strict_min_version": "42.0"
         }
     },
