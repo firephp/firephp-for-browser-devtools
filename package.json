@@ -2,7 +2,7 @@
   "name": "github.com~firephp~firephp-for-firefox-devtools",
   "version": "1.0.0",
   "dependencies": {
-    "bash.origin": "^0.1.71",
+    "bash.origin": "^0.1.72",
     "bash.origin.test": "^0.1.35",
     "eventemitter2": "^4.1.2",
     "wildfire-for-js": "^0.1.3",
