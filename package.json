@@ -10,7 +10,7 @@
   },
   "scripts": {
     "test": "BO_ROOT_SCRIPT_PATH=$(pwd)/node_modules/bash.origin/bash.origin bash.origin.test tests",
-    "build": "BO_ROOT_SCRIPT_PATH=$(pwd)/node_modules/bash.origin/bash.origin ./workspace.sh build",
+    "build": "BO_ROOT_SCRIPT_PATH=$(pwd)/node_modules/bash.origin/bash.origin bash workspace.sh build",
     "build-via-docker": "bash ./src/docker/build.sh"
   }
 }

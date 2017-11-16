@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+echo -e "\n########## START BUILD ON DOCKER IMAGE ##########\n"
+
+
 echo "Show info ..."
 
 echo "node version: $(node --version)"
