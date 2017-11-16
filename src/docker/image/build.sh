@@ -1,8 +1,13 @@
 #!/usr/bin/env bash
 
+echo "Show info ..."
+
+echo "node version: $(node --version)"
+echo "npm version: $(npm --version)"
+
 echo "Cloning ..."
 
-git clone git@github.com:firephp/firephp-for-firefox-devtools.git firephp
+git clone https://github.com/firephp/firephp-for-firefox-devtools.git firephp
 
 pushd "firephp"
 
