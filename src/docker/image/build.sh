@@ -15,6 +15,9 @@ pushd "firephp"
 
     echo "Installing ..."
 
+    export VERBOSE=1
+    export BO_VERBOSE=1
+
     npm install
 
     echo "Building ..."
