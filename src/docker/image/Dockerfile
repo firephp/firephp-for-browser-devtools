@@ -1,4 +1,4 @@
-FROM mhart/alpine-node:8.7
+FROM mhart/alpine-node:9.2
 
 RUN apk update && \
     apk add bash curl git perl util-linux && \
