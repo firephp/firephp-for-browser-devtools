@@ -5,7 +5,7 @@
     "bash.origin.workspace": "^0.2.22",
     "eventemitter2": "^4.1.2",
     "wildfire-for-js": "^0.1.3",
-    "fireconsole.rep.js": "^0.0.6"
+    "fireconsole.rep.js": "^0.0.7"
   },
   "scripts": {
     "start": "bash.origin.script ./workspace.sh run",
