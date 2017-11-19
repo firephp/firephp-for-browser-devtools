@@ -469,8 +469,7 @@ DomplateTag.prototype =
         js = js.replace('__SELF__JS__',js.replace(/\'/g,'\\\''));
         
 //system.print(js,'JS');
-
-
+        
         this.renderMarkup = eval(js);
 
         DomplateDebug.endGroup();
@@ -3050,7 +3049,7 @@ this.isArguments = function (object) {
 }();
 
 }).call(this,require('_process'))
-},{"_process":192}],4:[function(require,module,exports){
+},{"_process":190}],4:[function(require,module,exports){
 
 /* Binary */
 // -- tlrobinson Tom Robinson
@@ -4142,7 +4141,7 @@ exports.B_TRANSCODE = function(bytes, offset, length, sourceCharset, targetChars
 };
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":190}],10:[function(require,module,exports){
+},{"buffer":188}],10:[function(require,module,exports){
 
 // -- kriskowal Kris Kowal Copyright (C) 2009-2010 MIT License
 
@@ -6015,6 +6014,3778 @@ exports.title = function (value, delimiter) {
 
 
 },{}],13:[function(require,module,exports){
+
+var UTIL = require("fp-modules-for-nodejs/lib/util"),
+    JSON = require("fp-modules-for-nodejs/lib/json"),
+    ENCODER = require("../encoder/default");
+
+exports.EXTENDED = "EXTENDED";
+exports.SIMPLE = "SIMPLE";
+
+
+exports.generateFromMessage = function(message, format)
+{
+    format = format || exports.EXTENDED;
+
+    var og = new ObjectGraph();
+
+    var meta = {},
+        data;
+
+    if (typeof message.getMeta == "function")
+    {
+        meta = JSON.decode(message.getMeta() || "{}");
+    }
+    else
+    if (typeof message.meta == "string")
+    {
+        meta = JSON.decode(message.meta);
+    }
+    else
+    if (typeof message.meta == "object")
+    {
+        meta = message.meta;
+    }
+
+    if (typeof message.getData == "function")
+    {
+        data = message.getData();
+    }
+    else
+    if (typeof message.data != "undefined")
+    {
+        data = message.data;
+    }
+    else
+        throw new Error("NYI");
+
+    if(meta["msg.preprocessor"] && meta["msg.preprocessor"]=="FirePHPCoreCompatibility") {
+
+        var parts = convertFirePHPCoreData(meta, data);
+        if (typeof message.setMeta == "function")
+            message.setMeta(JSON.encode(parts[0]));
+        else
+            message.meta = JSON.encode(parts[0]);
+        data = parts[1];
+
+    } else
+    if(typeof data !== "undefined" && data != "") {
+        try {
+
+            data = JSON.decode(data);
+
+        } catch(e) {
+            console.error("Error decoding JSON data: " + data);
+            throw e;
+        }
+    } else {
+        data = {};
+    }
+
+    // assign group title to value if applicable
+    if(typeof meta["group.title"] != "undefined") {
+        data = {
+            "origin": {
+                "type": "text",
+                "text": meta["group.title"]
+            }
+        };
+    }
+
+    if(data.instances) {
+        for( var i=0 ; i<data.instances.length ; i++ ) {
+            data.instances[i] = generateNodesFromData(og, data.instances[i]);
+        }
+        og.setInstances(data.instances);
+    }
+
+    if(meta["lang.id"]) {
+        og.setLanguageId(meta["lang.id"]);
+    }
+
+    og.setMeta(meta);
+
+    if(UTIL.has(data, "origin")) {
+        if(format==exports.EXTENDED) {
+            og.setOrigin(generateNodesFromData(og, data.origin));
+        } else
+        if(format==exports.SIMPLE) {
+            og.setOrigin(generateObjectsFromData(og, data.origin));
+        } else {
+            throw new Error("unsupported format: " + format);
+        }
+    }
+
+    return og;
+}
+
+function generateObjectsFromData(objectGraph, data) {
+
+    var node;
+
+    if(data.type=="array") {
+        node = [];
+        for( var i=0 ; i<data[data.type].length ; i++ ) {
+            node.push(generateObjectsFromData(objectGraph, data[data.type][i]));
+        }
+    } else
+    if(data.type=="map") {
+        node = [];
+        for( var i=0 ; i<data[data.type].length ; i++ ) {
+            node.push([
+                generateObjectsFromData(objectGraph, data[data.type][i][0]),
+                generateObjectsFromData(objectGraph, data[data.type][i][1])
+            ]);
+        }
+    } else
+    if(data.type=="dictionary") {
+        node = {};
+        for( var name in data[data.type] ) {
+            node[name] = generateObjectsFromData(objectGraph, data[data.type][name]);
+        }
+    } else {
+        node = data[data.type];
+    }
+
+    return node;
+}
+
+
+function generateNodesFromData(objectGraph, data, parentNode) {
+    
+    parentNode = parentNode || null;
+    
+    var node = new Node(objectGraph, data, parentNode);
+    
+    if(node.value!==null && typeof node.value != "undefined") {
+        // some types need nested nodes decoded
+        if(node.type=="array") {
+            for( var i=0 ; i<node.value.length ; i++ ) {
+                node.value[i] = generateNodesFromData(objectGraph, node.value[i], node);
+            }
+        } else
+        if(node.type=="map") {
+            for( var i=0 ; i<node.value.length ; i++ ) {
+                node.value[i][0] = generateNodesFromData(objectGraph, node.value[i][0], node);
+                node.value[i][1] = generateNodesFromData(objectGraph, node.value[i][1], node);
+            }
+        } else
+        if(node.type=="dictionary") {
+            for( var name in node.value ) {
+                node.value[name] = generateNodesFromData(objectGraph, node.value[name], node);
+            }
+        }
+    } else {
+        node.value = null;
+    }
+
+    return node;
+}
+
+
+
+var Node = function(objectGraph, data, parentNode) {
+    var self = this;
+    self.parentNode = parentNode || null;
+    self.type = data.type;
+    self.value = data[data.type];
+    self.meta = {};
+    UTIL.every(data, function(item) {
+        if(item[0]!="type" && item[0]!=self.type) {
+            self.meta[item[0]] = item[1];
+        }
+    });
+    if(self.type=="reference") {
+        self.getInstance = function() {
+            return objectGraph.getInstance(self.value);
+        }
+    }
+    self.getObjectGraph = function() {
+        return objectGraph;
+    }
+}
+
+Node.prototype.getTemplateId = function() {
+    if(UTIL.has(this.meta, "tpl.id")) {
+        return this.meta["tpl.id"];
+    }
+    return false;
+}
+
+Node.prototype.compact = function() {
+    if(!this.compacted) {
+        if(this.type=="map") {
+            this.compacted = {};
+            for( var i=0 ; i<this.value.length ; i++ ) {
+                this.compacted[this.value[i][0].value] = this.value[i][1];
+            }
+        }
+    }
+    return this.compacted;
+}
+
+Node.prototype.getPath = function(locateChild) {
+    var path = [];
+    if (this.parentNode)
+        path = path.concat(this.parentNode.getPath(this));
+    else
+        path = path.concat(this.getObjectGraph().getPath(this));
+    if (locateChild)
+    {
+        if(this.type=="map") {
+            for( var i=0 ; i<this.value.length ; i++ ) {
+                if (this.value[i][1] === locateChild)
+                {
+                    path.push("value[" + i + "][1]");
+                    break;
+                }
+            }
+        } else
+        if(this.type=="dictionary") {
+            for (var key in this.value)
+            {
+                if (this.value[key] === locateChild)
+                {
+                    path.push("value['" + key + "']");
+                    break;
+                }
+            }
+        } else
+        if(this.type=="array") {
+            for( var i=0 ; i<this.value.length ; i++ ) {
+                if (this.value[i] === locateChild)
+                {
+                    path.push("value[" + i + "]");
+                    break;
+                }
+            }
+        } else {
+console.error("NYI - getPath() for this.type = '" + this.type + "'", this);            
+        }
+    }
+    return path;
+}
+
+Node.prototype.forPath = function(path) {
+    if (!path || path.length === 0)
+        return this;
+    if(this.type=="map") {
+        var m = path[0].match(/^value\[(\d*)\]\[1\]$/);
+        return this.value[parseInt(m[1])][1].forPath(path.slice(1));
+    } else
+    if(this.type=="dictionary") {
+        var m = path[0].match(/^value\['(.*?)'\]$/);
+        return this.value[m[1]].forPath(path.slice(1));
+    } else
+    if(this.type=="array") {
+        var m = path[0].match(/^value\[(\d*)\]$/);
+        return this.value[parseInt(m[1])].forPath(path.slice(1));
+    } else {
+//console.error("NYI - forPath('" + path + "') for this.type = '" + this.type + "'", this);            
+    }
+    return null;
+}
+
+//Node.prototype.renderIntoViewer = function(viewerDocument, options) {
+//    throw new Error("NYI - Node.prototype.renderIntoViewer in " + module.id);
+//    return RENDERER.renderIntoViewer(this, viewerDocument, options);
+//}
+
+
+var ObjectGraph = function() {
+//    this.message = message;
+}
+//ObjectGraph.prototype = Object.create(new Node());
+
+ObjectGraph.prototype.setOrigin = function(node) {
+    this.origin = node;
+}
+
+ObjectGraph.prototype.getOrigin = function() {
+    return this.origin;
+}
+
+ObjectGraph.prototype.setInstances = function(instances) {
+    this.instances = instances;
+}
+
+ObjectGraph.prototype.getInstance = function(index) {
+    return this.instances[index];
+}
+
+ObjectGraph.prototype.setLanguageId = function(id) {
+    this.languageId = id;
+}
+
+ObjectGraph.prototype.getLanguageId = function() {
+    return this.languageId;
+}
+
+ObjectGraph.prototype.setMeta = function(meta) {
+    this.meta = meta;
+}
+
+ObjectGraph.prototype.getMeta = function() {
+    return this.meta;
+}
+
+ObjectGraph.prototype.getPath = function(locateChild) {
+    if (this.origin === locateChild)
+    {
+        return ["origin"];
+    }
+    for( var i=0 ; i<this.instances.length ; i++ ) {
+        if (this.instances[i] === locateChild)
+        {
+            return ["instances[" + i + "]"];
+        }
+    }
+    throw new Error("Child node not found. We should never reach this!");
+}
+        
+ObjectGraph.prototype.nodeForPath = function(path) {
+    var m = path[0].match(/^instances\[(\d*)\]$/);
+    if (m) {
+        return this.instances[parseInt(m[1])].forPath(path.slice(1));
+    } else {
+        // assume path[0] == 'origin'
+        return this.origin.forPath(path.slice(1));
+    }
+    return node;
+}
+
+
+var encoder = ENCODER.Encoder();
+encoder.setOption("maxObjectDepth", 1000);
+encoder.setOption("maxArrayDepth", 1000);
+encoder.setOption("maxOverallDepth", 1000);
+function convertFirePHPCoreData(meta, data) {
+    data = encoder.encode(JSON.decode(data), null, {
+        "jsonEncode": false
+    });
+    return [meta, data]; 
+}
+
+},{"../encoder/default":14,"fp-modules-for-nodejs/lib/json":6,"fp-modules-for-nodejs/lib/util":12}],14:[function(require,module,exports){
+
+var UTIL = require("fp-modules-for-nodejs/lib/util");
+var JSON = require("fp-modules-for-nodejs/lib/json");
+
+var Encoder = exports.Encoder = function() {
+    if (!(this instanceof exports.Encoder))
+        return new exports.Encoder();
+    this.options = {
+        "maxObjectDepth": 4,
+        "maxArrayDepth": 4,
+        "maxOverallDepth": 6,
+        "includeLanguageMeta": true
+    };
+}
+
+Encoder.prototype.setOption = function(name, value) {
+    this.options[name] = value;
+}
+
+Encoder.prototype.setOrigin = function(variable) {
+    this.origin = variable;
+    // reset some variables
+    this.instances = [];
+    return true;
+}
+
+Encoder.prototype.encode = function(data, meta, options) {
+
+    options = options || {};
+
+    if(typeof data != "undefined") {
+        this.setOrigin(data);
+    }
+
+    // TODO: Use meta["fc.encoder.options"] to control encoding
+
+    var graph = {};
+    
+    try {
+        if(typeof this.origin != "undefined") {
+            graph["origin"] = this.encodeVariable(this.origin);
+        }
+    } catch(err) {
+        console.warn("Error encoding variable", err.stack);
+        throw err;
+    }
+
+    if(UTIL.len(this.instances)>0) {
+        graph["instances"] = [];
+        this.instances.forEach(function(instance) {
+            graph["instances"].push(instance[1]);
+        });
+    }
+
+    if(UTIL.has(options, "jsonEncode") && !options.jsonEncode) {
+        return graph;
+    }
+
+    try {
+        return JSON.encode(graph);
+    } catch(e) {
+        console.warn("Error jsonifying object graph" + e);
+        throw e;
+    }
+    return null;
+}
+
+Encoder.prototype.encodeVariable = function(variable, objectDepth, arrayDepth, overallDepth) {
+    objectDepth = objectDepth || 1;
+    arrayDepth = arrayDepth || 1;
+    overallDepth = overallDepth || 1;
+    
+    if(variable===null) {
+        var ret = {"type": "constant", "constant": "null"};
+        if(this.options["includeLanguageMeta"]) {
+            ret["lang.type"] = "null";
+        }
+        return ret;
+    } else
+    if(variable===true || variable===false) {
+        var ret = {"type": "constant", "constant": (variable===true)?"true":"false"};
+        if(this.options["includeLanguageMeta"]) {
+            ret["lang.type"] = "boolean";
+        }
+        return ret;
+    }
+
+    var type = typeof variable;
+    if(type=="undefined") {
+        var ret = {"type": "constant", "constant": "undefined"};
+        if(this.options["includeLanguageMeta"]) {
+            ret["lang.type"] = "undefined";
+        }
+        return ret;
+    } else
+    if(type=="number") {
+        if(Math.round(variable)==variable) {
+            var ret = {"type": "text", "text": ""+variable};
+            if(this.options["includeLanguageMeta"]) {
+                ret["lang.type"] = "integer";
+            }
+            return ret;
+        } else {
+            var ret = {"type": "text", "text": ""+variable};
+            if(this.options["includeLanguageMeta"]) {
+                ret["lang.type"] = "float";
+            }
+            return ret;
+        }
+    } else
+    if(type=="string") {
+        // HACK: This should be done via an option
+        // FirePHPCore compatibility: Detect resource string
+        if(variable=="** Excluded by Filter **") {
+            var ret = {"type": "text", "text": variable};
+            ret["encoder.notice"] = "Excluded by Filter";
+            ret["encoder.trimmed"] = true;
+            if(this.options["includeLanguageMeta"]) {
+                ret["lang.type"] = "string";
+            }
+            return ret;
+        } else
+        if(variable.match(/^\*\*\sRecursion\s\([^\(]*\)\s\*\*$/)) {
+            var ret = {"type": "text", "text": variable};
+            ret["encoder.notice"] = "Recursion";
+            ret["encoder.trimmed"] = true;
+            if(this.options["includeLanguageMeta"]) {
+                ret["lang.type"] = "string";
+            }
+            return ret;
+        } else
+        if(variable.match(/^\*\*\sResource\sid\s#\d*\s\*\*$/)) {
+            var ret = {"type": "text", "text": variable.substring(3, variable.length-3)};
+            if(this.options["includeLanguageMeta"]) {
+                ret["lang.type"] = "resource";
+            }
+            return ret;
+        } else {
+            var ret = {"type": "text", "text": variable};
+            if(this.options["includeLanguageMeta"]) {
+                ret["lang.type"] = "string";
+            }
+            return ret;
+        }
+    }
+
+    if (variable && variable.__no_serialize === true) {
+        var ret = {"type": "text", "text": "Object"};
+        ret["encoder.notice"] = "Excluded by __no_serialize";
+        ret["encoder.trimmed"] = true;
+        return ret;
+    }
+
+    if(type=="function") {
+        var ret = {"type": "text", "text": ""+variable};
+        if(this.options["includeLanguageMeta"]) {
+            ret["lang.type"] = "function";
+        }
+        return ret;
+    } else
+    if(type=="object") {
+
+        try {
+            if(UTIL.isArrayLike(variable)) {
+                var ret = {
+                    "type": "array",
+                    "array": this.encodeArray(variable, objectDepth, arrayDepth, overallDepth)
+                };
+                if(this.options["includeLanguageMeta"]) {
+                    ret["lang.type"] = "array";
+                }
+                return ret;
+            }
+        } catch (err) {
+// TODO: Find a better way to encode variables that cause security exceptions when accessed etc...
+            var ret = {"type": "text", "text": "Cannot serialize"};
+            ret["encoder.notice"] = "Cannot serialize";
+            ret["encoder.trimmed"] = true;
+            return ret;
+        }
+        // HACK: This should be done via an option
+        // FirePHPCore compatibility: we only have an object if a class name is present
+
+        if(typeof variable["__className"] != "undefined"  ) {
+            var ret = {
+                "type": "reference",
+                "reference": this.encodeInstance(variable, objectDepth, arrayDepth, overallDepth)
+            };
+            return ret;
+        } else {
+            var ret;
+            if (/^\[Exception\.\.\.\s/.test(variable)) {
+                ret = {
+                    "type": "map",
+                    "map": this.encodeException(variable, objectDepth, arrayDepth, overallDepth)
+                };
+            } else {
+                ret = {
+                    "type": "map",
+                    "map": this.encodeAssociativeArray(variable, objectDepth, arrayDepth, overallDepth)
+                };
+            }
+            if(this.options["includeLanguageMeta"]) {
+                ret["lang.type"] = "array";
+            }
+            return ret;
+        }
+    }
+
+    var ret = {"type": "text", "text": "Variable with type '" + type + "' unknown: "+variable};
+    if(this.options["includeLanguageMeta"]) {
+        ret["lang.type"] = "unknown";
+    }
+    return ret;
+//    return "["+(typeof variable)+"]["+variable+"]";    
+}
+
+Encoder.prototype.encodeArray = function(variable, objectDepth, arrayDepth, overallDepth) {
+    objectDepth = objectDepth || 1;
+    arrayDepth = arrayDepth || 1;
+    overallDepth = overallDepth || 1;
+    if(arrayDepth > this.options["maxArrayDepth"]) {
+        return {"notice": "Max Array Depth (" + this.options["maxArrayDepth"] + ")"};
+    } else
+    if(overallDepth > this.options["maxOverallDepth"]) {
+        return {"notice": "Max Overall Depth (" + this.options["maxOverallDepth"] + ")"};
+    }
+    var self = this,
+        items = [];
+    UTIL.forEach(variable, function(item) {
+        items.push(self.encodeVariable(item, 1, arrayDepth + 1, overallDepth + 1));
+    });
+    return items;
+}
+
+
+Encoder.prototype.encodeAssociativeArray = function(variable, objectDepth, arrayDepth, overallDepth) {
+    objectDepth = objectDepth || 1;
+    arrayDepth = arrayDepth || 1;
+    overallDepth = overallDepth || 1;
+    if(arrayDepth > this.options["maxArrayDepth"]) {
+        return {"notice": "Max Array Depth (" + this.options["maxArrayDepth"] + ")"};
+    } else
+    if(overallDepth > this.options["maxOverallDepth"]) {
+        return {"notice": "Max Overall Depth (" + this.options["maxOverallDepth"] + ")"};
+    }
+    var self = this,
+        items = [];
+    for (var key in variable) {
+
+        // HACK: This should be done via an option
+        // FirePHPCore compatibility: numeric (integer) strings as keys in associative arrays get converted to integers
+        // http://www.php.net/manual/en/language.types.array.php
+        if(isNumber(key) && Math.round(key)==key) {
+            key = parseInt(key);
+        }
+        
+        items.push([
+            self.encodeVariable(key, 1, arrayDepth + 1, overallDepth + 1),
+            self.encodeVariable(variable[key], 1, arrayDepth + 1, overallDepth + 1)
+        ]);
+    }
+    return items;
+}
+
+
+Encoder.prototype.encodeException = function(variable, objectDepth, arrayDepth, overallDepth) {
+    var self = this,
+        items = [];
+    items.push([
+        self.encodeVariable("message", 1, arrayDepth + 1, overallDepth + 1),
+        self.encodeVariable((""+variable), 1, arrayDepth + 1, overallDepth + 1)
+    ]);
+    return items;
+}
+
+// http://stackoverflow.com/questions/18082/validate-numbers-in-javascript-isnumeric
+function isNumber(n) {
+  return !isNaN(parseFloat(n)) && isFinite(n);
+}
+
+
+
+Encoder.prototype.getInstanceId = function(object) {
+    for( var i=0 ; i<this.instances.length ; i++ ) {
+        if(this.instances[i][0]===object) {
+            return i;
+        }
+    }
+    return null;
+}
+
+Encoder.prototype.encodeInstance = function(object, objectDepth, arrayDepth, overallDepth) {
+    objectDepth = objectDepth || 1;
+    arrayDepth = arrayDepth || 1;
+    overallDepth = overallDepth || 1;
+    var id = this.getInstanceId(object);
+    if(id!=null) {
+        return id;
+    }
+    this.instances.push([
+        object,
+        this.encodeObject(object, objectDepth, arrayDepth, overallDepth)
+    ]);
+    return UTIL.len(this.instances)-1;
+}
+
+Encoder.prototype.encodeObject = function(object, objectDepth, arrayDepth, overallDepth) {
+    objectDepth = objectDepth || 1;
+    arrayDepth = arrayDepth || 1;
+    overallDepth = overallDepth || 1;
+
+    if(arrayDepth > this.options["maxObjectDepth"]) {
+        return {"notice": "Max Object Depth (" + this.options["maxObjectDepth"] + ")"};
+    } else
+    if(overallDepth > this.options["maxOverallDepth"]) {
+        return {"notice": "Max Overall Depth (" + this.options["maxOverallDepth"] + ")"};
+    }
+    
+    var self = this,
+        ret = {"type": "dictionary", "dictionary": {}};
+
+    // HACK: This should be done via an option
+    // FirePHPCore compatibility: we have an object if a class name is present
+    var isPHPClass = false;
+    if(typeof object["__className"] != "undefined") {
+        isPHPClass = true;
+        ret["lang.class"] = object["__className"];
+        delete(object["__className"]);
+        if(this.options["includeLanguageMeta"]) {
+            ret["lang.type"] = "object";
+        }
+    }
+
+    // HACK: This should be done via an option
+    // FirePHPCore compatibility: we have an exception if a class name is present
+    if(typeof object["__isException"] != "undefined" && object["__isException"]) {
+        ret["lang.type"] = "exception";
+    }
+
+    UTIL.forEach(object, function(item) {
+        try {
+            if(item[0]=="__fc_tpl_id") {
+                ret['fc.tpl.id'] = item[1];
+                return;
+            }
+            if(isPHPClass) {
+                var val = self.encodeVariable(item[1], objectDepth + 1, 1, overallDepth + 1),
+                    parts = item[0].split(":"),
+                    name = parts[parts.length-1];
+                if(parts[0]=="public") {
+                    val["lang.visibility"] = "public";
+                } else
+                if(parts[0]=="protected") {
+                    val["lang.visibility"] = "protected";
+                } else
+                if(parts[0]=="private") {
+                    val["lang.visibility"] = "private";
+                } else
+                if(parts[0]=="undeclared") {
+                    val["lang.undeclared"] = 1;
+                }
+                if(parts.length==2 && parts[1]=="static") {
+                    val["lang.static"] = 1;
+                }
+                ret["dictionary"][name] = val;
+            } else {
+                ret["dictionary"][item[0]] = self.encodeVariable(item[1], objectDepth + 1, 1, overallDepth + 1);
+            }
+        } catch(e) {
+            console.warn(e);
+            ret["dictionary"]["__oops__"] = {"notice": "Error encoding member (" + e + ")"};
+        }
+    });
+    
+    return ret;
+}
+},{"fp-modules-for-nodejs/lib/json":6,"fp-modules-for-nodejs/lib/util":12}],15:[function(require,module,exports){
+
+module.exports = function () {/*
+
+///*######################################################################
+//#   primitives/text
+//#####################################################################
+
+SPAN.__NS__text {
+}
+
+
+
+///*######################################################################
+//#   primitives/constant
+//#####################################################################
+
+SPAN.__NS__constant {
+  color: #0000FF;
+}
+
+
+
+///*######################################################################
+//#   primitives/array
+//#####################################################################
+
+SPAN.__NS__array > SPAN {
+    color: #9C9C9C;
+    font-weight: bold;
+}
+
+SPAN.__NS__array > SPAN.collapsed {
+    color: #0000FF;
+    font-weight: normal;
+    padding-left: 5px;
+    padding-right: 5px;
+}
+
+SPAN.__NS__array > SPAN.summary {
+    color: #0000FF;
+    font-weight: normal;
+    padding-left: 5px;
+    padding-right: 5px;
+}
+
+SPAN.__NS__array > DIV.element {
+    display: block;
+    padding-left: 20px;
+}
+
+SPAN.__NS__array > SPAN.element {
+    padding-left: 2px;
+}
+
+SPAN.__NS__array > DIV.element.expandable {
+    background-image: url(__RESOURCE__images/twisty-closed.png);
+    background-repeat: no-repeat;
+    background-position: 6px 2px;
+    cursor: pointer;
+}
+SPAN.__NS__array > DIV.element.expandable.expanded {
+    background-image: url(__RESOURCE__images/twisty-open.png);
+}
+
+SPAN.__NS__array > .element > SPAN.value {
+}
+
+SPAN.__NS__array > .element > SPAN.separator {
+    color: #9C9C9C;
+}
+
+
+
+///*######################################################################
+//#   primitives/map
+//#####################################################################
+
+SPAN.__NS__map > SPAN {
+    color: #9C9C9C;
+    font-weight: bold;
+}
+
+SPAN.__NS__map > DIV.pair {
+    display: block;
+    padding-left: 20px;
+}
+
+SPAN.__NS__map > SPAN.pair {
+    padding-left: 2px;
+}
+
+SPAN.__NS__map > .pair > SPAN.delimiter,
+SPAN.__NS__map > .pair > SPAN.separator {
+    color: #9C9C9C;
+    padding-left: 2px;
+    padding-right: 2px;
+}
+
+
+
+
+///*######################################################################
+//#   primitives/reference
+//#####################################################################
+
+SPAN.__NS__reference {
+}
+
+
+
+///*######################################################################
+//#   primitives/dictionary
+//#####################################################################
+
+
+SPAN.__NS__dictionary > SPAN {
+    color: #9C9C9C;
+}
+
+SPAN.__NS__dictionary > SPAN.collapsed {
+    color: #0000FF;
+    font-weight: normal;
+    padding-left: 5px;
+    padding-right: 5px;
+}
+
+SPAN.__NS__dictionary > SPAN.summary {
+    color: #0000FF;
+    font-weight: normal;
+    padding-left: 5px;
+    padding-right: 5px;
+}
+
+SPAN.__NS__dictionary > SPAN.member {
+    color: #9C9C9C;
+}
+
+SPAN.__NS__dictionary > DIV.member {
+    display: block;
+    padding-left: 20px;
+}
+SPAN.__NS__dictionary > DIV.member.expandable {
+    background-image: url(__RESOURCE__images/twisty-closed.png);
+    background-repeat: no-repeat;
+    background-position: 6px 2px;
+    cursor: pointer;
+}
+SPAN.__NS__dictionary > DIV.member.expandable.expanded {
+    background-image: url(__RESOURCE__images/twisty-open.png);
+}
+
+SPAN.__NS__dictionary > .member > SPAN.name {
+    color: #E59D07;
+    font-weight: normal;
+}
+
+SPAN.__NS__dictionary > .member > SPAN.value {
+    font-weight: normal;
+}
+
+SPAN.__NS__dictionary > .member > SPAN.delimiter,
+SPAN.__NS__dictionary > .member > SPAN.separator,
+SPAN.__NS__dictionary > .member SPAN.more {
+    color: #9C9C9C;
+    padding-left: 2px;
+    padding-right: 2px;
+}
+
+
+///*######################################################################
+//#   primitives/unknown
+//#####################################################################
+
+
+SPAN.__NS__unknown {
+    color: #FFFFFF;
+    background-color: red;
+}
+
+
+///*######################################################################
+//#   structures/trace
+//#####################################################################
+
+SPAN.__NS__structures-trace {
+    background-image: url(__RESOURCE__images/edit-rule.png);
+    background-repeat: no-repeat;
+    background-position: 4px 1px;
+    padding-left: 25px;
+    font-weight: bold;
+}
+
+DIV.__NS__structures-trace {
+    padding: 0px;
+    margin: 0px;
+}
+
+DIV.__NS__structures-trace TABLE {
+  border-bottom: 1px solid #D7D7D7;
+}
+
+DIV.__NS__structures-trace TABLE TBODY TR TH,
+DIV.__NS__structures-trace TABLE TBODY TR TD {
+    padding: 3px;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+DIV.__NS__structures-trace TABLE TBODY TR TH.header-file {
+  white-space:nowrap;
+  font-weight: bold;
+  text-align: left;
+}
+
+DIV.__NS__structures-trace TABLE TBODY TR TH.header-line {
+  white-space:nowrap;
+  font-weight: bold;
+  text-align: right;
+}
+DIV.__NS__structures-trace TABLE TBODY TR TH.header-inst {
+  white-space:nowrap;
+  font-weight: bold;
+  text-align: left;
+}
+
+DIV.__NS__structures-trace TABLE TBODY TR TD.cell-file {
+  vertical-align: top;
+  border: 1px solid #D7D7D7;
+  border-bottom: 0px;
+  border-right: 0px;
+}
+DIV.__NS__structures-trace TABLE TBODY TR TD.cell-line {
+  white-space:nowrap;
+  vertical-align: top;
+  text-align: right;
+  border:1px solid #D7D7D7;
+  border-bottom: 0px;
+  border-right: 0px;
+}
+DIV.__NS__structures-trace TABLE TBODY TR TD.cell-line:hover,
+DIV.__NS__structures-trace TABLE TBODY TR TD.cell-file:hover {
+    background-color: #ffc73d;
+    cursor: pointer;    
+}
+DIV.__NS__structures-trace TABLE TBODY TR TD.cell-inst {
+  vertical-align: top;
+  padding-left: 10px;
+  font-weight: bold;
+  border:1px solid #D7D7D7;
+  border-bottom: 0px;
+}
+
+DIV.__NS__structures-trace TABLE TBODY TR TD.cell-inst DIV.arg {
+  font-weight: normal;
+  padding-left: 3px;
+  padding-right: 3px;
+  display: inline-block;
+}
+DIV.__NS__structures-trace TABLE TBODY TR TD.cell-inst DIV.arg:hover {
+    background-color: #ffc73d;
+    cursor: pointer;    
+}
+
+DIV.__NS__structures-trace TABLE TBODY TR TD.cell-inst .separator {
+    padding-left: 1px;
+    padding-right: 3px;
+}
+
+
+///*######################################################################
+//#   structures/table
+//#####################################################################
+
+SPAN.__NS__structures-table {
+    background-image: url(__RESOURCE__images/table.png);
+    background-repeat: no-repeat;
+    background-position: 4px -1px;
+    padding-left: 25px;
+}
+
+DIV.__NS__structures-table {
+    padding: 0px;
+    margin: 0px;
+}
+
+DIV.__NS__structures-table TABLE {
+  border-bottom: 1px solid #D7D7D7;
+  border-right: 1px solid #D7D7D7;
+}
+
+DIV.__NS__structures-table TABLE TBODY TR.hide {
+  display: none;
+}
+
+DIV.__NS__structures-table TABLE TBODY TR TH.header {
+  vertical-align: top;
+  font-weight: bold;
+  text-align: center;
+  border: 1px solid #D7D7D7;
+  border-bottom: 0px;
+  border-right: 0px;
+  background-color: #ececec;
+  padding: 2px;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+DIV.__NS__structures-table TABLE TBODY TR TD.cell {
+  vertical-align: top;
+  padding-right: 10px;
+  border: 1px solid #D7D7D7;
+  border-bottom: 0px;
+  border-right: 0px;
+  padding: 2px;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+DIV.__NS__structures-table TABLE TBODY TR TD.cell:hover {
+    background-color: #ffc73d;
+    cursor: pointer;    
+}
+
+
+///*######################################################################
+//#   util/trimmed
+//#####################################################################
+
+SPAN.__NS__util-trimmed {
+    color: #FFFFFF;
+    background-color: blue;
+    padding-left: 5px;
+    padding-right: 5px;
+}
+
+
+
+///*######################################################################
+//#   @anchor wrappers/console
+//#####################################################################
+
+DIV.__NS__console-message {
+    position: relative;
+    margin: 0;
+    border-bottom: 1px solid #D7D7D7;
+    padding: 0px;
+    background-color: #FFFFFF;
+}
+DIV.__NS__console-message.selected {
+    background-color: #35FC03 !important;
+}
+
+DIV.__NS__console-message-group[expanded=true] {
+    background-color: #77CDD9;
+}
+
+DIV.__NS__console-message > DIV.header {
+    position: relative;
+    padding-left: 34px;
+    padding-right: 10px;
+    padding-top: 3px;
+    padding-bottom: 4px;
+    cursor: pointer;
+}
+
+DIV.__NS__console-message[expanded=true] > DIV.header {
+    text-align: right;
+    min-height: 16px;
+}
+
+DIV.__NS__console-message[expanded=false] > DIV.header:hover {
+    background-color: #ffc73d;
+}
+
+DIV.__NS__console-message-group > DIV.header {
+    background: url(__RESOURCE__images/document_page_next.png) no-repeat;
+    background-position: 2px 3px;
+    font-weight: bold;
+    background-color: #77CDD9;
+}
+
+DIV.__NS__console-message > DIV.header-priority-info {
+    background: url(__RESOURCE__images/information.png) no-repeat;
+    background-position: 2px 3px;
+    background-color: #c6eeff;
+}
+
+DIV.__NS__console-message > DIV.header-priority-warn {
+    background: url(__RESOURCE__images/exclamation-diamond.png) no-repeat;
+    background-position: 2px 3px;
+    background-color: #ffe68d;
+}
+
+DIV.__NS__console-message > DIV.header-priority-error {
+    background: url(__RESOURCE__images/exclamation-red.png) no-repeat;
+    background-position: 2px 3px;
+    background-color: #ffa7a7;
+}
+
+DIV.__NS__console-message > DIV.header > DIV.expander {
+    background-color: black;
+    width: 18px;
+    height: 18px;
+    display: inline-block;
+    float: left;
+    position: relative;
+    top: -1px;
+    margin-left: -14px;
+}
+
+DIV.__NS__console-message > DIV.header > DIV.expander:hover {
+    cursor: pointer;
+}
+
+DIV.__NS__console-message[expanded=false] > DIV.header > DIV.expander {
+    background: url(__RESOURCE__images/plus-small-white.png) no-repeat;
+    background-position: 0px 1px;
+}
+
+DIV.__NS__console-message[expanded=true] > DIV.header > DIV.expander {
+    background: url(__RESOURCE__images/minus-small-white.png) no-repeat;
+    background-position: 0px 1px;
+}
+
+DIV.__NS__console-message > DIV.header > SPAN.summary > SPAN.label > SPAN,
+DIV.__NS__console-message > DIV.header > SPAN.fileline > DIV > DIV.label {
+    margin-right: 5px;
+    background-color: rgba(69,68,60,1);
+    padding-left: 5px;
+    padding-right: 5px;
+    color: white;
+    vertical-align: top;
+    margin-top: 1px;
+}
+DIV.__NS__console-message > DIV.header > SPAN.fileline > DIV > DIV.label {
+    float: left;
+    margin-top: 0px;
+}
+
+DIV.__NS__console-message > DIV.header > SPAN.summary > SPAN > SPAN.count {
+    color: #8c8c8c;
+}
+
+DIV.__NS__console-message > DIV.header > SPAN.fileline {
+    color: #8c8c8c;
+    word-wrap: break-word;
+}
+
+DIV.__NS__console-message[expanded=true] > DIV.header > SPAN.summary {
+    display: none;
+}
+
+DIV.__NS__console-message[keeptitle=true] > DIV.header,
+DIV.__NS__console-message-group > DIV.header {
+    text-align: left !important;
+}
+DIV.__NS__console-message[keeptitle=true] > DIV.header > SPAN.fileline,
+DIV.__NS__console-message-group > DIV.header > SPAN.fileline {
+    display: none !important;
+}
+DIV.__NS__console-message[keeptitle=true] > DIV.header > SPAN.summary,
+DIV.__NS__console-message-group > DIV.header > SPAN.summary {
+    display: inline !important;
+}
+DIV.__NS__console-message-group > DIV.header > DIV.actions {
+    display: none !important;
+}
+DIV.__NS__console-message-group > DIV.header > SPAN.summary > SPAN > SPAN.count {
+    color: #ffffff !important;
+}
+
+
+DIV.__NS__console-message[expanded=false] > DIV.header > SPAN.fileline {
+    display: none;
+}
+
+DIV.__NS__console-message > DIV.header > DIV.actions {
+    display: inline-block;
+    position: relative;
+    top: 0px;
+    left: 10px;
+    float: right;
+    margin-left: 0px;
+    margin-right: 5px;
+}
+
+DIV.__NS__console-message > DIV.header > DIV.actions DIV.inspect {
+    display: inline-block;
+    background: url(__RESOURCE__images/node-magnifier.png) no-repeat;
+    width: 16px;
+    height: 16px;
+    margin-right: 4px;
+}
+DIV.__NS__console-message > DIV.header > DIV.actions > DIV.file {
+    display: inline-block;
+    background: url(__RESOURCE__images/document-binary.png) no-repeat;
+    width: 16px;
+    height: 16px;
+    margin-right: 4px;
+}
+
+DIV.__NS__console-message > DIV.header > DIV.actions > DIV.inspect:hover,
+DIV.__NS__console-message > DIV.header > DIV.actions > DIV.file:hover {
+    cursor: pointer;
+}
+
+DIV.__NS__console-message > DIV.body {
+    padding: 6px;
+    margin: 3px;
+    margin-top: 0px;
+}
+
+DIV.__NS__console-message[expanded=false] > DIV.body {
+    display: none;
+}
+
+DIV.__NS__console-message-group > DIV.body {
+    padding: 0px;
+    margin: 0px;
+    margin-left: 20px;
+    border-top: 1px solid #000000;
+    border-left: 1px solid #000000;
+    margin-bottom: -1px;
+}
+
+DIV.__NS__console-message > DIV.body-priority-info {
+    border: 3px solid #c6eeff;
+    margin: 0px;
+    border-top: 0px;
+}
+
+DIV.__NS__console-message > DIV.body-priority-warn {
+    border: 3px solid #ffe68d;
+    margin: 0px;
+    border-top: 0px;
+}
+
+DIV.__NS__console-message > DIV.body-priority-error {
+    border: 3px solid #ffa7a7;
+    margin: 0px;
+    border-top: 0px;
+}
+
+DIV.__NS__console-message > DIV.body > DIV.group-no-messages {
+    background-color: white;
+    padding-left: 4px;
+    padding-right: 4px;
+    padding-top: 3px;
+    padding-bottom: 3px;
+    color: gray;
+}
+
+DIV.__NS__console-message .hidden {
+    display: none !important;
+}
+
+
+///*######################################################################
+//#   wrappers/viewer
+//#####################################################################
+
+DIV.__NS__viewer-harness {
+    padding: 2px 4px 1px 6px;
+    font-family: Lucida Grande, Tahoma, sans-serif;
+    font-size: 11px;
+}
+
+
+///*######################################################################
+//#   firebug console
+//#####################################################################
+
+DIV.devcomp-request-group {
+  background: url(__RESOURCE__images/firebug_request_group_bg.png) repeat-x #FFFFFF;
+}
+
+DIV.devcomp-request-group > DIV.logGroupLabel {
+  min-height: 16px !important;
+  background: url(__RESOURCE__images/devcomp_16.png) !important;
+  background-repeat: no-repeat !important;
+  background-position: 3px 1px !important;
+  padding-left: 24px !important;
+}
+
+DIV.devcomp-request-group > DIV.logGroupLabel > SPAN.objectBox {
+  color: #445777;
+  font-family: Lucida Grande, Tahoma, sans-serif;
+  font-size: 11px;
+}
+
+DIV.devcomp-request-group > DIV.logGroupBody > DIV > DIV.title > DIV.actions > DIV {
+    display: none !important;
+}
+
+
+*/}
+
+},{}],16:[function(require,module,exports){
+
+module.id = module.id || "insight_pack";
+
+require("../pack-helper").init(exports, module, {
+    css: require("./pack.css.js").toString().split("\n").slice(1, -1).filter(function (line) {
+        if (/^\/\//.test(line)) {
+            return false;
+        }
+        return true;
+    }).join("\n"),
+    getTemplates: function()
+    {
+        require("./wrappers/console");
+        require("./wrappers/viewer");
+
+        return [
+            // First: Match by node.meta.renderer
+            require("./structures/trace"),
+            require("./structures/table"),
+
+            // Second: Utility messages matched by various specific criteria
+            require("./util/trimmed"),
+
+            // Third: Match by node.type
+            require("./primitives/text"),
+            require("./primitives/constant"),
+            require("./primitives/array"),
+            require("./primitives/map"),
+            require("./primitives/reference"),
+            require("./primitives/dictionary"),
+
+            // Last: Catch any nodes that did not match above
+            require("./primitives/unknown")
+        ];
+    }
+});
+
+},{"../pack-helper":29,"./pack.css.js":15,"./primitives/array":17,"./primitives/constant":18,"./primitives/dictionary":19,"./primitives/map":20,"./primitives/reference":21,"./primitives/text":22,"./primitives/unknown":23,"./structures/table":24,"./structures/trace":25,"./util/trimmed":26,"./wrappers/console":27,"./wrappers/viewer":28}],17:[function(require,module,exports){
+
+var PACK = require("../pack");
+
+PACK.initTemplate(require, exports, module, {
+
+    type: "array",
+
+    initRep: function(DOMPLATE, helpers)
+    {
+        with(DOMPLATE.tags)
+        {
+            return DOMPLATE.domplate({
+    
+                VAR_label: "array",
+    
+                CONST_Normal: "tag",
+                CONST_Short: "shortTag",
+                CONST_Collapsed: "collapsedTag",
+        
+                tag:
+                    SPAN({"class": PACK.__NS__+"array"}, SPAN("$VAR_label("),
+                        FOR("element", "$node,$CONST_Normal|elementIterator",
+                            DIV({"class": "element", "$expandable":"$element.expandable", "_elementObject": "$element", "onclick": "$onClick"},
+                                SPAN({"class": "value"},
+                                    TAG("$element.tag", {"element": "$element", "node": "$element.node"})
+                                ),
+                                IF("$element.more", SPAN({"class": "separator"}, ","))
+                            )
+                        ),
+                    SPAN(")")),
+        
+                collapsedTag:
+                    SPAN({"class": PACK.__NS__+"array"}, SPAN("$VAR_label("),
+                        SPAN({"class": "collapsed"}, "... $node|getElementCount ..."),
+                    SPAN(")")),
+        
+                shortTag:
+                    SPAN({"class": PACK.__NS__+"array"}, SPAN("$VAR_label("),
+                        FOR("element", "$node,$CONST_Short|elementIterator",
+                            SPAN({"class": "element"},
+                                SPAN({"class": "value"},
+                                    TAG("$element.tag", {"element": "$element", "node": "$element.node"})
+                                ),
+                                IF("$element.more", SPAN({"class": "separator"}, ","))
+                            )
+                        ),
+                    SPAN(")")),
+        
+                expandableStub:
+                    TAG("$element,$CONST_Collapsed|getTag", {"node": "$element.node"}),
+                    
+                expandedStub:
+                    TAG("$tag", {"node": "$node", "element": "$element"}),
+        
+                moreTag:
+                    SPAN(" ... "),
+        
+                getElementCount: function(node) {
+                    if(!node.value) return 0;
+                    return node.value.length || 0;
+                },
+        
+                getTag: function(element, type) {
+                    if(type===this.CONST_Short) {
+                        return helpers.getTemplateForNode(element.node).shortTag;
+                    } else
+                    if(type===this.CONST_Normal) {
+                        if(element.expandable) {
+                            return this.expandableStub;
+                        } else {
+                            return helpers.getTemplateForNode(element.node).tag;
+                        }
+                    } else
+                    if(type===this.CONST_Collapsed) {
+                        var rep = helpers.getTemplateForNode(element.node);
+                        if(!rep.collapsedTag) {
+                            throw "no 'collapsedTag' property in rep: " + rep.toString();
+                        }
+                        return rep.collapsedTag;
+                    }
+                },
+        
+                elementIterator: function(node, type) {
+                    var elements = [];
+                    if(!node.value) return elements;
+                    for( var i=0 ; i<node.value.length ; i++ ) {
+                        
+                        var element = {
+                            "node": helpers.util.merge(node.value[i], {"wrapped": true}),
+                            "more": (i<node.value.length-1),
+                            "expandable": this.isExpandable(node.value[i])
+                        };
+        
+                        if(i>2 && type==this.CONST_Short) {
+                            element["tag"] = this.moreTag;
+                        } else {
+                            element["tag"] = this.getTag(element, type);
+                        }
+        
+                        elements.push(element);
+        
+                        if(i>2 && type==this.CONST_Short) {
+                            elements[elements.length-1].more = false;
+                            break;
+                        }
+                    }
+                    return elements;
+                },
+        
+                isExpandable: function(node) {
+                    return (node.type=="reference" ||
+                            node.type=="dictionary" ||
+                            node.type=="map" ||
+                            node.type=="array");
+                },
+                
+                onClick: function(event) {
+                    if (!helpers.util.isLeftClick(event)) {
+                        return;
+                    }
+                    var row = helpers.util.getAncestorByClass(event.target, "element");
+                    if(helpers.util.hasClass(row, "expandable")) {
+                        this.toggleRow(row);
+                    }
+                    event.stopPropagation();
+                },
+                
+                toggleRow: function(row)
+                {
+                    var valueElement = helpers.util.getElementByClass(row, "value");
+                    if (helpers.util.hasClass(row, "expanded"))
+                    {
+                        helpers.util.removeClass(row, "expanded");
+                        this.expandedStub.replace({
+                            "tag": this.expandableStub,
+                            "element": row.elementObject,
+                            "node": row.elementObject.node
+                        }, valueElement);
+                    } else {
+                        helpers.util.setClass(row, "expanded");
+                        this.expandedStub.replace({
+                            "tag": helpers.getTemplateForNode(row.elementObject.node).tag,
+                            "element": row.elementObject,
+                            "node": row.elementObject.node
+                        }, valueElement);
+                    }
+                }        
+            });
+        }  
+    }
+});
+
+},{"../pack":16}],18:[function(require,module,exports){
+
+var PACK = require("../pack");
+
+PACK.initTemplate(require, exports, module, {
+
+    type: "constant",
+
+    initRep: function(DOMPLATE, helpers)
+    {
+        with(DOMPLATE.tags)
+        {
+            return DOMPLATE.domplate({
+
+                tag: SPAN({"class": PACK.__NS__+"constant"},
+                          "$node.value"),
+
+                shortTag: SPAN({"class": PACK.__NS__+"constant"},
+                               "$node.value")
+            });
+        }        
+    }
+});
+
+},{"../pack":16}],19:[function(require,module,exports){
+
+var PACK = require("../pack");
+
+PACK.initTemplate(require, exports, module, {
+
+    type: "dictionary",
+
+    initRep: function(DOMPLATE, helpers)
+    {
+        with(DOMPLATE.tags)
+        {
+            return DOMPLATE.domplate({
+        
+                CONST_Normal: "tag",
+                CONST_Short: "shortTag",
+                CONST_Collapsed: "collapsedTag",
+        
+                tag:
+                    SPAN({"class": PACK.__NS__+"dictionary"}, SPAN("$node|getLabel("),
+                        FOR("member", "$node,$CONST_Normal|dictionaryIterator",
+                            DIV({"class": "member", "$expandable":"$member.expandable", "_memberObject": "$member", "onclick": "$onClick"},
+                                SPAN({"class": "name", "decorator": "$member|getMemberNameDecorator"}, "$member.name"),
+                                SPAN({"class": "delimiter"}, ":"),
+                                SPAN({"class": "value"},
+                                    TAG("$member.tag", {"member": "$member", "node": "$member.node"})
+                                ),
+                                IF("$member.more", SPAN({"class": "separator"}, ","))
+                            )
+                        ),
+                    SPAN(")")),
+        
+                shortTag:
+                    SPAN({"class": PACK.__NS__+"dictionary"}, SPAN("$node|getLabel("),
+                        FOR("member", "$node,$CONST_Short|dictionaryIterator",
+                            SPAN({"class": "member"},
+                                SPAN({"class": "name"}, "$member.name"),
+                                SPAN({"class": "delimiter"}, ":"),
+                                SPAN({"class": "value"},
+                                    TAG("$member.tag", {"member": "$member", "node": "$member.node"})
+                                ),
+                                IF("$member.more", SPAN({"class": "separator"}, ","))
+                            )
+                        ),
+                    SPAN(")")),
+        
+                collapsedTag:
+                    SPAN({"class": PACK.__NS__+"dictionary"}, SPAN("$node|getLabel("),
+                        SPAN({"class": "collapsed"}, "... $node|getMemberCount ..."),
+                    SPAN(")")),
+        
+                expandableStub:
+                    TAG("$member,$CONST_Collapsed|getTag", {"node": "$member.node"}),
+                    
+                expandedStub:
+                    TAG("$tag", {"node": "$node", "member": "$member"}),
+        
+                moreTag:
+                    SPAN({"class": "more"}, " ... "),
+                
+                getLabel: function(node) {
+                    return "dictionary";
+                },
+                
+                getMemberNameDecorator: function(member) {
+                    return "";
+                },
+                
+                getMemberCount: function(node) {
+                    if(!node.value) return 0;
+                    var count = 0;
+                    for( var name in node.value ) {
+                        count++;
+                    }
+                    return count;
+                },
+                
+                getTag: function(member, type) {
+                    if(type===this.CONST_Short) {
+                        return helpers.getTemplateForNode(member.node).shortTag;
+                    } else
+                    if(type===this.CONST_Normal) {
+                        if(member.expandable) {
+                            return this.expandableStub;
+                        } else {
+                            return helpers.getTemplateForNode(member.node).tag;
+                        }
+                    } else
+                    if(type===this.CONST_Collapsed) {
+                        var rep = helpers.getTemplateForNode(member.node);
+                        if(!rep.collapsedTag) {
+                            throw "no 'collapsedTag' property in rep: " + rep.toString();
+                        }
+                        return rep.collapsedTag;
+                    }
+                },
+                
+                dictionaryIterator: function(node, type) {
+                    var members = [];
+                    if(!node.value || node.value.length==0) return members;
+                    for( var name in node.value ) {
+        
+                        var member = {
+                            "name": name,
+                            "node": helpers.util.merge(node.value[name], {"wrapped": true}),
+                            "more": true,
+                            "expandable": this.isExpandable(node.value[name])
+                        };
+        
+                        if(members.length>1 && type==this.CONST_Short) {
+                            member["tag"] = this.moreTag;
+                        } else {
+                            member["tag"] = this.getTag(member, type);
+                        }
+                        
+                        members.push(member);
+        
+                        if(members.length>2 && type==this.CONST_Short) {
+                            break;
+                        }
+                    }
+                    if(members.length>0) {
+                        members[members.length-1]["more"] = false;
+                    }
+                    
+                    return members;
+                },
+                
+                isExpandable: function(node) {
+                    return (node.type=="reference" ||
+                            node.type=="dictionary" ||
+                            node.type=="map" ||
+                            node.type=="array");
+                },
+                
+                onClick: function(event) {
+                    if (!helpers.util.isLeftClick(event)) {
+                        return;
+                    }
+                    var row = helpers.util.getAncestorByClass(event.target, "member");
+                    if(helpers.util.hasClass(row, "expandable")) {
+                        this.toggleRow(row);
+                    }
+                    event.stopPropagation();
+                },
+                
+                toggleRow: function(row)
+                {
+                    var valueElement = helpers.util.getElementByClass(row, "value");
+                    if (helpers.util.hasClass(row, "expanded"))
+                    {
+                        helpers.util.removeClass(row, "expanded");
+                        this.expandedStub.replace({
+                            "tag": this.expandableStub,
+                            "member": row.memberObject,
+                            "node": row.memberObject.node
+                        }, valueElement);
+                    } else {
+                        helpers.util.setClass(row, "expanded");
+                        this.expandedStub.replace({
+                            "tag": helpers.getTemplateForNode(row.memberObject.node).tag,
+                            "member": row.memberObject,
+                            "node": row.memberObject.node
+                        }, valueElement);
+                    }
+                }
+            });
+        }        
+    }
+});
+
+},{"../pack":16}],20:[function(require,module,exports){
+
+var PACK = require("../pack");
+
+PACK.initTemplate(require, exports, module, {
+
+    type: "map",
+
+    initRep: function(DOMPLATE, helpers)
+    {
+        with(DOMPLATE.tags)
+        {
+            return DOMPLATE.domplate({
+                
+                VAR_label: "map",
+        
+                CONST_Normal: "tag",
+                CONST_Short: "shortTag",
+        
+                tag:
+                    SPAN({"class": PACK.__NS__+"map", "_nodeObject": "$node"}, SPAN("$VAR_label("),
+                        FOR("pair", "$node,$CONST_Normal|mapIterator",
+                            DIV({"class": "pair"},
+                                TAG("$pair.key.tag", {"node": "$pair.key.node"}),
+                                SPAN({"class": "delimiter"}, "=>"),
+                                SPAN({
+                                        "class": "value",
+                                        "onclick": "$onClick",
+                                        "_nodeObject": "$pair.value.node",
+                                        "_expandable": "$pair.value.expandable"
+                                    },
+                                    TAG("$pair.value.tag", {"node": "$pair.value.node"})
+                                    ),
+                                IF("$pair.more", SPAN({"class": "separator"}, ","))
+                            )
+                        ),
+                    SPAN(")")),
+        
+                shortTag:
+                    SPAN({"class": PACK.__NS__+"map", "_nodeObject": "$node"}, SPAN("$VAR_label("),
+                        FOR("pair", "$node,$CONST_Short|mapIterator",
+                            SPAN({"class": "pair"},
+                                TAG("$pair.key.tag", {"node": "$pair.key.node"}),
+                                SPAN({"class": "delimiter"}, "=>"),
+                                SPAN({
+                                        "class": "value",
+                                        "onclick": "$onClick",
+                                        "_nodeObject": "$pair.value.node",
+                                        "_expandable": "$pair.value.expandable"
+                                    },
+                                    TAG("$pair.value.tag", {"node": "$pair.value.node"})
+                                    ),
+                                IF("$pair.more", SPAN({"class": "separator"}, ","))
+                            )
+                        ),
+                    SPAN(")")),
+        
+                collapsedTag: 
+                    SPAN({"class": PACK.__NS__+"map"}, SPAN("$VAR_label("),
+                        SPAN({"class": "collapsed"}, "... $node|getItemCount ..."),
+                    SPAN(")")),
+        
+                moreTag:
+                    SPAN(" ... "),   
+                
+                getItemCount: function(node) {
+                    if(!node.value) return 0;
+                    return node.value.length;
+                },
+
+                onClick: function(event) {
+                    var row = helpers.util.getAncestorByClass(event.target, "value");
+                    if(row.expandable) {
+                        this.toggleRow(row);
+                    }
+                    event.stopPropagation();
+                },
+                
+                toggleRow: function(row)
+                {
+                    var node = null;
+                    if (helpers.util.hasClass(row, "expanded")) {
+                        node = this.collapsedTag.replace({
+                            "node": row.nodeObject
+                        }, row);
+                        helpers.util.removeClass(row, "expanded");
+                    } else {
+                        var valueRep = helpers.getTemplateForNode(row.nodeObject).tag;
+                        node = valueRep.replace({
+                            "node": row.nodeObject
+                        }, row);
+                        helpers.util.setClass(row, "expanded");
+                    }
+                },
+        
+                mapIterator: function(node, type) {
+                    var pairs = [];
+                    if(!node.value) return pairs;
+                    for( var i=0 ; i<node.value.length ; i++ ) {
+
+                        var valueRep = getTag(helpers.getTemplateForNode(node.value[i][1]), type, node.value[i][1]);
+        
+                        if(i>2 && type==this.CONST_Short) {
+                            valueRep = this.moreTag;
+                        }
+
+                        pairs.push({
+                            "key": {
+                                "tag": getTag(helpers.getTemplateForNode(node.value[i][0]), type, node.value[i][0]),
+                                "node": helpers.util.merge(node.value[i][0], {"wrapped": true})
+                            },
+                            "value": {
+                                "tag": valueRep,
+                                "node": helpers.util.merge(node.value[i][1], {"wrapped": true}),
+                                "expandable": isCollapsible(node.value[i][1])
+                            },
+                            "more": (i<node.value.length-1)
+                        });
+        
+                        if(i>2 && type==this.CONST_Short) {
+                            pairs[pairs.length-1].more = false;
+                            break;
+                        }
+                    }
+                    return pairs;
+                }
+            });
+        }        
+    }
+});
+
+function isCollapsible (node) {
+    return (node.type=="reference" ||
+            node.type=="dictionary" ||
+            node.type=="map" ||
+            node.type=="array");
+}    
+
+function getTag (rep, type, node) {
+    if (node.meta.collapsed) {
+        if (isCollapsible(node)) {
+            type = "collapsedTag";
+        } else {
+            type = "shortTag";
+        }
+    }
+    if(!rep[type]) {
+        if(type=="shortTag") {
+            return rep.tag;
+        }
+        throw new Error("Rep does not have tag of type: " + type);
+    }
+    return rep[type];
+}
+
+},{"../pack":16}],21:[function(require,module,exports){
+
+var PACK = require("../pack");
+
+PACK.initTemplate(require, exports, module, {
+
+    type: "reference",
+
+    initRep: function(DOMPLATE, helpers)
+    {
+        with(DOMPLATE.tags)
+        {
+            return DOMPLATE.domplate({
+        
+                CONST_Normal: "tag",
+                CONST_Short: "shortTag",
+                CONST_Collapsed: "collapsedTag",
+        
+                tag:
+                    SPAN({"class": PACK.__NS__+"reference"},
+                    TAG("$node,$CONST_Normal|getTag", {"node": "$node|getInstanceNode"})),
+                
+                shortTag:
+                    SPAN({"class": PACK.__NS__+"reference"},
+                    TAG("$node,$CONST_Collapsed|getTag", {"node": "$node|getInstanceNode"})),
+        
+                collapsedTag:
+                    SPAN({"class": PACK.__NS__+"reference"},
+                    TAG("$node,$CONST_Collapsed|getTag", {"node": "$node|getInstanceNode"})),
+                    
+                getTag: function(node, type) {
+                    return helpers.getTemplateForNode(this.getInstanceNode(node))[type];
+                },
+
+                getInstanceNode: function(node) {
+                    return node.getInstance();
+                }
+            });
+        }        
+    }
+});
+
+},{"../pack":16}],22:[function(require,module,exports){
+
+var PACK = require("../pack");
+
+PACK.initTemplate(require, exports, module, {
+
+    type: "text",
+
+    initRep: function(DOMPLATE, helpers)
+    {
+        with(DOMPLATE.tags)
+        {
+            return DOMPLATE.domplate({
+        
+                tag: SPAN({"class": PACK.__NS__+"text"},
+                          FOR("line", "$node.value|lineIterator", "$line.value",
+                              IF("$line.more", BR())
+                          )
+                     ),
+                
+                shortTag: SPAN({"class": PACK.__NS__+"text"}, "$node|getValue"),
+        
+
+                getValue: function(node) {
+                    if (!node.parentNode || (node.meta && typeof node.meta["string.trim.enabled"] !== "undefined" && node.meta["string.trim.enabled"]===false))
+                        return node.value;
+                    else
+                        return this.cropString(node.value);
+                },
+
+                cropString: function(text, limit){
+                    text = text + "";
+                    limit = limit || 50;
+                    var halfLimit = limit / 2;
+                    if (text.length > limit) {
+                        return this.escapeNewLines(text.substr(0, halfLimit) + "..." + text.substr(text.length - halfLimit));
+                    } else {
+                        return this.escapeNewLines(text);
+                    }
+                },
+                
+                escapeNewLines: function(value) {
+                    return value.replace(/\r/g, "\\r").replace(/\n/g, "\\n");
+                },
+                
+                lineIterator: function(value) {
+                    var parts = (""+value).replace(/\r/g, "\\r").split("\n");
+                    var lines = [];
+                    for( var i=0 ; i<parts.length ; i++ ) {
+                        lines.push({"value": parts[i], "more": (i<parts.length-1)});
+                    }
+                    return lines;
+                }
+            });
+        }        
+    }
+});
+
+},{"../pack":16}],23:[function(require,module,exports){
+
+var PACK = require("../pack");
+
+exports.supportsObjectGraphNode = function(node)
+{
+    return true;
+};
+
+PACK.initTemplate(require, exports, module, {
+
+    initRep: function(DOMPLATE, helpers)
+    {
+        with(DOMPLATE.tags)
+        {
+            return DOMPLATE.domplate({
+        
+                tag: SPAN({"class": PACK.__NS__+"unknown"},
+                          "$node.value"),
+                
+                shortTag: SPAN({"class": PACK.__NS__+"unknown"},
+                               "$node.value")
+
+            });
+        }        
+    }
+});
+
+},{"../pack":16}],24:[function(require,module,exports){
+
+var PACK = require("../pack");
+
+exports.supportsObjectGraphNode = function(node)
+{
+    return (node.meta && typeof node.meta.renderer !== "undefined" && node.meta.renderer === "structures/table")?true:false;
+};
+
+PACK.initTemplate(require, exports, module, {
+    __name: "table",
+    
+    VAR_hideShortTagOnExpand: false,
+    
+    initRep: function(DOMPLATE, helpers)
+    {
+        with(DOMPLATE.tags)
+        {
+            return DOMPLATE.domplate({
+
+                VAR_hideShortTagOnExpand: false,
+
+                tag:
+                    DIV({"class": PACK.__NS__+"structures-table"},
+                        TABLE({"cellpadding": 3, "cellspacing": 0},
+                            TBODY(
+                                TR({"class":"$node|getHeaderClass"},
+                                    FOR("column", "$node|getHeaders",
+                                        TH({"class": "header"}, TAG("$column.tag", {"node": "$column.node"}))
+                                    ),
+                                    IF("$node|hasNoHeader",
+                                        TH()    // needed to fix gecko bug that does not render table border if empty <tr/> in table
+                                    )
+                                ),
+                                FOR("row", "$node|getRows",
+                                    TR(
+                                        FOR("cell", "$row|getCells",
+                                            TD({"class": "cell", "_cellNodeObj": "$cell.node", "onclick":"$onCellClick"},
+                                                TAG("$cell.tag", {"node": "$cell.node"}))
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    ),
+
+                shortTag:
+                    SPAN({"class": PACK.__NS__+"structures-table"}, TAG("$node|getTitleTag", {"node": "$node|getTitleNode"})),
+
+                getTitleTag: function(node) {
+                    var rep = helpers.getTemplateForNode(this.getTitleNode(node));
+                    return rep.shortTag || rep.tag;
+                },
+
+                getTitleNode: function(node) {
+                    return helpers.util.merge(node.compact().title, {"wrapped": false});
+                },
+                
+                getHeaderClass: function(node)
+                {
+                    if (this.hasNoHeader(node)) {
+                        return "hide";
+                    } else {
+                        return "";
+                    }
+                },
+
+                hasNoHeader: function(node) {
+                    var header = node.compact().header;
+                    if(!header || header.type!="array") {
+                        return true;
+                    }
+                    return false;
+                },
+
+                getHeaders: function(node) {
+                    var header = node.compact().header;
+                    if(!header || header.type!="array") {
+                        return [];
+                    }
+                    var items = [];
+                    for (var i = 0; i < header.value.length; i++) {
+                        var rep = helpers.getTemplateForNode(header.value[i]);
+                        items.push({
+                            "node": helpers.util.merge(header.value[i], {"wrapped": false}),
+                            "tag": rep.shortTag || rep.tag
+                        });
+                    }
+                    return items;
+                },
+        
+                getRows: function(node) {
+                    var data = node.compact().data;
+                    if(!data || data.type!="array") {
+                        return [];
+                    }
+                    return data.value;
+                },
+        
+                getCells: function(node) {
+                    var items = [];
+                    if(node.value) {
+                        for (var i = 0; i < node.value.length; i++) {
+                            var rep = helpers.getTemplateForNode(node.value[i]);
+                            items.push({
+                                "node": helpers.util.merge(node.value[i], {"wrapped": false}),
+                                "tag": rep.shortTag || rep.tag
+                            });
+                        }
+                    } else
+                    if(node.meta && node.meta['encoder.trimmed']) {
+                        var rep = helpers.getTemplateForNode(node);
+                        items.push({
+                            "node": helpers.util.merge(node, {"wrapped": false}),
+                            "tag": rep.shortTag || rep.tag
+                        });
+                    }
+                    return items;
+                },
+        
+                onCellClick: function(event) {
+                    event.stopPropagation();
+
+                    //var masterRow = this._getMasterRow(event.target);
+                    //masterRow.messageObject
+
+                    var tag = event.target;
+                    while(tag.parentNode) {
+                        if (tag.cellNodeObj) {
+                            break;
+                        }
+                        tag = tag.parentNode;
+                    }
+                    helpers.dispatchEvent('inspectNode', [event, {
+                        //"message": masterRow.messageObject,
+                        "args": {"node": tag.cellNodeObj}
+                    }]);
+                },
+
+                _getMasterRow: function(row)
+                {
+                    while(true) {
+                        if(!row.parentNode) {
+                            return null;
+                        }
+                        if(helpers.util.hasClass(row, PACK.__NS__ + "console-message")) {
+                            break;
+                        }
+                        row = row.parentNode;
+                    }
+                    return row;
+                }                
+            });
+        }        
+    }
+});
+
+},{"../pack":16}],25:[function(require,module,exports){
+
+var PACK = require("../pack");
+
+exports.supportsObjectGraphNode = function(node)
+{
+    return (node.meta && typeof node.meta.renderer !== "undefined" && node.meta.renderer === "structures/trace")?true:false;
+};
+
+PACK.initTemplate(require, exports, module, {
+    __name: "trace",
+
+    VAR_hideShortTagOnExpand: false,
+
+    initRep: function(DOMPLATE, helpers)
+    {
+        with(DOMPLATE.tags)
+        {
+            return DOMPLATE.domplate({
+
+                VAR_hideShortTagOnExpand: false,
+                
+                tag:
+                    DIV({"class": PACK.__NS__+"structures-trace"},
+                        TABLE({"cellpadding": 3, "cellspacing": 0},
+                            TBODY(
+                                TR(
+                                    TH({"class": "header-file"}, "File"),
+                                    TH({"class": "header-line"}, "Line"),
+                                    TH({"class": "header-inst"}, "Instruction")
+                                ),
+                                FOR("frame", "$node|getCallList",
+                                    TR({"_frameNodeObj": "$frame.node"},
+                                        TD({"class": "cell-file", "onclick":"$onFileClick"}, "$frame.file"),
+                                        TD({"class": "cell-line", "onclick":"$onFileClick"}, "$frame.line"),
+                                        TD({"class": "cell-inst"},
+                                            DIV("$frame|getFrameLabel(",
+                                                FOR("arg", "$frame|argIterator",
+                                                    DIV({"class": "arg", "_argNodeObj": "$arg.node", "onclick":"$onArgClick"},
+                                                        TAG("$arg.tag", {"node": "$arg.node"}),
+                                                        IF("$arg.more", SPAN({"class": "separator"}, ","))
+                                                    )
+                                                ),
+                                            ")")
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    ),
+        
+                shortTag:
+                    SPAN({"class": PACK.__NS__+"structures-trace"}, TAG("$node|getCaptionTag", {"node": "$node|getCaptionNode"})),
+        
+        
+                onFileClick: function(event) {
+                    event.stopPropagation();
+                    var node = event.target.parentNode.frameNodeObj,
+                        frame = node.compact();
+                    if(!frame.file || !frame.line) {
+                        return;
+                    }
+                    var args = {
+                        "file": frame.file.value,
+                        "line": frame.line.value
+                    };
+                    if(args["file"] && args["line"]) {
+                        helpers.dispatchEvent('inspectFile', [event, {
+                            "message": node.getObjectGraph().message,
+                            "args": args
+                        }]);
+                    }
+                },
+        
+                onArgClick: function(event) {
+                    event.stopPropagation();
+                    var tag = event.target;
+                    while(tag.parentNode) {
+                        if(tag.argNodeObj) {
+                            break;
+                        }
+                        tag = tag.parentNode;
+                    }
+                    helpers.dispatchEvent('inspectNode', [event, {
+                        "message": tag.argNodeObj.getObjectGraph().message,
+                        "args": {"node": tag.argNodeObj}
+                    }]);
+                },
+        
+                getCaptionTag: function(node) {
+                    var rep = helpers.getTemplateForNode(this.getCaptionNode(node));
+                    return rep.shortTag || rep.tag;
+                },
+        
+                getCaptionNode: function(node) {
+                    if (node.type == "map")
+                        return helpers.util.merge(node.compact().title, {"wrapped": false});
+                    if (node.type == "dictionary")
+                        return helpers.util.merge(node.value.title, {"wrapped": false});
+                },
+
+                getTrace: function(node) {
+                    if (node.type == "map")
+                       return node.compact().trace.value;
+                    if (node.type == "dictionary")
+                       return node.value.trace.value;
+                    helpers.logger.error("Cannot get trace from node", node);
+                },
+
+                postRender: function(node)
+                {
+;debugger;                    
+/*                    
+                    var node = this._getMasterRow(node);
+                    if (node.messageObject && typeof node.messageObject.postRender == "object")
+                    {
+                        if (typeof node.messageObject.postRender.keeptitle !== "undefined")
+                        {
+                            node.setAttribute("keeptitle", node.messageObject.postRender.keeptitle?"true":"false");
+                        }
+                    }
+*/                    
+                },
+
+                getCallList: function(node) {
+
+                    // TODO: Do this in an init method
+/*
+                    if (node.messageObject && typeof node.messageObject.postRender == "object") {
+                        if (typeof node.messageObject.postRender.keeptitle !== "undefined") {
+                            node.setAttribute("keeptitle", "true");
+                        }
+                    }                    
+*/
+                    try {
+                        var list = [];
+                        this.getTrace(node).forEach(function(node) {
+                            frame = node.compact();
+                            list.push({
+                                'node': node,
+                                'file': (frame.file)?frame.file.value:"",
+                                'line': (frame.line)?frame.line.value:"",
+                                'class': (frame["class"])?frame["class"].value:"",
+                                'function': (frame["function"])?frame["function"].value:"",
+                                'type': (frame.type)?frame.type.value:"",
+                                'args': (frame.args)?frame.args.value:false
+                            });
+                        });
+        
+                        // Now that we have all call events, lets see if we can shorten the filenames.
+                        // This only works for unix filepaths for now.
+                        // TODO: Get this working for windows filepaths as well.
+                        try {
+                            if (list[0].file.substr(0, 1) == '/') {
+                                var file_shortest = list[0].file.split('/');
+                                var file_original_length = file_shortest.length;
+                                for (var i = 1; i < list.length; i++) {
+                                    var file = list[i].file.split('/');
+                                    for (var j = 0; j < file_shortest.length; j++) {
+                                        if (file_shortest[j] != file[j]) {
+                                            file_shortest.splice(j, file_shortest.length - j);
+                                            break;
+                                        }
+                                    }
+                                }
+                                if (file_shortest.length > 2) {
+                                    if (file_shortest.length == file_original_length) {
+                                        file_shortest.pop();
+                                    }
+                                    file_shortest = file_shortest.join('/');
+                                    for (var i = 0; i < list.length; i++) {
+                                        list[i].file = '...' + list[i].file.substr(file_shortest.length);
+                                    }
+                                }
+                            }
+                        } catch (e) {}
+        
+                        return list;
+                    } catch(e) {
+                        helpers.logger.error(e);
+                    }
+                },
+        
+                getFrameLabel: function(frame)
+                {
+                    try {
+                        if (frame['class']) {
+                            if (frame['type'] == 'throw') {
+                                return 'throw ' + frame['class'];
+                            } else
+                            if (frame['type'] == 'trigger') {
+                                return 'trigger_error';
+                            } else {
+                                return frame['class'] + frame['type'] + frame['function'];
+                            }
+                        }
+                        return frame['function'];
+                    } catch(e) {
+                        helpers.logger.error(e);
+                    }
+                },
+        
+                argIterator: function(frame)
+                {
+                    try {
+                        if(!frame.args) {
+                            return [];
+                        }
+                        var items = [];
+                        for (var i = 0; i < frame.args.length; i++) {
+                            items.push({
+                                "node": helpers.util.merge(frame.args[i], {"wrapped": true}),
+                                "tag": helpers.getTemplateForNode(frame.args[i]).shortTag,
+                                "more": (i < frame.args.length-1)
+                            });
+                        }
+                        return items;
+                    } catch(e) {
+                        helpers.logger.error(e);
+                    }
+                }
+            });
+        }        
+    }
+});
+
+},{"../pack":16}],26:[function(require,module,exports){
+
+var PACK = require("../pack");
+
+exports.supportsObjectGraphNode = function(node)
+{
+    return (node.meta && node.meta["encoder.trimmed"] && !node.meta["encoder.trimmed.partial"]);
+};
+
+PACK.initTemplate(require, exports, module, {
+
+    initRep: function(DOMPLATE, helpers)
+    {
+        with(DOMPLATE.tags)
+        {
+            return DOMPLATE.domplate({
+        
+                tag:
+                    SPAN({"class": PACK.__NS__+"util-trimmed"},
+                        "$node|getNotice"
+                    ),
+
+                collapsedTag: 
+                    SPAN({"class": PACK.__NS__+"util-trimmed"},
+                        "$node|getNotice"
+                    ),
+
+                getNotice: function(node) {
+                    return node.meta["encoder.notice"];
+                }
+            });
+        }        
+    }
+});
+
+},{"../pack":16}],27:[function(require,module,exports){
+
+var PACK = require("../pack");
+
+exports.supportsObjectGraphNode = function(node)
+{
+    return false;
+};
+
+PACK.initTemplate(require, exports, module, {
+    __name: "console",
+    
+    initRep: function(DOMPLATE, helpers)
+    {
+        with(DOMPLATE.tags)
+        {
+            return DOMPLATE.domplate({
+
+                CONST_Normal: "tag",
+                CONST_Short: "shortTag",
+        
+                tag:
+                    DIV(
+                        {
+                            "class": "$message|_getMessageClass",
+                            "_messageObject": "$message",
+                            "onmouseover":"$onMouseOver",
+                            "onmousemove":"$onMouseMove",
+                            "onmouseout":"$onMouseOut",
+                            "onclick":"$onClick",
+                            "expandable": "$message|_isExpandable",
+                            "expanded": "false",
+                            "_templateObject": "$message|_getTemplateObject"
+                        },
+                        DIV(
+                            {
+                                "class": "$message|_getHeaderClass",
+                                "hideOnExpand": "$message|_getHideShortTagOnExpand"
+                            },
+                            DIV({"class": "expander"}),
+                            DIV({"class": "actions"},
+                                DIV({"class": "inspect", "onclick":"$onClick"}),
+                                DIV({"class": "file $message|_getFileActionClass", "onclick":"$onClick"})
+                            ),
+                            SPAN(
+                                {"class": "summary"},
+                                SPAN({"class": "label"},    // WORKAROUND: IF does not work at top level due to a bug
+                                    IF("$message|_hasLabel", SPAN("$message|_getLabel"))
+                                ),
+                                TAG("$message,$CONST_Short|_getTag", {
+                                    "node": "$message|_getValue",
+                                    "message": "$message"
+                                })
+                            ),
+                            SPAN({"class": "fileline"}, 
+                                DIV(  // WORKAROUND: IF does not work at top level due to a bug
+                                    IF("$message|_hasLabel", DIV({"class": "label"}, "$message|_getLabel"))
+                                ),
+                                DIV("$message|_getFileLine"))
+                        ),
+                        DIV({"class": "$message|_getBodyClass"})
+                    ),
+
+                 groupNoMessagesTag:
+                    DIV({"class": "group-no-messages"}, "No Messages"),    
+
+                _getTemplateObject: function() {
+                    return this;
+                },
+        
+                _getMessageClass: function(message) {
+ 
+                    // TODO: Move this into more of an 'init' method
+                    message.postRender = {};
+                    
+                    if(typeof message.meta["group.start"] != "undefined") {
+                        return PACK.__NS__ + "console-message " + PACK.__NS__ + "console-message-group";
+                    } else {
+                        return PACK.__NS__ + "console-message";
+                    }
+                },
+        
+                _getHeaderClass: function(message) {
+                    if(!message.meta || !message.meta["priority"]) {
+                        return "header";
+                    }
+                    return "header header-priority-" + message.meta["priority"];
+                },
+        
+                _getBodyClass: function(message) {
+                    if(!message.meta || !message.meta["priority"]) {
+                        return "body";
+                    }
+                    return "body body-priority-" + message.meta["priority"];
+                },
+                
+                _getFileLine: function(message) {
+                    if(!message.meta) {
+                        return "";
+                    }
+                    var str = [];
+                    if(message.meta["file"]) {
+                        str.push(helpers.util.cropStringLeft(message.meta["file"], 75));
+                    }
+                    if(message.meta["line"]) {
+                        str.push("@");
+                        str.push(message.meta["line"]);
+                    }
+                    return str.join(" ");
+                },
+        
+                // TODO: Need better way to set/determine if tag should be hidden
+                _getHideShortTagOnExpand: function(message) {
+                    if(typeof message.meta["group.start"] != "undefined") {
+                        return "false";
+                    }
+                    var rep = this._getRep(message);
+                    if(rep.VAR_hideShortTagOnExpand===false) {
+                        return "false";
+                        
+                    }
+                    var node = message.og.getOrigin();
+                    if(node.type=="reference") {
+                        node = node.getInstance();
+                        if(node.meta["lang.type"]=="exception") {
+                            return "false";
+                        }
+                    }
+                    return "true";
+                },
+        
+                _isExpandable: function(message) {
+        /*
+                    switch(message.getObjectGraph().getOrigin().type) {
+                        case "array":
+                        case "reference":
+                        case "dictionary":
+                        case "map":
+                        case "text":
+                            break;
+                    }
+        */            
+                    return true;
+                },
+                
+                _getFileActionClass: function(message) {
+                    if(message.meta["file"]) return "";
+                    return "hidden";
+                },
+        
+                _getTag: function(message, type)
+                {
+                    var rep = this._getRep(message);
+                    if(type==this.CONST_Short) {
+                        if(rep.shortTag) {
+                            return rep.shortTag;
+                        }
+                    }
+                    return rep.tag;
+                },
+                
+                _getRep: function(message)
+                {
+                    return message.template;
+/*
+                    var rep;
+                    
+                    if(message.meta && message.meta["renderer"]) {
+                        rep = helpers.getTemplateForId(message.meta["renderer"]);
+                    } else {
+                        rep = helpers.getTemplateForNode(message.getObjectGraph().getOrigin());
+                    }
+                    return rep;
+*/
+                },
+        
+                _hasLabel: function(message)
+                {
+                    if(message.meta && typeof message.meta["label"] != "undefined") {
+                        return true;
+                    } else {
+                        return false;
+                    }
+                },
+        
+                _getLabel: function(message)
+                {
+                    if(this._hasLabel(message)) {
+                        return message.meta["label"];
+                    } else {
+                        return "";
+                    }
+                },
+        
+                _getValue: function(message)
+                {
+                    if(typeof message.meta["group.start"] != "undefined") {
+                        var node = message.og.getOrigin();
+                        node.meta["string.trim.enabled"] = false;
+                        return node;
+                    }
+                    else
+                        return message.og.getOrigin();
+                },
+        
+                onMouseMove: function(event)
+                {
+        /*            
+                    if(activeInfoTip) {
+                        var x = event.clientX, y = event.clientY;
+                        infoTipModule.showInfoTip(activeInfoTip, {
+                            showInfoTip: function() {
+                                return true;
+                            }
+                        }, event.target, x, y, event.rangeParent, event.rangeOffset);
+                    }
+        */            
+                },
+            
+                onMouseOver: function(event)
+                {
+                    // set a class on our logRow parent identifying this log row as fireconsole controlled
+                    // this is used for hover and selected styling
+                    //helpers.util.setClass(this._getMasterRow(event.target).parentNode, "logRow-" + PACK.__NS__ + "console-message");
+        
+                    if(helpers.util.getChildByClass(this._getMasterRow(event.target), "__no_inspect")) {
+                        return;
+                    }
+        
+                    // populate file/line info tip
+        /*            
+                    var meta = this._getMasterRow(event.target).repObject.meta;
+                    if(meta && (meta["fc.msg.file"] || meta["fc.msg.line"])) {
+                        activeInfoTip = event.target.ownerDocument.getElementsByClassName('infoTip')[0];
+                        this.fileLineInfoTipTag.replace({
+                            "file": meta["fc.msg.file"] || "?",
+                            "line": meta["fc.msg.line"] || "?"
+                        }, activeInfoTip);
+                    } else {
+                        activeInfoTip = null;
+                    }
+        */            
+                },
+            
+                onMouseOut: function(event)
+                {
+        //            if(activeInfoTip) {
+        //                infoTipModule.hideInfoTip(activeInfoTip);
+        //            }
+                },
+                
+                onClick: function(event)
+                {
+        //            if(this.util.getChildByClass(this._getMasterRow(event.target), "__no_inspect")) {
+        //                return;
+        //            }
+                    try {
+                        var masterRow = this._getMasterRow(event.target),
+                            headerTag = helpers.util.getChildByClass(masterRow, "header"),
+                            actionsTag = helpers.util.getChildByClass(headerTag, "actions"),
+                            summaryTag = helpers.util.getChildByClass(headerTag, "summary"),
+                            bodyTag = helpers.util.getChildByClass(masterRow, "body");
+
+                        var pointer = {
+                            x: event.clientX,
+                            y: event.clientY
+                        };
+                        var masterRect = {
+                            "left": headerTag.getBoundingClientRect().left-2,
+                            "top": headerTag.getBoundingClientRect().top-2,
+                            // actionsTag.getBoundingClientRect().left is 0 if actions tag not showing
+                            "right": actionsTag.getBoundingClientRect().left || headerTag.getBoundingClientRect().right,
+                            "bottom": headerTag.getBoundingClientRect().bottom+1
+                        };
+            
+                        if(pointer.x >= masterRect.left && pointer.x <= masterRect.right && pointer.y >= masterRect.top && pointer.y <= masterRect.bottom) {
+                            event.stopPropagation();
+                            
+                            if(masterRow.getAttribute("expanded")=="true") {
+            
+                                masterRow.setAttribute("expanded", "false");
+            
+                                helpers.dispatchEvent('contract', [event, {
+                                    "message": masterRow.messageObject,
+                                    "masterTag": masterRow,
+                                    "summaryTag": summaryTag,
+                                    "bodyTag": bodyTag
+                                }]);
+            
+                            } else {
+
+                                masterRow.setAttribute("expanded", "true");
+
+                                helpers.dispatchEvent('expand', [event, {
+                                    "message": masterRow.messageObject,
+                                    "masterTag": masterRow,
+                                    "summaryTag": summaryTag,
+                                    "bodyTag": bodyTag
+                                }]);
+
+                                if(!bodyTag.innerHTML) {
+                                    if(typeof masterRow.messageObject.meta["group.start"] != "undefined") {                                            
+                                        this.groupNoMessagesTag.replace({}, bodyTag, this);
+                                    } else {
+                                        this.expandForMasterRow(masterRow, bodyTag);
+                                    }
+                                    this.postRender(bodyTag);
+                                }
+                            }
+                        } else
+                        if(helpers.util.hasClass(event.target, "inspect")) {
+                            event.stopPropagation();
+                            helpers.dispatchEvent('inspectMessage', [event, {
+                                "message": masterRow.messageObject,
+                                "masterTag": masterRow,
+                                "summaryTag": summaryTag,
+                                "bodyTag": bodyTag,
+                                "args": {
+                                    "node": masterRow.messageObject.og.getOrigin()
+                                }
+                            }]);
+                        } else
+                        if(helpers.util.hasClass(event.target, "file")) {
+                            event.stopPropagation();
+                            var args = {
+                                "file": masterRow.messageObject.meta.file,
+                                "line": masterRow.messageObject.meta.line
+                            };
+                            if(args["file"] && args["line"]) {
+                                helpers.dispatchEvent('inspectFile', [event, {
+                                    "message": masterRow.messageObject,
+                                    "masterTag": masterRow,
+                                    "summaryTag": summaryTag,
+                                    "bodyTag": bodyTag,
+                                    "args": args
+                                }]);
+                            }
+            /*                
+                        } else {
+                            event.stopPropagation();
+                            helpers.dispatchEvent('click', [event, {
+                                "message": masterRow.messageObject,
+                                "masterTag": masterRow,
+                                "valueTag": valueTag,
+                                "bodyTag": bodyTag
+                            }]);
+            */
+                        }
+                    } catch(e) {
+                        helpers.logger.error(e);
+                    }
+                },
+
+                setCount: function(node, count)
+                {
+                    try {
+                        var masterRow = this._getMasterRow(node),
+                            headerTag = helpers.util.getChildByClass(masterRow, "header"),
+                            summaryTag = helpers.util.getChildByClass(headerTag, "summary");
+
+                        summaryTag.children[1].innerHTML += ' <span class="count">(' + count + ')</span>';
+
+                    } catch(e) {
+                        helpers.logger.error("Error setting count for node!: " + e);
+                    }                                                
+                },
+         
+                postRender: function(node)
+                {
+                    var node = this._getMasterRow(node);
+                    if (node.messageObject && typeof node.messageObject.postRender == "object")
+                    {
+                        if (typeof node.messageObject.postRender.keeptitle !== "undefined")
+                        {
+                            node.setAttribute("keeptitle", node.messageObject.postRender.keeptitle?"true":"false");
+                        }
+                    }
+                },
+
+                expandForMasterRow: function(masterRow, bodyTag) {
+                    masterRow.setAttribute("expanded", "true");
+
+                    masterRow.messageObject.render(bodyTag, "detail", masterRow.messageObject);
+
+/*
+                    var rep = this._getRep(masterRow.messageObject, this.CONST_Normal);
+                    rep.tag.replace({
+                        "node": masterRow.messageObject.getObjectGraph().getOrigin(),
+                        "message": masterRow.messageObject
+                    }, bodyTag, rep);
+*/
+                },
+        
+                _getMasterRow: function(row)
+                {
+                    while(true) {
+                        if(!row.parentNode) {
+                            return null;
+                        }
+                        if(helpers.util.hasClass(row, PACK.__NS__ + "console-message")) {
+                            break;
+                        }
+                        row = row.parentNode;
+                    }
+                    return row;
+                }
+            });
+        }        
+    }
+});
+
+exports.renderMessage = function(message, node, options, helpers)
+{
+    exports.getTemplate(helpers).tag.replace({"message": message}, node);
+}
+
+},{"../pack":16}],28:[function(require,module,exports){
+
+var PACK = require("../pack");
+
+exports.supportsObjectGraphNode = function(node)
+{
+    return false;
+};
+
+PACK.initTemplate(require, exports, module, {
+    __name: "viewer",
+    
+    initRep: function(DOMPLATE, helpers)
+    {
+        with(DOMPLATE.tags)
+        {
+            return DOMPLATE.domplate({
+
+                tag:
+                    DIV({
+                        "class": PACK.__NS__ + "viewer-harness"
+                    }, TAG("$message|_getTag", {
+                        "node": "$message|_getValue",
+                        "message": "$message"
+                    })),
+
+                _getTag: function(message)
+                {
+                    return message.template.tag;
+                },
+
+                _getValue: function(message)
+                {
+                    if (typeof message.og != "undefined")
+                        return message.og.getOrigin();
+                    else
+                    if (typeof message.node != "undefined")
+                    {
+                        return message.node;
+                    }
+                    else
+                        helpers.logger.error("Unknown message format in " + module.id);
+                }
+            });
+        }        
+    }
+});
+
+exports.renderMessage = function(message, node, options, helpers)
+{
+    exports.getTemplate(helpers).tag.replace({"message": message}, node);
+}
+
+},{"../pack":16}],29:[function(require,module,exports){
+
+var DOMPLATE = require("domplate/lib/domplate");
+
+
+exports.init = function(packExports, packModule, packOptions) {
+    var templates;
+
+    packExports.__NS__ = "__" + packModule.id.replace(/[\.-\/~]/g, "_") + "__";
+    packExports.getTemplateForNode = function(node) {
+        if (!templates) {
+            templates = packOptions.getTemplates();
+        }
+
+        var found;
+        templates.forEach(function(template) {
+            if (found)
+                return;
+            if (template.supportsObjectGraphNode(node))
+                found = template;
+        });
+        if (!found)
+            return false;
+        return found;
+    }
+
+    var cssImported = false;
+    function importCss(helpers) {
+        if (!cssImported) {
+            cssImported = true;
+
+            var css = packOptions.css;
+
+            css = css.replace(/__NS__/g, packExports.__NS__);
+            css = css.replace(/__RESOURCE__/g, helpers.getResourceBaseUrl(packModule));
+
+            helpers.importCssString(packModule.id, css, helpers.document);
+        }
+    }
+
+    // The wrapper for a template
+    packExports.initTemplate = function(require, exports, module, template) {
+
+        exports.getTemplatePack = function() {
+            return packExports;
+        };
+        exports.getTemplateLocator = function() {
+            var m = module.id.split("/");
+            return {
+                id: "github.com/insight/insight.renderers.default/",
+                module: m.splice(m.length-3,3).join("/")
+            };
+        };
+        if (typeof exports.supportsObjectGraphNode == "undefined") {
+            exports.supportsObjectGraphNode = function(node) {
+                return (node.type == template.type);
+            };
+        }
+
+        exports.getTemplateDeclaration = function () {
+            return template;
+        }
+
+        exports.getTemplate = function(helpers, subclass) {
+
+            if (helpers.debug) {
+                DOMPLATE.DomplateDebug.console = window.console;
+                DOMPLATE.DomplateDebug.setEnabled(true);
+            }
+
+            var rep;
+// NOTE: This needs to go as this gets called multiple times with different 'subclass'
+//            if (typeof rep == "undefined")
+//            {
+                importCss(helpers);
+                rep = template.initRep({
+                    tags: DOMPLATE.tags,
+                    domplate: function(tpl) {
+                        if (subclass) {
+                            tpl = helpers.util.merge(tpl, subclass);
+                        }
+                        if (tpl.inherits) {
+                            var inherits = tpl.inherits;
+                            delete tpl.inherits;
+                            return inherits.getTemplate(helpers, tpl);
+                        } else {
+                            return DOMPLATE.domplate(tpl);
+                        }
+                    }
+                }, helpers);
+                rep.getTemplate = function() {
+                    return exports;
+                };
+//            }
+            return rep;
+        }
+
+        exports.renderObjectGraphToNode = function(ogNode, domNode, options, helpers) {
+            var tpl = exports.getTemplate(helpers);
+            for (var i=0, ic=options.view.length ; i<ic ; i++) {
+                var tag;
+                switch(options.view[i]) {
+                    case "detail":
+                        tag = "tag";
+                        break;
+                    default:
+                    case "summary":
+                        tag = "shortTag";
+                        break;
+                }
+                if (typeof tpl[tag] != "undefined") {
+                    tpl[tag].replace({"node": ogNode}, domNode);
+                    return;
+                }
+            }
+        };
+    }
+}
+
+},{"domplate/lib/domplate":1}],30:[function(require,module,exports){
+
+module.exports = function () {/*
+
+///*######################################################################
+//#   primitives/array
+//#####################################################################
+
+SPAN.__NS__map > SPAN {
+    color: green;
+    font-weight: normal;
+}
+
+SPAN.__NS__map > .pair > SPAN.delimiter,
+SPAN.__NS__map > .pair > SPAN.separator {
+    color: green;
+}
+
+SPAN.__NS__array > SPAN {
+    color: green;
+    font-weight: normal;
+}
+
+SPAN.__NS__array > .element > SPAN.separator {
+    color: green;
+}
+
+///*######################################################################
+//#   primitives/boolean
+//#####################################################################
+
+SPAN.__NS__boolean {
+    color: navy;
+}
+
+
+///*######################################################################
+//#   primitives/exception
+//#####################################################################
+
+SPAN.__NS__exception {
+    font-weight: bold;
+    color: red;
+}
+
+
+///*######################################################################
+//#   primitives/float
+//#####################################################################
+
+SPAN.__NS__float {
+    color: green;
+}
+
+
+///*######################################################################
+//#   primitives/integer
+//#####################################################################
+
+SPAN.__NS__integer {
+    color: green;
+}
+
+
+///*######################################################################
+//#   primitives/null
+//#####################################################################
+
+SPAN.__NS__null {
+    color: navy;
+}
+
+
+///*######################################################################
+//#   primitives/object
+//#####################################################################
+
+
+SPAN.__NS__dictionary > SPAN {
+    color: brown;
+    font-weight: bold;
+}
+
+SPAN.__NS__dictionary > DIV.member {
+    display: block;
+    padding-left: 20px;
+}
+
+SPAN.__NS__dictionary > .member > SPAN.name {
+    color: black;
+    padding-left: 12px;
+}
+
+SPAN.__NS__dictionary > .member > SPAN.name[decorator=private-static] {
+  background: url(__RESOURCE__images/object-member-visibility-sprite.png) no-repeat -4px -2px;
+}
+SPAN.__NS__dictionary > .member > SPAN.name[decorator=protected-static] {
+  background: url(__RESOURCE__images/object-member-visibility-sprite.png) no-repeat -4px -18px;
+}
+SPAN.__NS__dictionary > .member > SPAN.name[decorator=public-static] {
+  background: url(__RESOURCE__images/object-member-visibility-sprite.png) no-repeat -4px -34px;
+}
+SPAN.__NS__dictionary > .member > SPAN.name[decorator=undeclared-static] {
+  background: url(__RESOURCE__images/object-member-visibility-sprite.png) no-repeat -4px -50px;
+}
+SPAN.__NS__dictionary > .member > SPAN.name[decorator=private] {
+  background: url(__RESOURCE__images/object-member-visibility-sprite.png) no-repeat -4px -66px;
+}
+SPAN.__NS__dictionary > .member > SPAN.name[decorator=protected] {
+  background: url(__RESOURCE__images/object-member-visibility-sprite.png) no-repeat -4px -82px;
+}
+SPAN.__NS__dictionary > .member > SPAN.name[decorator=public] {
+  background: url(__RESOURCE__images/object-member-visibility-sprite.png) no-repeat -4px -98px;
+}
+SPAN.__NS__dictionary > .member > SPAN.name[decorator=undeclared] {
+  background: url(__RESOURCE__images/object-member-visibility-sprite.png) no-repeat -4px -114px;
+}
+
+SPAN.__NS__dictionary > .member > SPAN.delimiter,
+SPAN.__NS__dictionary > .member > SPAN.separator,
+SPAN.__NS__dictionary > .member SPAN.more {
+    color: brown;
+}
+
+
+///*######################################################################
+//#   primitives/resource
+//#####################################################################
+
+SPAN.__NS__resource {
+    color: navy;
+}
+
+
+///*######################################################################
+//#   primitives/string
+//#####################################################################
+
+SPAN.__NS__string {
+    color: black;
+}
+
+SPAN.__NS__string[wrapped=true] {
+    color: red;
+}
+
+SPAN.__NS__string > SPAN.special {
+    color: gray;
+    font-weight: bold;
+    padding-left: 3px;
+    padding-right: 3px;
+}
+
+SPAN.__NS__string > SPAN.trimmed {
+    color: #FFFFFF;
+    background-color: blue;
+    padding-left: 5px;
+    padding-right: 5px;
+    margin-left: 5px;
+}
+
+*/}
+
+},{}],31:[function(require,module,exports){
+
+module.id = module.id || "php_pack";
+
+require("../pack-helper").init(exports, module, {
+    css: require("./pack.css.js").toString().split("\n").slice(1, -1).filter(function (line) {
+        if (/^\/\//.test(line)) {
+            return false;
+        }
+        return true;
+    }).join("\n"),
+    getTemplates: function()
+    {
+        return [
+
+            // Second: Utility messages matched by various specific criteria
+            require("../insight/util/trimmed"),
+
+            require("./primitives/array-indexed"),
+            require("./primitives/array-associative"),
+            require("./primitives/boolean"),
+            require("./primitives/exception"),
+            require("./primitives/float"),
+            require("./primitives/integer"),
+            require("./primitives/null"),
+            require("./primitives/object"),
+            require("./primitives/object-reference"),
+            require("./primitives/resource"),
+            require("./primitives/string"),
+            require("./primitives/unknown")
+        ];
+    }
+});
+
+},{"../insight/util/trimmed":26,"../pack-helper":29,"./pack.css.js":30,"./primitives/array-associative":32,"./primitives/array-indexed":33,"./primitives/boolean":34,"./primitives/exception":35,"./primitives/float":36,"./primitives/integer":37,"./primitives/null":38,"./primitives/object":40,"./primitives/object-reference":39,"./primitives/resource":41,"./primitives/string":42,"./primitives/unknown":43}],32:[function(require,module,exports){
+
+var PACK = require("../pack");
+var MAP_TEMPLATE = require("../../insight/primitives/map");
+
+exports.supportsObjectGraphNode = function(node)
+{
+    return (node.type=="map" && node.meta && node.meta["lang.type"]=="array");
+}
+
+PACK.initTemplate(require, exports, module, {
+
+    __name: "array-associative",
+    
+    initRep: function(DOMPLATE, helpers)
+    {
+        with(DOMPLATE.tags)
+        {
+            return DOMPLATE.domplate({
+                
+                inherits: MAP_TEMPLATE,
+        
+                VAR_label: "array"
+            });
+        }        
+    }
+});
+
+},{"../../insight/primitives/map":20,"../pack":31}],33:[function(require,module,exports){
+
+var PACK = require("../pack");
+var ARRAY_TEMPLATE = require("../../insight/primitives/array");
+
+exports.supportsObjectGraphNode = function(node)
+{
+    return (node.type=="array" && node.meta && node.meta["lang.type"]=="array");
+}
+
+PACK.initTemplate(require, exports, module, {
+
+    __name: "array-indexed",
+    
+    initRep: function(DOMPLATE, helpers)
+    {
+        with(DOMPLATE.tags)
+        {
+            return DOMPLATE.domplate({
+                
+                inherits: ARRAY_TEMPLATE,
+        
+                VAR_label: "array"
+            });
+        }        
+    }
+});
+
+},{"../../insight/primitives/array":17,"../pack":31}],34:[function(require,module,exports){
+
+var PACK = require("../pack");
+
+exports.supportsObjectGraphNode = function(node)
+{
+    return (node.meta && node.meta["lang.type"]=="boolean");
+}
+
+PACK.initTemplate(require, exports, module, {
+
+    __name: "boolean",
+    
+    initRep: function(DOMPLATE, helpers)
+    {
+        with(DOMPLATE.tags)
+        {
+            return DOMPLATE.domplate({
+                
+                tag:
+                    SPAN({"class": PACK.__NS__+"boolean"}, "$node|getValue"),
+        
+                shortTag:
+                    SPAN({"class": PACK.__NS__+"boolean"}, "$node|getValue"),
+        
+                getValue: function(node) {
+                    return node.value.toUpperCase();
+                }  
+            });
+        }        
+    }
+});
+
+},{"../pack":31}],35:[function(require,module,exports){
+
+var PACK = require("../pack");
+var TRACE_TEMPLATE = require("../../insight/structures/trace");
+
+exports.supportsObjectGraphNode = function(node)
+{
+    return (node.type=="dictionary" && node.meta && node.meta["lang.type"]=="exception");
+}
+
+PACK.initTemplate(require, exports, module, {
+
+    __name: "exception",
+
+    VAR_hideShortTagOnExpand: false,
+    
+    initRep: function(DOMPLATE, helpers)
+    {
+        with(DOMPLATE.tags)
+        {
+            return DOMPLATE.domplate({
+                
+                inherits: TRACE_TEMPLATE,
+        
+                collapsedTag:
+                    SPAN({"class": PACK.__NS__+"exception"}, "$node|getCaption"),
+                
+                getCaption: function(node) {
+                    return node.meta["lang.class"] + ": " + node.value.message.value;
+                },
+                
+                getTrace: function(node) {
+                    if (node.type=="map")
+                        return [].concat(node.compact().trace.value);
+
+                    if (node.type=="dictionary")
+                        return [].concat(node.value.trace.value);
+                }  
+            });
+        }        
+    }
+});
+
+},{"../../insight/structures/trace":25,"../pack":31}],36:[function(require,module,exports){
+
+var PACK = require("../pack");
+
+exports.supportsObjectGraphNode = function(node)
+{
+    return (node.meta && node.meta["lang.type"]=="float");
+}
+
+PACK.initTemplate(require, exports, module, {
+
+    __name: "float",
+    
+    initRep: function(DOMPLATE, helpers)
+    {
+        with(DOMPLATE.tags)
+        {
+            return DOMPLATE.domplate({
+        
+                tag:
+                    SPAN({"class": PACK.__NS__+"float"}, "$node|getValue"),
+        
+                shortTag:
+                    SPAN({"class": PACK.__NS__+"float"}, "$node|getValue"),
+        
+                getValue: function(node) {
+                    return addCommas(node.value);
+                }    
+
+            });
+        }        
+    }
+});
+
+// @see http://www.mredkj.com/javascript/numberFormat.html
+function addCommas(nStr)
+{
+    nStr += '';
+    x = nStr.split('.');
+    x1 = x[0];
+    x2 = x.length > 1 ? '.' + x[1] : '';
+    var rgx = /(\d+)(\d{3})/;
+    while (rgx.test(x1)) {
+        x1 = x1.replace(rgx, '$1' + ',' + '$2');
+    }
+    return x1 + x2;
+}
+
+},{"../pack":31}],37:[function(require,module,exports){
+
+var PACK = require("../pack");
+
+exports.supportsObjectGraphNode = function(node)
+{
+    return (node.meta && node.meta["lang.type"]=="integer");
+}
+
+PACK.initTemplate(require, exports, module, {
+
+    __name: "integer",
+    
+    initRep: function(DOMPLATE, helpers)
+    {
+        with(DOMPLATE.tags)
+        {
+            return DOMPLATE.domplate({
+        
+                tag:
+                    SPAN({"class": PACK.__NS__+"integer"}, "$node|getValue"),
+        
+                shortTag:
+                    SPAN({"class": PACK.__NS__+"integer"}, "$node|getValue"),
+        
+                getValue: function(node) {
+                    return addCommas(node.value);
+                }    
+
+            });
+        }        
+    }
+});
+
+// @see http://www.mredkj.com/javascript/numberFormat.html
+function addCommas(nStr)
+{
+    nStr += '';
+    x = nStr.split('.');
+    x1 = x[0];
+    x2 = x.length > 1 ? '.' + x[1] : '';
+    var rgx = /(\d+)(\d{3})/;
+    while (rgx.test(x1)) {
+        x1 = x1.replace(rgx, '$1' + ',' + '$2');
+    }
+    return x1 + x2;
+}
+
+},{"../pack":31}],38:[function(require,module,exports){
+
+var PACK = require("../pack");
+
+exports.supportsObjectGraphNode = function(node)
+{
+    return (node.meta && node.meta["lang.type"]=="null");
+}
+
+PACK.initTemplate(require, exports, module, {
+
+    __name: "null",
+    
+    initRep: function(DOMPLATE, helpers)
+    {
+        with(DOMPLATE.tags)
+        {
+            return DOMPLATE.domplate({
+        
+                tag:
+                    SPAN({"class": PACK.__NS__+"null"}, "$node|getValue"),
+
+                shortTag:
+                    SPAN({"class": PACK.__NS__+"null"}, "$node|getValue"),
+
+                getValue: function(node) {
+                    return node.value.toUpperCase();
+                }
+
+            });
+        }        
+    }
+});
+
+},{"../pack":31}],39:[function(require,module,exports){
+
+var PACK = require("../pack");
+var REFERENCE_TEMPLATE = require("../../insight/primitives/reference");
+
+exports.supportsObjectGraphNode = function(node)
+{
+    return (node.type=="reference");
+}
+
+PACK.initTemplate(require, exports, module, {
+
+    __name: "object-reference",
+    
+    initRep: function(DOMPLATE, helpers)
+    {
+        with(DOMPLATE.tags)
+        {
+            return DOMPLATE.domplate({
+
+                inherits: REFERENCE_TEMPLATE
+        
+            });
+        }        
+    }
+});
+
+},{"../../insight/primitives/reference":21,"../pack":31}],40:[function(require,module,exports){
+
+var PACK = require("../pack");
+var DICTIONARY_TEMPLATE = require("../../insight/primitives/dictionary");
+
+exports.supportsObjectGraphNode = function(node)
+{
+    return (node.type=="dictionary" && node.meta && node.meta["lang.type"]=="object");
+}
+
+PACK.initTemplate(require, exports, module, {
+
+    __name: "object",
+    
+    initRep: function(DOMPLATE, helpers)
+    {
+        with(DOMPLATE.tags)
+        {
+            return DOMPLATE.domplate({
+
+                inherits: DICTIONARY_TEMPLATE,
+
+                getLabel: function(node) {
+                    return node.meta["lang.class"];
+                },
+                
+                getMemberNameDecorator: function(member) {
+        
+                    var decorator = [];
+        
+                    if(member.node.meta["lang.visibility"]) {
+                        decorator.push(member.node.meta["lang.visibility"]);
+                    } else
+                    if(member.node.meta["lang.undeclared"]) {
+                        decorator.push("undeclared");
+                    }
+        
+                    if(member.node.meta["lang.static"]) {
+                        decorator.push("static");
+                    }
+        
+                    return decorator.join("-");
+                }
+
+            });
+        }        
+    }
+});
+
+},{"../../insight/primitives/dictionary":19,"../pack":31}],41:[function(require,module,exports){
+
+var PACK = require("../pack");
+
+exports.supportsObjectGraphNode = function(node)
+{
+    return (node.meta && node.meta["lang.type"]=="resource");
+}
+
+PACK.initTemplate(require, exports, module, {
+
+    __name: "resource",
+    
+    initRep: function(DOMPLATE, helpers)
+    {
+        with(DOMPLATE.tags)
+        {
+            return DOMPLATE.domplate({
+
+                tag:
+                    SPAN({"class": PACK.__NS__+"resource"}, "[$node|getValue]"),
+        
+                shortTag:
+                    SPAN({"class": PACK.__NS__+"resource"}, "[$node|getValue]"),
+        
+                getValue: function(node) {
+                    return node.value.toUpperCase();
+                }    
+        
+            });
+        }        
+    }
+});
+
+},{"../pack":31}],42:[function(require,module,exports){
+
+var PACK = require("../pack");
+
+exports.supportsObjectGraphNode = function(node)
+{
+    return (node.meta && node.meta["lang.type"]=="string");
+}
+
+PACK.initTemplate(require, exports, module, {
+
+    __name: "string",
+    
+    initRep: function(DOMPLATE, helpers)
+    {
+        with(DOMPLATE.tags)
+        {
+            return DOMPLATE.domplate({
+                
+                VAR_wrapped: false,
+        
+                tag:
+                    SPAN({"class": PACK.__NS__+"string", "wrapped": "$node.wrapped"},
+                        IF("$node.wrapped", "'"),
+                        FOR("line", "$node|getValue",
+                            "$line.value",
+                            IF("$line.special", SPAN({"class": "special"}, "$line.specialvalue")),
+                            IF("$line.more", BR()),
+                            IF("$line.trimmed", TAG("$node|getTrimmedTag", {"node": "$node"}))
+                        ),
+                        IF("$node.wrapped", "'")),
+        
+                shortTag:
+                    SPAN({"class": PACK.__NS__+"string", "wrapped": "$node.wrapped"},
+                        IF("$node.wrapped", "'"),
+                        FOR("line", "$node|getShortValue",
+                            "$line.value",
+                            IF("$line.special", SPAN({"class": "special"}, "$line.specialvalue")),
+                            IF("$line.more", BR()),
+                            IF("$line.trimmed", TAG("$node|getTrimmedTag", {"node": "$node"}))
+                        ),
+                        IF("$node.wrapped", "'")),
+        
+                // TODO: Should be using the insight/util/trimmed tag but the tag is inclusion not working
+                trimmedNoticeTag: 
+                    SPAN({"class": "trimmed"},
+                        "$node|getNotice"
+                    ),
+        
+                getNotice: function(node) {
+                    return node.meta["encoder.notice"];
+                },
+                        
+                getTrimmedTag: function() {
+                    return this.trimmedNoticeTag;
+                },
+        
+                getValue: function(node) {
+                    var parts = node.value.split("\n");
+                    var lines = [];
+                    for( var i=0,c=parts.length ; i<c ; i++ ) {
+                        lines.push({
+                            "value": parts[i],
+                            "more": (i<c-1)?true:false,
+                            "special": false
+                        });
+                    }
+                    if(node.meta["encoder.trimmed"] && node.meta["encoder.notice"]) {
+                        lines.push({
+                            "value": "",
+                            "trimmed": true
+                        });
+                    }
+                    return lines;
+                },
+                
+                getShortValue: function(node) {
+                    var meta = node.getObjectGraph().getMeta();
+
+                    // TODO: This needs to be optimized
+
+                    var trimEnabled = true;
+                    var trimLength = 50;
+                    var trimNewlines = true;
+                    if(!node.parentNode) {
+                        // if a top-level string display 500 chars (but trim newlines)
+                        // but only if we are not asked to specifically trim
+                        if(typeof meta["string.trim.enabled"] == "undefined" || !meta["string.trim.enabled"]) {
+                            trimLength = 500;
+                        }
+                    }
+                    if(typeof meta["string.trim.enabled"] != "undefined") {
+                        trimEnabled = meta["string.trim.enabled"];
+                    }
+                    if(typeof meta["string.trim.length"] != "undefined" && meta["string.trim.length"]>=5) {
+                        trimLength = meta["string.trim.length"];
+                    }
+                    if(typeof meta["string.trim.newlines"] != "undefined") {
+                        trimNewlines = meta["string.trim.newlines"];
+                    }
+        
+                    var str = node.value;
+                    if(trimEnabled) {
+                        if(trimLength>-1) {
+                            str = cropString(str, trimLength);
+                        }
+                        if(trimNewlines) {
+                            str = escapeNewLines(str);
+                        }
+                    }
+        
+                    var parts = str.split("\n");
+                    var lines = [],
+                        parts2;
+                    for( var i=0,ci=parts.length ; i<ci ; i++ ) {
+                        parts2 = parts[i].split("|:_!_:|");
+                        for( var j=0,cj=parts2.length ; j<cj ; j++ ) {
+                            if(parts2[j]=="STRING_CROP") {
+                                lines.push({
+                                    "value": "",
+                                    "more": false,
+                                    "special": true,
+                                    "specialvalue": "..."
+                                });
+                            } else
+                            if(parts2[j]=="STRING_NEWLINE") {
+                                lines.push({
+                                    "value": "",
+                                    "more": false,
+                                    "special": true,
+                                    "specialvalue": "\\n"
+                                });
+                            } else {
+                                lines.push({
+                                    "value": parts2[j],
+                                    "more": (i<ci-1 && j==cj-1)?true:false
+                                });
+                            }
+                        }
+                    }
+                    if(node.meta["encoder.trimmed"] && node.meta["encoder.notice"]) {
+                        lines.push({
+                            "value": "",
+                            "trimmed": true
+                        });
+                    }
+                    return lines;
+                }
+            });
+        }        
+    }
+});
+
+function cropString(value, limit) {
+    limit = limit || 50;
+    if (value.length > limit) {
+        return value.substr(0, limit/2) + "|:_!_:|STRING_CROP|:_!_:|" + value.substr(value.length-limit/2);
+    } else {
+        return value;
+    }
+}
+
+function escapeNewLines(value) {
+    return (""+value).replace(/\r/g, "\\r").replace(/\n/g, "|:_!_:|STRING_NEWLINE|:_!_:|");
+}
+
+},{"../pack":31}],43:[function(require,module,exports){
+
+var PACK = require("../pack");
+
+exports.supportsObjectGraphNode = function(node)
+{
+    return (node.type=="text" && node.meta && node.meta["lang.type"]=="unknown");
+}
+
+PACK.initTemplate(require, exports, module, {
+
+    __name: "unknown",
+    
+    initRep: function(DOMPLATE, helpers)
+    {
+        with(DOMPLATE.tags)
+        {
+            return DOMPLATE.domplate({
+        
+                tag:
+                    DIV("UNKNOWN EXPANDED"),
+        
+                collapsedTag:
+                    DIV("UNKNOWN COLLAPSED"),
+        
+                shortTag:
+                    DIV("UNKNOWN SHORT")
+
+            });
+        }        
+    }
+});
+
+},{"../pack":31}],44:[function(require,module,exports){
 var getNative = require('./_getNative'),
     root = require('./_root');
 
@@ -6023,7 +9794,7 @@ var DataView = getNative(root, 'DataView');
 
 module.exports = DataView;
 
-},{"./_getNative":74,"./_root":112}],14:[function(require,module,exports){
+},{"./_getNative":105,"./_root":143}],45:[function(require,module,exports){
 var hashClear = require('./_hashClear'),
     hashDelete = require('./_hashDelete'),
     hashGet = require('./_hashGet'),
@@ -6057,7 +9828,7 @@ Hash.prototype.set = hashSet;
 
 module.exports = Hash;
 
-},{"./_hashClear":81,"./_hashDelete":82,"./_hashGet":83,"./_hashHas":84,"./_hashSet":85}],15:[function(require,module,exports){
+},{"./_hashClear":112,"./_hashDelete":113,"./_hashGet":114,"./_hashHas":115,"./_hashSet":116}],46:[function(require,module,exports){
 var listCacheClear = require('./_listCacheClear'),
     listCacheDelete = require('./_listCacheDelete'),
     listCacheGet = require('./_listCacheGet'),
@@ -6091,7 +9862,7 @@ ListCache.prototype.set = listCacheSet;
 
 module.exports = ListCache;
 
-},{"./_listCacheClear":94,"./_listCacheDelete":95,"./_listCacheGet":96,"./_listCacheHas":97,"./_listCacheSet":98}],16:[function(require,module,exports){
+},{"./_listCacheClear":125,"./_listCacheDelete":126,"./_listCacheGet":127,"./_listCacheHas":128,"./_listCacheSet":129}],47:[function(require,module,exports){
 var getNative = require('./_getNative'),
     root = require('./_root');
 
@@ -6100,7 +9871,7 @@ var Map = getNative(root, 'Map');
 
 module.exports = Map;
 
-},{"./_getNative":74,"./_root":112}],17:[function(require,module,exports){
+},{"./_getNative":105,"./_root":143}],48:[function(require,module,exports){
 var mapCacheClear = require('./_mapCacheClear'),
     mapCacheDelete = require('./_mapCacheDelete'),
     mapCacheGet = require('./_mapCacheGet'),
@@ -6134,7 +9905,7 @@ MapCache.prototype.set = mapCacheSet;
 
 module.exports = MapCache;
 
-},{"./_mapCacheClear":99,"./_mapCacheDelete":100,"./_mapCacheGet":101,"./_mapCacheHas":102,"./_mapCacheSet":103}],18:[function(require,module,exports){
+},{"./_mapCacheClear":130,"./_mapCacheDelete":131,"./_mapCacheGet":132,"./_mapCacheHas":133,"./_mapCacheSet":134}],49:[function(require,module,exports){
 var getNative = require('./_getNative'),
     root = require('./_root');
 
@@ -6143,7 +9914,7 @@ var Promise = getNative(root, 'Promise');
 
 module.exports = Promise;
 
-},{"./_getNative":74,"./_root":112}],19:[function(require,module,exports){
+},{"./_getNative":105,"./_root":143}],50:[function(require,module,exports){
 var getNative = require('./_getNative'),
     root = require('./_root');
 
@@ -6152,7 +9923,7 @@ var Set = getNative(root, 'Set');
 
 module.exports = Set;
 
-},{"./_getNative":74,"./_root":112}],20:[function(require,module,exports){
+},{"./_getNative":105,"./_root":143}],51:[function(require,module,exports){
 var ListCache = require('./_ListCache'),
     stackClear = require('./_stackClear'),
     stackDelete = require('./_stackDelete'),
@@ -6181,7 +9952,7 @@ Stack.prototype.set = stackSet;
 
 module.exports = Stack;
 
-},{"./_ListCache":15,"./_stackClear":116,"./_stackDelete":117,"./_stackGet":118,"./_stackHas":119,"./_stackSet":120}],21:[function(require,module,exports){
+},{"./_ListCache":46,"./_stackClear":147,"./_stackDelete":148,"./_stackGet":149,"./_stackHas":150,"./_stackSet":151}],52:[function(require,module,exports){
 var root = require('./_root');
 
 /** Built-in value references. */
@@ -6189,7 +9960,7 @@ var Symbol = root.Symbol;
 
 module.exports = Symbol;
 
-},{"./_root":112}],22:[function(require,module,exports){
+},{"./_root":143}],53:[function(require,module,exports){
 var root = require('./_root');
 
 /** Built-in value references. */
@@ -6197,7 +9968,7 @@ var Uint8Array = root.Uint8Array;
 
 module.exports = Uint8Array;
 
-},{"./_root":112}],23:[function(require,module,exports){
+},{"./_root":143}],54:[function(require,module,exports){
 var getNative = require('./_getNative'),
     root = require('./_root');
 
@@ -6206,7 +9977,7 @@ var WeakMap = getNative(root, 'WeakMap');
 
 module.exports = WeakMap;
 
-},{"./_getNative":74,"./_root":112}],24:[function(require,module,exports){
+},{"./_getNative":105,"./_root":143}],55:[function(require,module,exports){
 /**
  * Adds the key-value `pair` to `map`.
  *
@@ -6223,7 +9994,7 @@ function addMapEntry(map, pair) {
 
 module.exports = addMapEntry;
 
-},{}],25:[function(require,module,exports){
+},{}],56:[function(require,module,exports){
 /**
  * Adds `value` to `set`.
  *
@@ -6240,7 +10011,7 @@ function addSetEntry(set, value) {
 
 module.exports = addSetEntry;
 
-},{}],26:[function(require,module,exports){
+},{}],57:[function(require,module,exports){
 /**
  * A faster alternative to `Function#apply`, this function invokes `func`
  * with the `this` binding of `thisArg` and the arguments of `args`.
@@ -6263,7 +10034,7 @@ function apply(func, thisArg, args) {
 
 module.exports = apply;
 
-},{}],27:[function(require,module,exports){
+},{}],58:[function(require,module,exports){
 /**
  * A specialized version of `_.forEach` for arrays without support for
  * iteratee shorthands.
@@ -6287,7 +10058,7 @@ function arrayEach(array, iteratee) {
 
 module.exports = arrayEach;
 
-},{}],28:[function(require,module,exports){
+},{}],59:[function(require,module,exports){
 /**
  * A specialized version of `_.filter` for arrays without support for
  * iteratee shorthands.
@@ -6314,7 +10085,7 @@ function arrayFilter(array, predicate) {
 
 module.exports = arrayFilter;
 
-},{}],29:[function(require,module,exports){
+},{}],60:[function(require,module,exports){
 var baseTimes = require('./_baseTimes'),
     isArguments = require('./isArguments'),
     isArray = require('./isArray'),
@@ -6365,7 +10136,7 @@ function arrayLikeKeys(value, inherited) {
 
 module.exports = arrayLikeKeys;
 
-},{"./_baseTimes":52,"./_isIndex":89,"./isArguments":126,"./isArray":127,"./isBuffer":130,"./isTypedArray":136}],30:[function(require,module,exports){
+},{"./_baseTimes":83,"./_isIndex":120,"./isArguments":157,"./isArray":158,"./isBuffer":161,"./isTypedArray":167}],61:[function(require,module,exports){
 /**
  * Appends the elements of `values` to `array`.
  *
@@ -6387,7 +10158,7 @@ function arrayPush(array, values) {
 
 module.exports = arrayPush;
 
-},{}],31:[function(require,module,exports){
+},{}],62:[function(require,module,exports){
 /**
  * A specialized version of `_.reduce` for arrays without support for
  * iteratee shorthands.
@@ -6415,7 +10186,7 @@ function arrayReduce(array, iteratee, accumulator, initAccum) {
 
 module.exports = arrayReduce;
 
-},{}],32:[function(require,module,exports){
+},{}],63:[function(require,module,exports){
 var baseAssignValue = require('./_baseAssignValue'),
     eq = require('./eq');
 
@@ -6437,7 +10208,7 @@ function assignMergeValue(object, key, value) {
 
 module.exports = assignMergeValue;
 
-},{"./_baseAssignValue":37,"./eq":124}],33:[function(require,module,exports){
+},{"./_baseAssignValue":68,"./eq":155}],64:[function(require,module,exports){
 var baseAssignValue = require('./_baseAssignValue'),
     eq = require('./eq');
 
@@ -6467,7 +10238,7 @@ function assignValue(object, key, value) {
 
 module.exports = assignValue;
 
-},{"./_baseAssignValue":37,"./eq":124}],34:[function(require,module,exports){
+},{"./_baseAssignValue":68,"./eq":155}],65:[function(require,module,exports){
 var eq = require('./eq');
 
 /**
@@ -6490,7 +10261,7 @@ function assocIndexOf(array, key) {
 
 module.exports = assocIndexOf;
 
-},{"./eq":124}],35:[function(require,module,exports){
+},{"./eq":155}],66:[function(require,module,exports){
 var copyObject = require('./_copyObject'),
     keys = require('./keys');
 
@@ -6509,7 +10280,7 @@ function baseAssign(object, source) {
 
 module.exports = baseAssign;
 
-},{"./_copyObject":63,"./keys":137}],36:[function(require,module,exports){
+},{"./_copyObject":94,"./keys":168}],67:[function(require,module,exports){
 var copyObject = require('./_copyObject'),
     keysIn = require('./keysIn');
 
@@ -6528,7 +10299,7 @@ function baseAssignIn(object, source) {
 
 module.exports = baseAssignIn;
 
-},{"./_copyObject":63,"./keysIn":138}],37:[function(require,module,exports){
+},{"./_copyObject":94,"./keysIn":169}],68:[function(require,module,exports){
 var defineProperty = require('./_defineProperty');
 
 /**
@@ -6555,7 +10326,7 @@ function baseAssignValue(object, key, value) {
 
 module.exports = baseAssignValue;
 
-},{"./_defineProperty":69}],38:[function(require,module,exports){
+},{"./_defineProperty":100}],69:[function(require,module,exports){
 var Stack = require('./_Stack'),
     arrayEach = require('./_arrayEach'),
     assignValue = require('./_assignValue'),
@@ -6710,7 +10481,7 @@ function baseClone(value, bitmask, customizer, key, object, stack) {
 
 module.exports = baseClone;
 
-},{"./_Stack":20,"./_arrayEach":27,"./_assignValue":33,"./_baseAssign":35,"./_baseAssignIn":36,"./_cloneBuffer":55,"./_copyArray":62,"./_copySymbols":64,"./_copySymbolsIn":65,"./_getAllKeys":71,"./_getAllKeysIn":72,"./_getTag":79,"./_initCloneArray":86,"./_initCloneByTag":87,"./_initCloneObject":88,"./isArray":127,"./isBuffer":130,"./isObject":133,"./keys":137}],39:[function(require,module,exports){
+},{"./_Stack":51,"./_arrayEach":58,"./_assignValue":64,"./_baseAssign":66,"./_baseAssignIn":67,"./_cloneBuffer":86,"./_copyArray":93,"./_copySymbols":95,"./_copySymbolsIn":96,"./_getAllKeys":102,"./_getAllKeysIn":103,"./_getTag":110,"./_initCloneArray":117,"./_initCloneByTag":118,"./_initCloneObject":119,"./isArray":158,"./isBuffer":161,"./isObject":164,"./keys":168}],70:[function(require,module,exports){
 var isObject = require('./isObject');
 
 /** Built-in value references. */
@@ -6742,7 +10513,7 @@ var baseCreate = (function() {
 
 module.exports = baseCreate;
 
-},{"./isObject":133}],40:[function(require,module,exports){
+},{"./isObject":164}],71:[function(require,module,exports){
 var createBaseFor = require('./_createBaseFor');
 
 /**
@@ -6760,7 +10531,7 @@ var baseFor = createBaseFor();
 
 module.exports = baseFor;
 
-},{"./_createBaseFor":68}],41:[function(require,module,exports){
+},{"./_createBaseFor":99}],72:[function(require,module,exports){
 var arrayPush = require('./_arrayPush'),
     isArray = require('./isArray');
 
@@ -6782,7 +10553,7 @@ function baseGetAllKeys(object, keysFunc, symbolsFunc) {
 
 module.exports = baseGetAllKeys;
 
-},{"./_arrayPush":30,"./isArray":127}],42:[function(require,module,exports){
+},{"./_arrayPush":61,"./isArray":158}],73:[function(require,module,exports){
 var Symbol = require('./_Symbol'),
     getRawTag = require('./_getRawTag'),
     objectToString = require('./_objectToString');
@@ -6812,7 +10583,7 @@ function baseGetTag(value) {
 
 module.exports = baseGetTag;
 
-},{"./_Symbol":21,"./_getRawTag":76,"./_objectToString":109}],43:[function(require,module,exports){
+},{"./_Symbol":52,"./_getRawTag":107,"./_objectToString":140}],74:[function(require,module,exports){
 var baseGetTag = require('./_baseGetTag'),
     isObjectLike = require('./isObjectLike');
 
@@ -6832,7 +10603,7 @@ function baseIsArguments(value) {
 
 module.exports = baseIsArguments;
 
-},{"./_baseGetTag":42,"./isObjectLike":134}],44:[function(require,module,exports){
+},{"./_baseGetTag":73,"./isObjectLike":165}],75:[function(require,module,exports){
 var isFunction = require('./isFunction'),
     isMasked = require('./_isMasked'),
     isObject = require('./isObject'),
@@ -6881,7 +10652,7 @@ function baseIsNative(value) {
 
 module.exports = baseIsNative;
 
-},{"./_isMasked":92,"./_toSource":121,"./isFunction":131,"./isObject":133}],45:[function(require,module,exports){
+},{"./_isMasked":123,"./_toSource":152,"./isFunction":162,"./isObject":164}],76:[function(require,module,exports){
 var baseGetTag = require('./_baseGetTag'),
     isLength = require('./isLength'),
     isObjectLike = require('./isObjectLike');
@@ -6943,7 +10714,7 @@ function baseIsTypedArray(value) {
 
 module.exports = baseIsTypedArray;
 
-},{"./_baseGetTag":42,"./isLength":132,"./isObjectLike":134}],46:[function(require,module,exports){
+},{"./_baseGetTag":73,"./isLength":163,"./isObjectLike":165}],77:[function(require,module,exports){
 var isPrototype = require('./_isPrototype'),
     nativeKeys = require('./_nativeKeys');
 
@@ -6975,7 +10746,7 @@ function baseKeys(object) {
 
 module.exports = baseKeys;
 
-},{"./_isPrototype":93,"./_nativeKeys":106}],47:[function(require,module,exports){
+},{"./_isPrototype":124,"./_nativeKeys":137}],78:[function(require,module,exports){
 var isObject = require('./isObject'),
     isPrototype = require('./_isPrototype'),
     nativeKeysIn = require('./_nativeKeysIn');
@@ -7010,7 +10781,7 @@ function baseKeysIn(object) {
 
 module.exports = baseKeysIn;
 
-},{"./_isPrototype":93,"./_nativeKeysIn":107,"./isObject":133}],48:[function(require,module,exports){
+},{"./_isPrototype":124,"./_nativeKeysIn":138,"./isObject":164}],79:[function(require,module,exports){
 var Stack = require('./_Stack'),
     assignMergeValue = require('./_assignMergeValue'),
     baseFor = require('./_baseFor'),
@@ -7053,7 +10824,7 @@ function baseMerge(object, source, srcIndex, customizer, stack) {
 
 module.exports = baseMerge;
 
-},{"./_Stack":20,"./_assignMergeValue":32,"./_baseFor":40,"./_baseMergeDeep":49,"./isObject":133,"./keysIn":138}],49:[function(require,module,exports){
+},{"./_Stack":51,"./_assignMergeValue":63,"./_baseFor":71,"./_baseMergeDeep":80,"./isObject":164,"./keysIn":169}],80:[function(require,module,exports){
 var assignMergeValue = require('./_assignMergeValue'),
     cloneBuffer = require('./_cloneBuffer'),
     cloneTypedArray = require('./_cloneTypedArray'),
@@ -7148,7 +10919,7 @@ function baseMergeDeep(object, source, key, srcIndex, mergeFunc, customizer, sta
 
 module.exports = baseMergeDeep;
 
-},{"./_assignMergeValue":32,"./_cloneBuffer":55,"./_cloneTypedArray":61,"./_copyArray":62,"./_initCloneObject":88,"./isArguments":126,"./isArray":127,"./isArrayLikeObject":129,"./isBuffer":130,"./isFunction":131,"./isObject":133,"./isPlainObject":135,"./isTypedArray":136,"./toPlainObject":142}],50:[function(require,module,exports){
+},{"./_assignMergeValue":63,"./_cloneBuffer":86,"./_cloneTypedArray":92,"./_copyArray":93,"./_initCloneObject":119,"./isArguments":157,"./isArray":158,"./isArrayLikeObject":160,"./isBuffer":161,"./isFunction":162,"./isObject":164,"./isPlainObject":166,"./isTypedArray":167,"./toPlainObject":173}],81:[function(require,module,exports){
 var identity = require('./identity'),
     overRest = require('./_overRest'),
     setToString = require('./_setToString');
@@ -7167,7 +10938,7 @@ function baseRest(func, start) {
 
 module.exports = baseRest;
 
-},{"./_overRest":111,"./_setToString":114,"./identity":125}],51:[function(require,module,exports){
+},{"./_overRest":142,"./_setToString":145,"./identity":156}],82:[function(require,module,exports){
 var constant = require('./constant'),
     defineProperty = require('./_defineProperty'),
     identity = require('./identity');
@@ -7191,7 +10962,7 @@ var baseSetToString = !defineProperty ? identity : function(func, string) {
 
 module.exports = baseSetToString;
 
-},{"./_defineProperty":69,"./constant":123,"./identity":125}],52:[function(require,module,exports){
+},{"./_defineProperty":100,"./constant":154,"./identity":156}],83:[function(require,module,exports){
 /**
  * The base implementation of `_.times` without support for iteratee shorthands
  * or max array length checks.
@@ -7213,7 +10984,7 @@ function baseTimes(n, iteratee) {
 
 module.exports = baseTimes;
 
-},{}],53:[function(require,module,exports){
+},{}],84:[function(require,module,exports){
 /**
  * The base implementation of `_.unary` without support for storing metadata.
  *
@@ -7229,7 +11000,7 @@ function baseUnary(func) {
 
 module.exports = baseUnary;
 
-},{}],54:[function(require,module,exports){
+},{}],85:[function(require,module,exports){
 var Uint8Array = require('./_Uint8Array');
 
 /**
@@ -7247,7 +11018,7 @@ function cloneArrayBuffer(arrayBuffer) {
 
 module.exports = cloneArrayBuffer;
 
-},{"./_Uint8Array":22}],55:[function(require,module,exports){
+},{"./_Uint8Array":53}],86:[function(require,module,exports){
 var root = require('./_root');
 
 /** Detect free variable `exports`. */
@@ -7284,7 +11055,7 @@ function cloneBuffer(buffer, isDeep) {
 
 module.exports = cloneBuffer;
 
-},{"./_root":112}],56:[function(require,module,exports){
+},{"./_root":143}],87:[function(require,module,exports){
 var cloneArrayBuffer = require('./_cloneArrayBuffer');
 
 /**
@@ -7302,7 +11073,7 @@ function cloneDataView(dataView, isDeep) {
 
 module.exports = cloneDataView;
 
-},{"./_cloneArrayBuffer":54}],57:[function(require,module,exports){
+},{"./_cloneArrayBuffer":85}],88:[function(require,module,exports){
 var addMapEntry = require('./_addMapEntry'),
     arrayReduce = require('./_arrayReduce'),
     mapToArray = require('./_mapToArray');
@@ -7326,7 +11097,7 @@ function cloneMap(map, isDeep, cloneFunc) {
 
 module.exports = cloneMap;
 
-},{"./_addMapEntry":24,"./_arrayReduce":31,"./_mapToArray":104}],58:[function(require,module,exports){
+},{"./_addMapEntry":55,"./_arrayReduce":62,"./_mapToArray":135}],89:[function(require,module,exports){
 /** Used to match `RegExp` flags from their coerced string values. */
 var reFlags = /\w*$/;
 
@@ -7345,7 +11116,7 @@ function cloneRegExp(regexp) {
 
 module.exports = cloneRegExp;
 
-},{}],59:[function(require,module,exports){
+},{}],90:[function(require,module,exports){
 var addSetEntry = require('./_addSetEntry'),
     arrayReduce = require('./_arrayReduce'),
     setToArray = require('./_setToArray');
@@ -7369,7 +11140,7 @@ function cloneSet(set, isDeep, cloneFunc) {
 
 module.exports = cloneSet;
 
-},{"./_addSetEntry":25,"./_arrayReduce":31,"./_setToArray":113}],60:[function(require,module,exports){
+},{"./_addSetEntry":56,"./_arrayReduce":62,"./_setToArray":144}],91:[function(require,module,exports){
 var Symbol = require('./_Symbol');
 
 /** Used to convert symbols to primitives and strings. */
@@ -7389,7 +11160,7 @@ function cloneSymbol(symbol) {
 
 module.exports = cloneSymbol;
 
-},{"./_Symbol":21}],61:[function(require,module,exports){
+},{"./_Symbol":52}],92:[function(require,module,exports){
 var cloneArrayBuffer = require('./_cloneArrayBuffer');
 
 /**
@@ -7407,7 +11178,7 @@ function cloneTypedArray(typedArray, isDeep) {
 
 module.exports = cloneTypedArray;
 
-},{"./_cloneArrayBuffer":54}],62:[function(require,module,exports){
+},{"./_cloneArrayBuffer":85}],93:[function(require,module,exports){
 /**
  * Copies the values of `source` to `array`.
  *
@@ -7429,7 +11200,7 @@ function copyArray(source, array) {
 
 module.exports = copyArray;
 
-},{}],63:[function(require,module,exports){
+},{}],94:[function(require,module,exports){
 var assignValue = require('./_assignValue'),
     baseAssignValue = require('./_baseAssignValue');
 
@@ -7471,7 +11242,7 @@ function copyObject(source, props, object, customizer) {
 
 module.exports = copyObject;
 
-},{"./_assignValue":33,"./_baseAssignValue":37}],64:[function(require,module,exports){
+},{"./_assignValue":64,"./_baseAssignValue":68}],95:[function(require,module,exports){
 var copyObject = require('./_copyObject'),
     getSymbols = require('./_getSymbols');
 
@@ -7489,7 +11260,7 @@ function copySymbols(source, object) {
 
 module.exports = copySymbols;
 
-},{"./_copyObject":63,"./_getSymbols":77}],65:[function(require,module,exports){
+},{"./_copyObject":94,"./_getSymbols":108}],96:[function(require,module,exports){
 var copyObject = require('./_copyObject'),
     getSymbolsIn = require('./_getSymbolsIn');
 
@@ -7507,7 +11278,7 @@ function copySymbolsIn(source, object) {
 
 module.exports = copySymbolsIn;
 
-},{"./_copyObject":63,"./_getSymbolsIn":78}],66:[function(require,module,exports){
+},{"./_copyObject":94,"./_getSymbolsIn":109}],97:[function(require,module,exports){
 var root = require('./_root');
 
 /** Used to detect overreaching core-js shims. */
@@ -7515,7 +11286,7 @@ var coreJsData = root['__core-js_shared__'];
 
 module.exports = coreJsData;
 
-},{"./_root":112}],67:[function(require,module,exports){
+},{"./_root":143}],98:[function(require,module,exports){
 var baseRest = require('./_baseRest'),
     isIterateeCall = require('./_isIterateeCall');
 
@@ -7554,7 +11325,7 @@ function createAssigner(assigner) {
 
 module.exports = createAssigner;
 
-},{"./_baseRest":50,"./_isIterateeCall":90}],68:[function(require,module,exports){
+},{"./_baseRest":81,"./_isIterateeCall":121}],99:[function(require,module,exports){
 /**
  * Creates a base function for methods like `_.forIn` and `_.forOwn`.
  *
@@ -7581,7 +11352,7 @@ function createBaseFor(fromRight) {
 
 module.exports = createBaseFor;
 
-},{}],69:[function(require,module,exports){
+},{}],100:[function(require,module,exports){
 var getNative = require('./_getNative');
 
 var defineProperty = (function() {
@@ -7594,7 +11365,7 @@ var defineProperty = (function() {
 
 module.exports = defineProperty;
 
-},{"./_getNative":74}],70:[function(require,module,exports){
+},{"./_getNative":105}],101:[function(require,module,exports){
 (function (global){
 /** Detect free variable `global` from Node.js. */
 var freeGlobal = typeof global == 'object' && global && global.Object === Object && global;
@@ -7602,7 +11373,7 @@ var freeGlobal = typeof global == 'object' && global && global.Object === Object
 module.exports = freeGlobal;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],71:[function(require,module,exports){
+},{}],102:[function(require,module,exports){
 var baseGetAllKeys = require('./_baseGetAllKeys'),
     getSymbols = require('./_getSymbols'),
     keys = require('./keys');
@@ -7620,7 +11391,7 @@ function getAllKeys(object) {
 
 module.exports = getAllKeys;
 
-},{"./_baseGetAllKeys":41,"./_getSymbols":77,"./keys":137}],72:[function(require,module,exports){
+},{"./_baseGetAllKeys":72,"./_getSymbols":108,"./keys":168}],103:[function(require,module,exports){
 var baseGetAllKeys = require('./_baseGetAllKeys'),
     getSymbolsIn = require('./_getSymbolsIn'),
     keysIn = require('./keysIn');
@@ -7639,7 +11410,7 @@ function getAllKeysIn(object) {
 
 module.exports = getAllKeysIn;
 
-},{"./_baseGetAllKeys":41,"./_getSymbolsIn":78,"./keysIn":138}],73:[function(require,module,exports){
+},{"./_baseGetAllKeys":72,"./_getSymbolsIn":109,"./keysIn":169}],104:[function(require,module,exports){
 var isKeyable = require('./_isKeyable');
 
 /**
@@ -7659,7 +11430,7 @@ function getMapData(map, key) {
 
 module.exports = getMapData;
 
-},{"./_isKeyable":91}],74:[function(require,module,exports){
+},{"./_isKeyable":122}],105:[function(require,module,exports){
 var baseIsNative = require('./_baseIsNative'),
     getValue = require('./_getValue');
 
@@ -7678,7 +11449,7 @@ function getNative(object, key) {
 
 module.exports = getNative;
 
-},{"./_baseIsNative":44,"./_getValue":80}],75:[function(require,module,exports){
+},{"./_baseIsNative":75,"./_getValue":111}],106:[function(require,module,exports){
 var overArg = require('./_overArg');
 
 /** Built-in value references. */
@@ -7686,7 +11457,7 @@ var getPrototype = overArg(Object.getPrototypeOf, Object);
 
 module.exports = getPrototype;
 
-},{"./_overArg":110}],76:[function(require,module,exports){
+},{"./_overArg":141}],107:[function(require,module,exports){
 var Symbol = require('./_Symbol');
 
 /** Used for built-in method references. */
@@ -7734,7 +11505,7 @@ function getRawTag(value) {
 
 module.exports = getRawTag;
 
-},{"./_Symbol":21}],77:[function(require,module,exports){
+},{"./_Symbol":52}],108:[function(require,module,exports){
 var arrayFilter = require('./_arrayFilter'),
     stubArray = require('./stubArray');
 
@@ -7766,7 +11537,7 @@ var getSymbols = !nativeGetSymbols ? stubArray : function(object) {
 
 module.exports = getSymbols;
 
-},{"./_arrayFilter":28,"./stubArray":140}],78:[function(require,module,exports){
+},{"./_arrayFilter":59,"./stubArray":171}],109:[function(require,module,exports){
 var arrayPush = require('./_arrayPush'),
     getPrototype = require('./_getPrototype'),
     getSymbols = require('./_getSymbols'),
@@ -7793,7 +11564,7 @@ var getSymbolsIn = !nativeGetSymbols ? stubArray : function(object) {
 
 module.exports = getSymbolsIn;
 
-},{"./_arrayPush":30,"./_getPrototype":75,"./_getSymbols":77,"./stubArray":140}],79:[function(require,module,exports){
+},{"./_arrayPush":61,"./_getPrototype":106,"./_getSymbols":108,"./stubArray":171}],110:[function(require,module,exports){
 var DataView = require('./_DataView'),
     Map = require('./_Map'),
     Promise = require('./_Promise'),
@@ -7853,7 +11624,7 @@ if ((DataView && getTag(new DataView(new ArrayBuffer(1))) != dataViewTag) ||
 
 module.exports = getTag;
 
-},{"./_DataView":13,"./_Map":16,"./_Promise":18,"./_Set":19,"./_WeakMap":23,"./_baseGetTag":42,"./_toSource":121}],80:[function(require,module,exports){
+},{"./_DataView":44,"./_Map":47,"./_Promise":49,"./_Set":50,"./_WeakMap":54,"./_baseGetTag":73,"./_toSource":152}],111:[function(require,module,exports){
 /**
  * Gets the value at `key` of `object`.
  *
@@ -7868,7 +11639,7 @@ function getValue(object, key) {
 
 module.exports = getValue;
 
-},{}],81:[function(require,module,exports){
+},{}],112:[function(require,module,exports){
 var nativeCreate = require('./_nativeCreate');
 
 /**
@@ -7885,7 +11656,7 @@ function hashClear() {
 
 module.exports = hashClear;
 
-},{"./_nativeCreate":105}],82:[function(require,module,exports){
+},{"./_nativeCreate":136}],113:[function(require,module,exports){
 /**
  * Removes `key` and its value from the hash.
  *
@@ -7904,7 +11675,7 @@ function hashDelete(key) {
 
 module.exports = hashDelete;
 
-},{}],83:[function(require,module,exports){
+},{}],114:[function(require,module,exports){
 var nativeCreate = require('./_nativeCreate');
 
 /** Used to stand-in for `undefined` hash values. */
@@ -7936,7 +11707,7 @@ function hashGet(key) {
 
 module.exports = hashGet;
 
-},{"./_nativeCreate":105}],84:[function(require,module,exports){
+},{"./_nativeCreate":136}],115:[function(require,module,exports){
 var nativeCreate = require('./_nativeCreate');
 
 /** Used for built-in method references. */
@@ -7961,7 +11732,7 @@ function hashHas(key) {
 
 module.exports = hashHas;
 
-},{"./_nativeCreate":105}],85:[function(require,module,exports){
+},{"./_nativeCreate":136}],116:[function(require,module,exports){
 var nativeCreate = require('./_nativeCreate');
 
 /** Used to stand-in for `undefined` hash values. */
@@ -7986,7 +11757,7 @@ function hashSet(key, value) {
 
 module.exports = hashSet;
 
-},{"./_nativeCreate":105}],86:[function(require,module,exports){
+},{"./_nativeCreate":136}],117:[function(require,module,exports){
 /** Used for built-in method references. */
 var objectProto = Object.prototype;
 
@@ -8014,7 +11785,7 @@ function initCloneArray(array) {
 
 module.exports = initCloneArray;
 
-},{}],87:[function(require,module,exports){
+},{}],118:[function(require,module,exports){
 var cloneArrayBuffer = require('./_cloneArrayBuffer'),
     cloneDataView = require('./_cloneDataView'),
     cloneMap = require('./_cloneMap'),
@@ -8096,7 +11867,7 @@ function initCloneByTag(object, tag, cloneFunc, isDeep) {
 
 module.exports = initCloneByTag;
 
-},{"./_cloneArrayBuffer":54,"./_cloneDataView":56,"./_cloneMap":57,"./_cloneRegExp":58,"./_cloneSet":59,"./_cloneSymbol":60,"./_cloneTypedArray":61}],88:[function(require,module,exports){
+},{"./_cloneArrayBuffer":85,"./_cloneDataView":87,"./_cloneMap":88,"./_cloneRegExp":89,"./_cloneSet":90,"./_cloneSymbol":91,"./_cloneTypedArray":92}],119:[function(require,module,exports){
 var baseCreate = require('./_baseCreate'),
     getPrototype = require('./_getPrototype'),
     isPrototype = require('./_isPrototype');
@@ -8116,7 +11887,7 @@ function initCloneObject(object) {
 
 module.exports = initCloneObject;
 
-},{"./_baseCreate":39,"./_getPrototype":75,"./_isPrototype":93}],89:[function(require,module,exports){
+},{"./_baseCreate":70,"./_getPrototype":106,"./_isPrototype":124}],120:[function(require,module,exports){
 /** Used as references for various `Number` constants. */
 var MAX_SAFE_INTEGER = 9007199254740991;
 
@@ -8140,7 +11911,7 @@ function isIndex(value, length) {
 
 module.exports = isIndex;
 
-},{}],90:[function(require,module,exports){
+},{}],121:[function(require,module,exports){
 var eq = require('./eq'),
     isArrayLike = require('./isArrayLike'),
     isIndex = require('./_isIndex'),
@@ -8172,7 +11943,7 @@ function isIterateeCall(value, index, object) {
 
 module.exports = isIterateeCall;
 
-},{"./_isIndex":89,"./eq":124,"./isArrayLike":128,"./isObject":133}],91:[function(require,module,exports){
+},{"./_isIndex":120,"./eq":155,"./isArrayLike":159,"./isObject":164}],122:[function(require,module,exports){
 /**
  * Checks if `value` is suitable for use as unique object key.
  *
@@ -8189,7 +11960,7 @@ function isKeyable(value) {
 
 module.exports = isKeyable;
 
-},{}],92:[function(require,module,exports){
+},{}],123:[function(require,module,exports){
 var coreJsData = require('./_coreJsData');
 
 /** Used to detect methods masquerading as native. */
@@ -8211,7 +11982,7 @@ function isMasked(func) {
 
 module.exports = isMasked;
 
-},{"./_coreJsData":66}],93:[function(require,module,exports){
+},{"./_coreJsData":97}],124:[function(require,module,exports){
 /** Used for built-in method references. */
 var objectProto = Object.prototype;
 
@@ -8231,7 +12002,7 @@ function isPrototype(value) {
 
 module.exports = isPrototype;
 
-},{}],94:[function(require,module,exports){
+},{}],125:[function(require,module,exports){
 /**
  * Removes all key-value entries from the list cache.
  *
@@ -8246,7 +12017,7 @@ function listCacheClear() {
 
 module.exports = listCacheClear;
 
-},{}],95:[function(require,module,exports){
+},{}],126:[function(require,module,exports){
 var assocIndexOf = require('./_assocIndexOf');
 
 /** Used for built-in method references. */
@@ -8283,7 +12054,7 @@ function listCacheDelete(key) {
 
 module.exports = listCacheDelete;
 
-},{"./_assocIndexOf":34}],96:[function(require,module,exports){
+},{"./_assocIndexOf":65}],127:[function(require,module,exports){
 var assocIndexOf = require('./_assocIndexOf');
 
 /**
@@ -8304,7 +12075,7 @@ function listCacheGet(key) {
 
 module.exports = listCacheGet;
 
-},{"./_assocIndexOf":34}],97:[function(require,module,exports){
+},{"./_assocIndexOf":65}],128:[function(require,module,exports){
 var assocIndexOf = require('./_assocIndexOf');
 
 /**
@@ -8322,7 +12093,7 @@ function listCacheHas(key) {
 
 module.exports = listCacheHas;
 
-},{"./_assocIndexOf":34}],98:[function(require,module,exports){
+},{"./_assocIndexOf":65}],129:[function(require,module,exports){
 var assocIndexOf = require('./_assocIndexOf');
 
 /**
@@ -8350,7 +12121,7 @@ function listCacheSet(key, value) {
 
 module.exports = listCacheSet;
 
-},{"./_assocIndexOf":34}],99:[function(require,module,exports){
+},{"./_assocIndexOf":65}],130:[function(require,module,exports){
 var Hash = require('./_Hash'),
     ListCache = require('./_ListCache'),
     Map = require('./_Map');
@@ -8373,7 +12144,7 @@ function mapCacheClear() {
 
 module.exports = mapCacheClear;
 
-},{"./_Hash":14,"./_ListCache":15,"./_Map":16}],100:[function(require,module,exports){
+},{"./_Hash":45,"./_ListCache":46,"./_Map":47}],131:[function(require,module,exports){
 var getMapData = require('./_getMapData');
 
 /**
@@ -8393,7 +12164,7 @@ function mapCacheDelete(key) {
 
 module.exports = mapCacheDelete;
 
-},{"./_getMapData":73}],101:[function(require,module,exports){
+},{"./_getMapData":104}],132:[function(require,module,exports){
 var getMapData = require('./_getMapData');
 
 /**
@@ -8411,7 +12182,7 @@ function mapCacheGet(key) {
 
 module.exports = mapCacheGet;
 
-},{"./_getMapData":73}],102:[function(require,module,exports){
+},{"./_getMapData":104}],133:[function(require,module,exports){
 var getMapData = require('./_getMapData');
 
 /**
@@ -8429,7 +12200,7 @@ function mapCacheHas(key) {
 
 module.exports = mapCacheHas;
 
-},{"./_getMapData":73}],103:[function(require,module,exports){
+},{"./_getMapData":104}],134:[function(require,module,exports){
 var getMapData = require('./_getMapData');
 
 /**
@@ -8453,7 +12224,7 @@ function mapCacheSet(key, value) {
 
 module.exports = mapCacheSet;
 
-},{"./_getMapData":73}],104:[function(require,module,exports){
+},{"./_getMapData":104}],135:[function(require,module,exports){
 /**
  * Converts `map` to its key-value pairs.
  *
@@ -8473,7 +12244,7 @@ function mapToArray(map) {
 
 module.exports = mapToArray;
 
-},{}],105:[function(require,module,exports){
+},{}],136:[function(require,module,exports){
 var getNative = require('./_getNative');
 
 /* Built-in method references that are verified to be native. */
@@ -8481,7 +12252,7 @@ var nativeCreate = getNative(Object, 'create');
 
 module.exports = nativeCreate;
 
-},{"./_getNative":74}],106:[function(require,module,exports){
+},{"./_getNative":105}],137:[function(require,module,exports){
 var overArg = require('./_overArg');
 
 /* Built-in method references for those with the same name as other `lodash` methods. */
@@ -8489,7 +12260,7 @@ var nativeKeys = overArg(Object.keys, Object);
 
 module.exports = nativeKeys;
 
-},{"./_overArg":110}],107:[function(require,module,exports){
+},{"./_overArg":141}],138:[function(require,module,exports){
 /**
  * This function is like
  * [`Object.keys`](http://ecma-international.org/ecma-262/7.0/#sec-object.keys)
@@ -8511,7 +12282,7 @@ function nativeKeysIn(object) {
 
 module.exports = nativeKeysIn;
 
-},{}],108:[function(require,module,exports){
+},{}],139:[function(require,module,exports){
 var freeGlobal = require('./_freeGlobal');
 
 /** Detect free variable `exports`. */
@@ -8535,7 +12306,7 @@ var nodeUtil = (function() {
 
 module.exports = nodeUtil;
 
-},{"./_freeGlobal":70}],109:[function(require,module,exports){
+},{"./_freeGlobal":101}],140:[function(require,module,exports){
 /** Used for built-in method references. */
 var objectProto = Object.prototype;
 
@@ -8559,7 +12330,7 @@ function objectToString(value) {
 
 module.exports = objectToString;
 
-},{}],110:[function(require,module,exports){
+},{}],141:[function(require,module,exports){
 /**
  * Creates a unary function that invokes `func` with its argument transformed.
  *
@@ -8576,7 +12347,7 @@ function overArg(func, transform) {
 
 module.exports = overArg;
 
-},{}],111:[function(require,module,exports){
+},{}],142:[function(require,module,exports){
 var apply = require('./_apply');
 
 /* Built-in method references for those with the same name as other `lodash` methods. */
@@ -8614,7 +12385,7 @@ function overRest(func, start, transform) {
 
 module.exports = overRest;
 
-},{"./_apply":26}],112:[function(require,module,exports){
+},{"./_apply":57}],143:[function(require,module,exports){
 var freeGlobal = require('./_freeGlobal');
 
 /** Detect free variable `self`. */
@@ -8625,7 +12396,7 @@ var root = freeGlobal || freeSelf || Function('return this')();
 
 module.exports = root;
 
-},{"./_freeGlobal":70}],113:[function(require,module,exports){
+},{"./_freeGlobal":101}],144:[function(require,module,exports){
 /**
  * Converts `set` to an array of its values.
  *
@@ -8645,7 +12416,7 @@ function setToArray(set) {
 
 module.exports = setToArray;
 
-},{}],114:[function(require,module,exports){
+},{}],145:[function(require,module,exports){
 var baseSetToString = require('./_baseSetToString'),
     shortOut = require('./_shortOut');
 
@@ -8661,7 +12432,7 @@ var setToString = shortOut(baseSetToString);
 
 module.exports = setToString;
 
-},{"./_baseSetToString":51,"./_shortOut":115}],115:[function(require,module,exports){
+},{"./_baseSetToString":82,"./_shortOut":146}],146:[function(require,module,exports){
 /** Used to detect hot functions by number of calls within a span of milliseconds. */
 var HOT_COUNT = 800,
     HOT_SPAN = 16;
@@ -8700,7 +12471,7 @@ function shortOut(func) {
 
 module.exports = shortOut;
 
-},{}],116:[function(require,module,exports){
+},{}],147:[function(require,module,exports){
 var ListCache = require('./_ListCache');
 
 /**
@@ -8717,7 +12488,7 @@ function stackClear() {
 
 module.exports = stackClear;
 
-},{"./_ListCache":15}],117:[function(require,module,exports){
+},{"./_ListCache":46}],148:[function(require,module,exports){
 /**
  * Removes `key` and its value from the stack.
  *
@@ -8737,7 +12508,7 @@ function stackDelete(key) {
 
 module.exports = stackDelete;
 
-},{}],118:[function(require,module,exports){
+},{}],149:[function(require,module,exports){
 /**
  * Gets the stack value for `key`.
  *
@@ -8753,7 +12524,7 @@ function stackGet(key) {
 
 module.exports = stackGet;
 
-},{}],119:[function(require,module,exports){
+},{}],150:[function(require,module,exports){
 /**
  * Checks if a stack value for `key` exists.
  *
@@ -8769,7 +12540,7 @@ function stackHas(key) {
 
 module.exports = stackHas;
 
-},{}],120:[function(require,module,exports){
+},{}],151:[function(require,module,exports){
 var ListCache = require('./_ListCache'),
     Map = require('./_Map'),
     MapCache = require('./_MapCache');
@@ -8805,7 +12576,7 @@ function stackSet(key, value) {
 
 module.exports = stackSet;
 
-},{"./_ListCache":15,"./_Map":16,"./_MapCache":17}],121:[function(require,module,exports){
+},{"./_ListCache":46,"./_Map":47,"./_MapCache":48}],152:[function(require,module,exports){
 /** Used for built-in method references. */
 var funcProto = Function.prototype;
 
@@ -8833,7 +12604,7 @@ function toSource(func) {
 
 module.exports = toSource;
 
-},{}],122:[function(require,module,exports){
+},{}],153:[function(require,module,exports){
 var baseClone = require('./_baseClone');
 
 /** Used to compose bitmasks for cloning. */
@@ -8871,7 +12642,7 @@ function clone(value) {
 
 module.exports = clone;
 
-},{"./_baseClone":38}],123:[function(require,module,exports){
+},{"./_baseClone":69}],154:[function(require,module,exports){
 /**
  * Creates a function that returns `value`.
  *
@@ -8899,7 +12670,7 @@ function constant(value) {
 
 module.exports = constant;
 
-},{}],124:[function(require,module,exports){
+},{}],155:[function(require,module,exports){
 /**
  * Performs a
  * [`SameValueZero`](http://ecma-international.org/ecma-262/7.0/#sec-samevaluezero)
@@ -8938,7 +12709,7 @@ function eq(value, other) {
 
 module.exports = eq;
 
-},{}],125:[function(require,module,exports){
+},{}],156:[function(require,module,exports){
 /**
  * This method returns the first argument it receives.
  *
@@ -8961,7 +12732,7 @@ function identity(value) {
 
 module.exports = identity;
 
-},{}],126:[function(require,module,exports){
+},{}],157:[function(require,module,exports){
 var baseIsArguments = require('./_baseIsArguments'),
     isObjectLike = require('./isObjectLike');
 
@@ -8999,7 +12770,7 @@ var isArguments = baseIsArguments(function() { return arguments; }()) ? baseIsAr
 
 module.exports = isArguments;
 
-},{"./_baseIsArguments":43,"./isObjectLike":134}],127:[function(require,module,exports){
+},{"./_baseIsArguments":74,"./isObjectLike":165}],158:[function(require,module,exports){
 /**
  * Checks if `value` is classified as an `Array` object.
  *
@@ -9027,7 +12798,7 @@ var isArray = Array.isArray;
 
 module.exports = isArray;
 
-},{}],128:[function(require,module,exports){
+},{}],159:[function(require,module,exports){
 var isFunction = require('./isFunction'),
     isLength = require('./isLength');
 
@@ -9062,7 +12833,7 @@ function isArrayLike(value) {
 
 module.exports = isArrayLike;
 
-},{"./isFunction":131,"./isLength":132}],129:[function(require,module,exports){
+},{"./isFunction":162,"./isLength":163}],160:[function(require,module,exports){
 var isArrayLike = require('./isArrayLike'),
     isObjectLike = require('./isObjectLike');
 
@@ -9097,7 +12868,7 @@ function isArrayLikeObject(value) {
 
 module.exports = isArrayLikeObject;
 
-},{"./isArrayLike":128,"./isObjectLike":134}],130:[function(require,module,exports){
+},{"./isArrayLike":159,"./isObjectLike":165}],161:[function(require,module,exports){
 var root = require('./_root'),
     stubFalse = require('./stubFalse');
 
@@ -9137,7 +12908,7 @@ var isBuffer = nativeIsBuffer || stubFalse;
 
 module.exports = isBuffer;
 
-},{"./_root":112,"./stubFalse":141}],131:[function(require,module,exports){
+},{"./_root":143,"./stubFalse":172}],162:[function(require,module,exports){
 var baseGetTag = require('./_baseGetTag'),
     isObject = require('./isObject');
 
@@ -9176,7 +12947,7 @@ function isFunction(value) {
 
 module.exports = isFunction;
 
-},{"./_baseGetTag":42,"./isObject":133}],132:[function(require,module,exports){
+},{"./_baseGetTag":73,"./isObject":164}],163:[function(require,module,exports){
 /** Used as references for various `Number` constants. */
 var MAX_SAFE_INTEGER = 9007199254740991;
 
@@ -9213,7 +12984,7 @@ function isLength(value) {
 
 module.exports = isLength;
 
-},{}],133:[function(require,module,exports){
+},{}],164:[function(require,module,exports){
 /**
  * Checks if `value` is the
  * [language type](http://www.ecma-international.org/ecma-262/7.0/#sec-ecmascript-language-types)
@@ -9246,7 +13017,7 @@ function isObject(value) {
 
 module.exports = isObject;
 
-},{}],134:[function(require,module,exports){
+},{}],165:[function(require,module,exports){
 /**
  * Checks if `value` is object-like. A value is object-like if it's not `null`
  * and has a `typeof` result of "object".
@@ -9277,7 +13048,7 @@ function isObjectLike(value) {
 
 module.exports = isObjectLike;
 
-},{}],135:[function(require,module,exports){
+},{}],166:[function(require,module,exports){
 var baseGetTag = require('./_baseGetTag'),
     getPrototype = require('./_getPrototype'),
     isObjectLike = require('./isObjectLike');
@@ -9341,7 +13112,7 @@ function isPlainObject(value) {
 
 module.exports = isPlainObject;
 
-},{"./_baseGetTag":42,"./_getPrototype":75,"./isObjectLike":134}],136:[function(require,module,exports){
+},{"./_baseGetTag":73,"./_getPrototype":106,"./isObjectLike":165}],167:[function(require,module,exports){
 var baseIsTypedArray = require('./_baseIsTypedArray'),
     baseUnary = require('./_baseUnary'),
     nodeUtil = require('./_nodeUtil');
@@ -9370,7 +13141,7 @@ var isTypedArray = nodeIsTypedArray ? baseUnary(nodeIsTypedArray) : baseIsTypedA
 
 module.exports = isTypedArray;
 
-},{"./_baseIsTypedArray":45,"./_baseUnary":53,"./_nodeUtil":108}],137:[function(require,module,exports){
+},{"./_baseIsTypedArray":76,"./_baseUnary":84,"./_nodeUtil":139}],168:[function(require,module,exports){
 var arrayLikeKeys = require('./_arrayLikeKeys'),
     baseKeys = require('./_baseKeys'),
     isArrayLike = require('./isArrayLike');
@@ -9409,7 +13180,7 @@ function keys(object) {
 
 module.exports = keys;
 
-},{"./_arrayLikeKeys":29,"./_baseKeys":46,"./isArrayLike":128}],138:[function(require,module,exports){
+},{"./_arrayLikeKeys":60,"./_baseKeys":77,"./isArrayLike":159}],169:[function(require,module,exports){
 var arrayLikeKeys = require('./_arrayLikeKeys'),
     baseKeysIn = require('./_baseKeysIn'),
     isArrayLike = require('./isArrayLike');
@@ -9443,7 +13214,7 @@ function keysIn(object) {
 
 module.exports = keysIn;
 
-},{"./_arrayLikeKeys":29,"./_baseKeysIn":47,"./isArrayLike":128}],139:[function(require,module,exports){
+},{"./_arrayLikeKeys":60,"./_baseKeysIn":78,"./isArrayLike":159}],170:[function(require,module,exports){
 var baseMerge = require('./_baseMerge'),
     createAssigner = require('./_createAssigner');
 
@@ -9484,7 +13255,7 @@ var merge = createAssigner(function(object, source, srcIndex) {
 
 module.exports = merge;
 
-},{"./_baseMerge":48,"./_createAssigner":67}],140:[function(require,module,exports){
+},{"./_baseMerge":79,"./_createAssigner":98}],171:[function(require,module,exports){
 /**
  * This method returns a new empty array.
  *
@@ -9509,7 +13280,7 @@ function stubArray() {
 
 module.exports = stubArray;
 
-},{}],141:[function(require,module,exports){
+},{}],172:[function(require,module,exports){
 /**
  * This method returns `false`.
  *
@@ -9529,7 +13300,7 @@ function stubFalse() {
 
 module.exports = stubFalse;
 
-},{}],142:[function(require,module,exports){
+},{}],173:[function(require,module,exports){
 var copyObject = require('./_copyObject'),
     keysIn = require('./keysIn');
 
@@ -9563,7 +13334,7 @@ function toPlainObject(value) {
 
 module.exports = toPlainObject;
 
-},{"./_copyObject":63,"./keysIn":138}],143:[function(require,module,exports){
+},{"./_copyObject":94,"./keysIn":169}],174:[function(require,module,exports){
 
 
 var CHANNEL = require("./channel");
@@ -9678,7 +13449,7 @@ HttpHeaderChannel.prototype.getMozillaRequestObserverListener = function(globals
     return this.mozillaRequestObserverListener;
 }
 
-},{"./channel":146}],144:[function(require,module,exports){
+},{"./channel":177}],175:[function(require,module,exports){
 
 var CHANNEL = require("./channel"),
     UTIL = require("fp-modules-for-nodejs/lib/util");
@@ -9742,7 +13513,7 @@ PostMessageChannel.prototype.parseReceivedPostMessage = function(msg)
     });
 }
 
-},{"./channel":146,"fp-modules-for-nodejs/lib/util":12}],145:[function(require,module,exports){
+},{"./channel":177,"fp-modules-for-nodejs/lib/util":12}],176:[function(require,module,exports){
 
 var CHANNEL = require("./channel");
 
@@ -9759,7 +13530,7 @@ var ShellCommandChannel = exports.ShellCommandChannel = function () {
 
 ShellCommandChannel.prototype = CHANNEL.Channel();
 
-},{"./channel":146}],146:[function(require,module,exports){
+},{"./channel":177}],177:[function(require,module,exports){
 
 var UTIL = require("fp-modules-for-nodejs/lib/util");
 var PROTOCOL = require("./protocol");
@@ -10289,7 +14060,7 @@ Channel.prototype.setTransport = function(transport) {
 }
 
 
-},{"./protocol":150,"./transport":153,"fp-modules-for-nodejs/lib/util":12}],147:[function(require,module,exports){
+},{"./protocol":181,"./transport":184,"fp-modules-for-nodejs/lib/util":12}],178:[function(require,module,exports){
 
 var CHANNEL = require("../channel"),
     UTIL = require("fp-modules-for-nodejs/lib/util"),
@@ -10386,7 +14157,7 @@ HttpClientChannel.prototype.flush = function(applicator, bypassTransport)
     return self._flush(applicator);
 }
 
-},{"../channel":146,"fp-modules-for-nodejs/lib/http-client":5,"fp-modules-for-nodejs/lib/json":6,"fp-modules-for-nodejs/lib/util":12}],148:[function(require,module,exports){
+},{"../channel":177,"fp-modules-for-nodejs/lib/http-client":5,"fp-modules-for-nodejs/lib/json":6,"fp-modules-for-nodejs/lib/util":12}],179:[function(require,module,exports){
 
 var Dispatcher = exports.Dispatcher = function () {
     if (!(this instanceof exports.Dispatcher))
@@ -10425,7 +14196,7 @@ Dispatcher.prototype._dispatch = function(message, bypassReceivers) {
     this.channel.enqueueOutgoing(message, bypassReceivers);
 }
 
-},{}],149:[function(require,module,exports){
+},{}],180:[function(require,module,exports){
 
 var Message = exports.Message = function (dispatcher) {
     if (!(this instanceof exports.Message))
@@ -10483,7 +14254,7 @@ Message.prototype.getData = function() {
     return this.data;
 }
 
-},{}],150:[function(require,module,exports){
+},{}],181:[function(require,module,exports){
 
 var MESSAGE = require("./message");
 var JSON = require("fp-modules-for-nodejs/lib/json");
@@ -11323,7 +15094,7 @@ function chunk_split(value, length) {
     return parts;
 }
 
-},{"./message":149,"fp-modules-for-nodejs/lib/json":6,"fp-modules-for-nodejs/lib/util":12}],151:[function(require,module,exports){
+},{"./message":180,"fp-modules-for-nodejs/lib/json":6,"fp-modules-for-nodejs/lib/util":12}],182:[function(require,module,exports){
 
 var Receiver = exports.Receiver = function () {
     if (!(this instanceof exports.Receiver))
@@ -11414,7 +15185,7 @@ Receiver.prototype._dispatch = function(event, args) {
     return returnOptions;
 }
 
-},{}],152:[function(require,module,exports){
+},{}],183:[function(require,module,exports){
 
 var WILDFIRE = require("../wildfire"),
     JSON = require("fp-modules-for-nodejs/lib/json");
@@ -11544,7 +15315,7 @@ CallbackStream.prototype.receive = function(handler)
     this.receiveHandler = handler;
 }
 
-},{"../wildfire":154,"fp-modules-for-nodejs/lib/json":6}],153:[function(require,module,exports){
+},{"../wildfire":185,"fp-modules-for-nodejs/lib/json":6}],184:[function(require,module,exports){
 
 
 const RECEIVER_ID = "http://registry.pinf.org/cadorn.org/wildfire/@meta/receiver/transport/0";
@@ -11660,7 +15431,7 @@ throw new Error("OOPS!!!");
 }
 
 
-},{"./message":149,"./receiver":151,"./wildfire":154,"fp-modules-for-nodejs/lib/json":6,"fp-modules-for-nodejs/lib/md5":7,"fp-modules-for-nodejs/lib/struct":10}],154:[function(require,module,exports){
+},{"./message":180,"./receiver":182,"./wildfire":185,"fp-modules-for-nodejs/lib/json":6,"fp-modules-for-nodejs/lib/md5":7,"fp-modules-for-nodejs/lib/struct":10}],185:[function(require,module,exports){
 
 exports.Receiver = function() {
     return require("./receiver").Receiver();
@@ -11694,7 +15465,7 @@ exports.CallbackStream = function() {
     return require("./stream/callback").CallbackStream();
 }
 
-},{"./channel-httpheader":143,"./channel-postmessage":144,"./channel-shellcommand":145,"./channel/http-client":147,"./dispatcher":148,"./message":149,"./receiver":151,"./stream/callback":152}],155:[function(require,module,exports){
+},{"./channel-httpheader":174,"./channel-postmessage":175,"./channel-shellcommand":176,"./channel/http-client":178,"./dispatcher":179,"./message":180,"./receiver":182,"./stream/callback":183}],186:[function(require,module,exports){
 "use strict";
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -12261,3783 +16032,7 @@ exports.main = function (JSONREP, node) {
     });
 };
 
-},{"domplate/lib/util":2,"eventemitter2":3,"insight-for-js/lib/decoder/default":156,"insight-for-js/lib/encoder/default":157,"insight.renderers.default/lib/insight/pack":161,"insight.renderers.default/lib/insight/wrappers/console":172,"insight.renderers.default/lib/insight/wrappers/viewer":173,"insight.renderers.default/lib/php/pack":176,"lodash/clone":122,"lodash/merge":139,"wildfire-for-js/lib/wildfire":154}],156:[function(require,module,exports){
-
-var UTIL = require("fp-modules-for-nodejs/lib/util"),
-    JSON = require("fp-modules-for-nodejs/lib/json"),
-    ENCODER = require("../encoder/default");
-
-exports.EXTENDED = "EXTENDED";
-exports.SIMPLE = "SIMPLE";
-
-
-exports.generateFromMessage = function(message, format)
-{
-    format = format || exports.EXTENDED;
-
-    var og = new ObjectGraph();
-
-    var meta = {},
-        data;
-
-    if (typeof message.getMeta == "function")
-    {
-        meta = JSON.decode(message.getMeta() || "{}");
-    }
-    else
-    if (typeof message.meta == "string")
-    {
-        meta = JSON.decode(message.meta);
-    }
-    else
-    if (typeof message.meta == "object")
-    {
-        meta = message.meta;
-    }
-
-    if (typeof message.getData == "function")
-    {
-        data = message.getData();
-    }
-    else
-    if (typeof message.data != "undefined")
-    {
-        data = message.data;
-    }
-    else
-        throw new Error("NYI");
-
-    if(meta["msg.preprocessor"] && meta["msg.preprocessor"]=="FirePHPCoreCompatibility") {
-
-        var parts = convertFirePHPCoreData(meta, data);
-        if (typeof message.setMeta == "function")
-            message.setMeta(JSON.encode(parts[0]));
-        else
-            message.meta = JSON.encode(parts[0]);
-        data = parts[1];
-
-    } else
-    if(typeof data !== "undefined" && data != "") {
-        try {
-
-            data = JSON.decode(data);
-
-        } catch(e) {
-            console.error("Error decoding JSON data: " + data);
-            throw e;
-        }
-    } else {
-        data = {};
-    }
-
-    // assign group title to value if applicable
-    if(typeof meta["group.title"] != "undefined") {
-        data = {
-            "origin": {
-                "type": "text",
-                "text": meta["group.title"]
-            }
-        };
-    }
-
-    if(data.instances) {
-        for( var i=0 ; i<data.instances.length ; i++ ) {
-            data.instances[i] = generateNodesFromData(og, data.instances[i]);
-        }
-        og.setInstances(data.instances);
-    }
-
-    if(meta["lang.id"]) {
-        og.setLanguageId(meta["lang.id"]);
-    }
-
-    og.setMeta(meta);
-
-    if(UTIL.has(data, "origin")) {
-        if(format==exports.EXTENDED) {
-            og.setOrigin(generateNodesFromData(og, data.origin));
-        } else
-        if(format==exports.SIMPLE) {
-            og.setOrigin(generateObjectsFromData(og, data.origin));
-        } else {
-            throw new Error("unsupported format: " + format);
-        }
-    }
-
-    return og;
-}
-
-function generateObjectsFromData(objectGraph, data) {
-
-    var node;
-
-    if(data.type=="array") {
-        node = [];
-        for( var i=0 ; i<data[data.type].length ; i++ ) {
-            node.push(generateObjectsFromData(objectGraph, data[data.type][i]));
-        }
-    } else
-    if(data.type=="map") {
-        node = [];
-        for( var i=0 ; i<data[data.type].length ; i++ ) {
-            node.push([
-                generateObjectsFromData(objectGraph, data[data.type][i][0]),
-                generateObjectsFromData(objectGraph, data[data.type][i][1])
-            ]);
-        }
-    } else
-    if(data.type=="dictionary") {
-        node = {};
-        for( var name in data[data.type] ) {
-            node[name] = generateObjectsFromData(objectGraph, data[data.type][name]);
-        }
-    } else {
-        node = data[data.type];
-    }
-
-    return node;
-}
-
-
-function generateNodesFromData(objectGraph, data, parentNode) {
-    
-    parentNode = parentNode || null;
-    
-    var node = new Node(objectGraph, data, parentNode);
-    
-    if(node.value!==null && typeof node.value != "undefined") {
-        // some types need nested nodes decoded
-        if(node.type=="array") {
-            for( var i=0 ; i<node.value.length ; i++ ) {
-                node.value[i] = generateNodesFromData(objectGraph, node.value[i], node);
-            }
-        } else
-        if(node.type=="map") {
-            for( var i=0 ; i<node.value.length ; i++ ) {
-                node.value[i][0] = generateNodesFromData(objectGraph, node.value[i][0], node);
-                node.value[i][1] = generateNodesFromData(objectGraph, node.value[i][1], node);
-            }
-        } else
-        if(node.type=="dictionary") {
-            for( var name in node.value ) {
-                node.value[name] = generateNodesFromData(objectGraph, node.value[name], node);
-            }
-        }
-    } else {
-        node.value = null;
-    }
-
-    return node;
-}
-
-
-
-var Node = function(objectGraph, data, parentNode) {
-    var self = this;
-    self.parentNode = parentNode || null;
-    self.type = data.type;
-    self.value = data[data.type];
-    self.meta = {};
-    UTIL.every(data, function(item) {
-        if(item[0]!="type" && item[0]!=self.type) {
-            self.meta[item[0]] = item[1];
-        }
-    });
-    if(self.type=="reference") {
-        self.getInstance = function() {
-            return objectGraph.getInstance(self.value);
-        }
-    }
-    self.getObjectGraph = function() {
-        return objectGraph;
-    }
-}
-
-Node.prototype.getTemplateId = function() {
-    if(UTIL.has(this.meta, "tpl.id")) {
-        return this.meta["tpl.id"];
-    }
-    return false;
-}
-
-Node.prototype.compact = function() {
-    if(!this.compacted) {
-        if(this.type=="map") {
-            this.compacted = {};
-            for( var i=0 ; i<this.value.length ; i++ ) {
-                this.compacted[this.value[i][0].value] = this.value[i][1];
-            }
-        }
-    }
-    return this.compacted;
-}
-
-Node.prototype.getPath = function(locateChild) {
-    var path = [];
-    if (this.parentNode)
-        path = path.concat(this.parentNode.getPath(this));
-    else
-        path = path.concat(this.getObjectGraph().getPath(this));
-    if (locateChild)
-    {
-        if(this.type=="map") {
-            for( var i=0 ; i<this.value.length ; i++ ) {
-                if (this.value[i][1] === locateChild)
-                {
-                    path.push("value[" + i + "][1]");
-                    break;
-                }
-            }
-        } else
-        if(this.type=="dictionary") {
-            for (var key in this.value)
-            {
-                if (this.value[key] === locateChild)
-                {
-                    path.push("value['" + key + "']");
-                    break;
-                }
-            }
-        } else
-        if(this.type=="array") {
-            for( var i=0 ; i<this.value.length ; i++ ) {
-                if (this.value[i] === locateChild)
-                {
-                    path.push("value[" + i + "]");
-                    break;
-                }
-            }
-        } else {
-console.error("NYI - getPath() for this.type = '" + this.type + "'", this);            
-        }
-    }
-    return path;
-}
-
-Node.prototype.forPath = function(path) {
-    if (!path || path.length === 0)
-        return this;
-    if(this.type=="map") {
-        var m = path[0].match(/^value\[(\d*)\]\[1\]$/);
-        return this.value[parseInt(m[1])][1].forPath(path.slice(1));
-    } else
-    if(this.type=="dictionary") {
-        var m = path[0].match(/^value\['(.*?)'\]$/);
-        return this.value[m[1]].forPath(path.slice(1));
-    } else
-    if(this.type=="array") {
-        var m = path[0].match(/^value\[(\d*)\]$/);
-        return this.value[parseInt(m[1])].forPath(path.slice(1));
-    } else {
-//console.error("NYI - forPath('" + path + "') for this.type = '" + this.type + "'", this);            
-    }
-    return null;
-}
-
-//Node.prototype.renderIntoViewer = function(viewerDocument, options) {
-//    throw new Error("NYI - Node.prototype.renderIntoViewer in " + module.id);
-//    return RENDERER.renderIntoViewer(this, viewerDocument, options);
-//}
-
-
-var ObjectGraph = function() {
-//    this.message = message;
-}
-//ObjectGraph.prototype = Object.create(new Node());
-
-ObjectGraph.prototype.setOrigin = function(node) {
-    this.origin = node;
-}
-
-ObjectGraph.prototype.getOrigin = function() {
-    return this.origin;
-}
-
-ObjectGraph.prototype.setInstances = function(instances) {
-    this.instances = instances;
-}
-
-ObjectGraph.prototype.getInstance = function(index) {
-    return this.instances[index];
-}
-
-ObjectGraph.prototype.setLanguageId = function(id) {
-    this.languageId = id;
-}
-
-ObjectGraph.prototype.getLanguageId = function() {
-    return this.languageId;
-}
-
-ObjectGraph.prototype.setMeta = function(meta) {
-    this.meta = meta;
-}
-
-ObjectGraph.prototype.getMeta = function() {
-    return this.meta;
-}
-
-ObjectGraph.prototype.getPath = function(locateChild) {
-    if (this.origin === locateChild)
-    {
-        return ["origin"];
-    }
-    for( var i=0 ; i<this.instances.length ; i++ ) {
-        if (this.instances[i] === locateChild)
-        {
-            return ["instances[" + i + "]"];
-        }
-    }
-    throw new Error("Child node not found. We should never reach this!");
-}
-        
-ObjectGraph.prototype.nodeForPath = function(path) {
-    var m = path[0].match(/^instances\[(\d*)\]$/);
-    if (m) {
-        return this.instances[parseInt(m[1])].forPath(path.slice(1));
-    } else {
-        // assume path[0] == 'origin'
-        return this.origin.forPath(path.slice(1));
-    }
-    return node;
-}
-
-
-var encoder = ENCODER.Encoder();
-encoder.setOption("maxObjectDepth", 1000);
-encoder.setOption("maxArrayDepth", 1000);
-encoder.setOption("maxOverallDepth", 1000);
-function convertFirePHPCoreData(meta, data) {
-    data = encoder.encode(JSON.decode(data), null, {
-        "jsonEncode": false
-    });
-    return [meta, data]; 
-}
-
-},{"../encoder/default":157,"fp-modules-for-nodejs/lib/json":158,"fp-modules-for-nodejs/lib/util":159}],157:[function(require,module,exports){
-
-var UTIL = require("fp-modules-for-nodejs/lib/util");
-var JSON = require("fp-modules-for-nodejs/lib/json");
-
-var Encoder = exports.Encoder = function() {
-    if (!(this instanceof exports.Encoder))
-        return new exports.Encoder();
-    this.options = {
-        "maxObjectDepth": 4,
-        "maxArrayDepth": 4,
-        "maxOverallDepth": 6,
-        "includeLanguageMeta": true
-    };
-}
-
-Encoder.prototype.setOption = function(name, value) {
-    this.options[name] = value;
-}
-
-Encoder.prototype.setOrigin = function(variable) {
-    this.origin = variable;
-    // reset some variables
-    this.instances = [];
-    return true;
-}
-
-Encoder.prototype.encode = function(data, meta, options) {
-
-    options = options || {};
-
-    if(typeof data != "undefined") {
-        this.setOrigin(data);
-    }
-
-    // TODO: Use meta["fc.encoder.options"] to control encoding
-
-    var graph = {};
-    
-    try {
-        if(typeof this.origin != "undefined") {
-            graph["origin"] = this.encodeVariable(this.origin);
-        }
-    } catch(err) {
-        console.warn("Error encoding variable", err.stack);
-        throw err;
-    }
-
-    if(UTIL.len(this.instances)>0) {
-        graph["instances"] = [];
-        this.instances.forEach(function(instance) {
-            graph["instances"].push(instance[1]);
-        });
-    }
-
-    if(UTIL.has(options, "jsonEncode") && !options.jsonEncode) {
-        return graph;
-    }
-
-    try {
-        return JSON.encode(graph);
-    } catch(e) {
-        console.warn("Error jsonifying object graph" + e);
-        throw e;
-    }
-    return null;
-}
-
-Encoder.prototype.encodeVariable = function(variable, objectDepth, arrayDepth, overallDepth) {
-    objectDepth = objectDepth || 1;
-    arrayDepth = arrayDepth || 1;
-    overallDepth = overallDepth || 1;
-    
-    if(variable===null) {
-        var ret = {"type": "constant", "constant": "null"};
-        if(this.options["includeLanguageMeta"]) {
-            ret["lang.type"] = "null";
-        }
-        return ret;
-    } else
-    if(variable===true || variable===false) {
-        var ret = {"type": "constant", "constant": (variable===true)?"true":"false"};
-        if(this.options["includeLanguageMeta"]) {
-            ret["lang.type"] = "boolean";
-        }
-        return ret;
-    }
-
-    var type = typeof variable;
-    if(type=="undefined") {
-        var ret = {"type": "constant", "constant": "undefined"};
-        if(this.options["includeLanguageMeta"]) {
-            ret["lang.type"] = "undefined";
-        }
-        return ret;
-    } else
-    if(type=="number") {
-        if(Math.round(variable)==variable) {
-            var ret = {"type": "text", "text": ""+variable};
-            if(this.options["includeLanguageMeta"]) {
-                ret["lang.type"] = "integer";
-            }
-            return ret;
-        } else {
-            var ret = {"type": "text", "text": ""+variable};
-            if(this.options["includeLanguageMeta"]) {
-                ret["lang.type"] = "float";
-            }
-            return ret;
-        }
-    } else
-    if(type=="string") {
-        // HACK: This should be done via an option
-        // FirePHPCore compatibility: Detect resource string
-        if(variable=="** Excluded by Filter **") {
-            var ret = {"type": "text", "text": variable};
-            ret["encoder.notice"] = "Excluded by Filter";
-            ret["encoder.trimmed"] = true;
-            if(this.options["includeLanguageMeta"]) {
-                ret["lang.type"] = "string";
-            }
-            return ret;
-        } else
-        if(variable.match(/^\*\*\sRecursion\s\([^\(]*\)\s\*\*$/)) {
-            var ret = {"type": "text", "text": variable};
-            ret["encoder.notice"] = "Recursion";
-            ret["encoder.trimmed"] = true;
-            if(this.options["includeLanguageMeta"]) {
-                ret["lang.type"] = "string";
-            }
-            return ret;
-        } else
-        if(variable.match(/^\*\*\sResource\sid\s#\d*\s\*\*$/)) {
-            var ret = {"type": "text", "text": variable.substring(3, variable.length-3)};
-            if(this.options["includeLanguageMeta"]) {
-                ret["lang.type"] = "resource";
-            }
-            return ret;
-        } else {
-            var ret = {"type": "text", "text": variable};
-            if(this.options["includeLanguageMeta"]) {
-                ret["lang.type"] = "string";
-            }
-            return ret;
-        }
-    }
-
-    if (variable && variable.__no_serialize === true) {
-        var ret = {"type": "text", "text": "Object"};
-        ret["encoder.notice"] = "Excluded by __no_serialize";
-        ret["encoder.trimmed"] = true;
-        return ret;
-    }
-
-    if(type=="function") {
-        var ret = {"type": "text", "text": ""+variable};
-        if(this.options["includeLanguageMeta"]) {
-            ret["lang.type"] = "function";
-        }
-        return ret;
-    } else
-    if(type=="object") {
-
-        try {
-            if(UTIL.isArrayLike(variable)) {
-                var ret = {
-                    "type": "array",
-                    "array": this.encodeArray(variable, objectDepth, arrayDepth, overallDepth)
-                };
-                if(this.options["includeLanguageMeta"]) {
-                    ret["lang.type"] = "array";
-                }
-                return ret;
-            }
-        } catch (err) {
-// TODO: Find a better way to encode variables that cause security exceptions when accessed etc...
-            var ret = {"type": "text", "text": "Cannot serialize"};
-            ret["encoder.notice"] = "Cannot serialize";
-            ret["encoder.trimmed"] = true;
-            return ret;
-        }
-        // HACK: This should be done via an option
-        // FirePHPCore compatibility: we only have an object if a class name is present
-
-        if(typeof variable["__className"] != "undefined"  ) {
-            var ret = {
-                "type": "reference",
-                "reference": this.encodeInstance(variable, objectDepth, arrayDepth, overallDepth)
-            };
-            return ret;
-        } else {
-            var ret;
-            if (/^\[Exception\.\.\.\s/.test(variable)) {
-                ret = {
-                    "type": "map",
-                    "map": this.encodeException(variable, objectDepth, arrayDepth, overallDepth)
-                };
-            } else {
-                ret = {
-                    "type": "map",
-                    "map": this.encodeAssociativeArray(variable, objectDepth, arrayDepth, overallDepth)
-                };
-            }
-            if(this.options["includeLanguageMeta"]) {
-                ret["lang.type"] = "array";
-            }
-            return ret;
-        }
-    }
-
-    var ret = {"type": "text", "text": "Variable with type '" + type + "' unknown: "+variable};
-    if(this.options["includeLanguageMeta"]) {
-        ret["lang.type"] = "unknown";
-    }
-    return ret;
-//    return "["+(typeof variable)+"]["+variable+"]";    
-}
-
-Encoder.prototype.encodeArray = function(variable, objectDepth, arrayDepth, overallDepth) {
-    objectDepth = objectDepth || 1;
-    arrayDepth = arrayDepth || 1;
-    overallDepth = overallDepth || 1;
-    if(arrayDepth > this.options["maxArrayDepth"]) {
-        return {"notice": "Max Array Depth (" + this.options["maxArrayDepth"] + ")"};
-    } else
-    if(overallDepth > this.options["maxOverallDepth"]) {
-        return {"notice": "Max Overall Depth (" + this.options["maxOverallDepth"] + ")"};
-    }
-    var self = this,
-        items = [];
-    UTIL.forEach(variable, function(item) {
-        items.push(self.encodeVariable(item, 1, arrayDepth + 1, overallDepth + 1));
-    });
-    return items;
-}
-
-
-Encoder.prototype.encodeAssociativeArray = function(variable, objectDepth, arrayDepth, overallDepth) {
-    objectDepth = objectDepth || 1;
-    arrayDepth = arrayDepth || 1;
-    overallDepth = overallDepth || 1;
-    if(arrayDepth > this.options["maxArrayDepth"]) {
-        return {"notice": "Max Array Depth (" + this.options["maxArrayDepth"] + ")"};
-    } else
-    if(overallDepth > this.options["maxOverallDepth"]) {
-        return {"notice": "Max Overall Depth (" + this.options["maxOverallDepth"] + ")"};
-    }
-    var self = this,
-        items = [];
-    for (var key in variable) {
-
-        // HACK: This should be done via an option
-        // FirePHPCore compatibility: numeric (integer) strings as keys in associative arrays get converted to integers
-        // http://www.php.net/manual/en/language.types.array.php
-        if(isNumber(key) && Math.round(key)==key) {
-            key = parseInt(key);
-        }
-        
-        items.push([
-            self.encodeVariable(key, 1, arrayDepth + 1, overallDepth + 1),
-            self.encodeVariable(variable[key], 1, arrayDepth + 1, overallDepth + 1)
-        ]);
-    }
-    return items;
-}
-
-
-Encoder.prototype.encodeException = function(variable, objectDepth, arrayDepth, overallDepth) {
-    var self = this,
-        items = [];
-    items.push([
-        self.encodeVariable("message", 1, arrayDepth + 1, overallDepth + 1),
-        self.encodeVariable((""+variable), 1, arrayDepth + 1, overallDepth + 1)
-    ]);
-    return items;
-}
-
-// http://stackoverflow.com/questions/18082/validate-numbers-in-javascript-isnumeric
-function isNumber(n) {
-  return !isNaN(parseFloat(n)) && isFinite(n);
-}
-
-
-
-Encoder.prototype.getInstanceId = function(object) {
-    for( var i=0 ; i<this.instances.length ; i++ ) {
-        if(this.instances[i][0]===object) {
-            return i;
-        }
-    }
-    return null;
-}
-
-Encoder.prototype.encodeInstance = function(object, objectDepth, arrayDepth, overallDepth) {
-    objectDepth = objectDepth || 1;
-    arrayDepth = arrayDepth || 1;
-    overallDepth = overallDepth || 1;
-    var id = this.getInstanceId(object);
-    if(id!=null) {
-        return id;
-    }
-    this.instances.push([
-        object,
-        this.encodeObject(object, objectDepth, arrayDepth, overallDepth)
-    ]);
-    return UTIL.len(this.instances)-1;
-}
-
-Encoder.prototype.encodeObject = function(object, objectDepth, arrayDepth, overallDepth) {
-    objectDepth = objectDepth || 1;
-    arrayDepth = arrayDepth || 1;
-    overallDepth = overallDepth || 1;
-
-    if(arrayDepth > this.options["maxObjectDepth"]) {
-        return {"notice": "Max Object Depth (" + this.options["maxObjectDepth"] + ")"};
-    } else
-    if(overallDepth > this.options["maxOverallDepth"]) {
-        return {"notice": "Max Overall Depth (" + this.options["maxOverallDepth"] + ")"};
-    }
-    
-    var self = this,
-        ret = {"type": "dictionary", "dictionary": {}};
-
-    // HACK: This should be done via an option
-    // FirePHPCore compatibility: we have an object if a class name is present
-    var isPHPClass = false;
-    if(typeof object["__className"] != "undefined") {
-        isPHPClass = true;
-        ret["lang.class"] = object["__className"];
-        delete(object["__className"]);
-        if(this.options["includeLanguageMeta"]) {
-            ret["lang.type"] = "object";
-        }
-    }
-
-    // HACK: This should be done via an option
-    // FirePHPCore compatibility: we have an exception if a class name is present
-    if(typeof object["__isException"] != "undefined" && object["__isException"]) {
-        ret["lang.type"] = "exception";
-    }
-
-    UTIL.forEach(object, function(item) {
-        try {
-            if(item[0]=="__fc_tpl_id") {
-                ret['fc.tpl.id'] = item[1];
-                return;
-            }
-            if(isPHPClass) {
-                var val = self.encodeVariable(item[1], objectDepth + 1, 1, overallDepth + 1),
-                    parts = item[0].split(":"),
-                    name = parts[parts.length-1];
-                if(parts[0]=="public") {
-                    val["lang.visibility"] = "public";
-                } else
-                if(parts[0]=="protected") {
-                    val["lang.visibility"] = "protected";
-                } else
-                if(parts[0]=="private") {
-                    val["lang.visibility"] = "private";
-                } else
-                if(parts[0]=="undeclared") {
-                    val["lang.undeclared"] = 1;
-                }
-                if(parts.length==2 && parts[1]=="static") {
-                    val["lang.static"] = 1;
-                }
-                ret["dictionary"][name] = val;
-            } else {
-                ret["dictionary"][item[0]] = self.encodeVariable(item[1], objectDepth + 1, 1, overallDepth + 1);
-            }
-        } catch(e) {
-            console.warn(e);
-            ret["dictionary"]["__oops__"] = {"notice": "Error encoding member (" + e + ")"};
-        }
-    });
-    
-    return ret;
-}
-},{"fp-modules-for-nodejs/lib/json":158,"fp-modules-for-nodejs/lib/util":159}],158:[function(require,module,exports){
-arguments[4][6][0].apply(exports,arguments)
-},{"dup":6}],159:[function(require,module,exports){
-arguments[4][12][0].apply(exports,arguments)
-},{"dup":12}],160:[function(require,module,exports){
-
-module.exports = function () {/*
-
-///*######################################################################
-//#   primitives/text
-//#####################################################################
-
-SPAN.__NS__text {
-}
-
-
-
-///*######################################################################
-//#   primitives/constant
-//#####################################################################
-
-SPAN.__NS__constant {
-  color: #0000FF;
-}
-
-
-
-///*######################################################################
-//#   primitives/array
-//#####################################################################
-
-SPAN.__NS__array > SPAN {
-    color: #9C9C9C;
-    font-weight: bold;
-}
-
-SPAN.__NS__array > SPAN.collapsed {
-    color: #0000FF;
-    font-weight: normal;
-    padding-left: 5px;
-    padding-right: 5px;
-}
-
-SPAN.__NS__array > SPAN.summary {
-    color: #0000FF;
-    font-weight: normal;
-    padding-left: 5px;
-    padding-right: 5px;
-}
-
-SPAN.__NS__array > DIV.element {
-    display: block;
-    padding-left: 20px;
-}
-
-SPAN.__NS__array > SPAN.element {
-    padding-left: 2px;
-}
-
-SPAN.__NS__array > DIV.element.expandable {
-    background-image: url(__RESOURCE__images/twisty-closed.png);
-    background-repeat: no-repeat;
-    background-position: 6px 2px;
-    cursor: pointer;
-}
-SPAN.__NS__array > DIV.element.expandable.expanded {
-    background-image: url(__RESOURCE__images/twisty-open.png);
-}
-
-SPAN.__NS__array > .element > SPAN.value {
-}
-
-SPAN.__NS__array > .element > SPAN.separator {
-    color: #9C9C9C;
-}
-
-
-
-///*######################################################################
-//#   primitives/map
-//#####################################################################
-
-SPAN.__NS__map > SPAN {
-    color: #9C9C9C;
-    font-weight: bold;
-}
-
-SPAN.__NS__map > DIV.pair {
-    display: block;
-    padding-left: 20px;
-}
-
-SPAN.__NS__map > SPAN.pair {
-    padding-left: 2px;
-}
-
-SPAN.__NS__map > .pair > SPAN.delimiter,
-SPAN.__NS__map > .pair > SPAN.separator {
-    color: #9C9C9C;
-    padding-left: 2px;
-    padding-right: 2px;
-}
-
-
-
-
-///*######################################################################
-//#   primitives/reference
-//#####################################################################
-
-SPAN.__NS__reference {
-}
-
-
-
-///*######################################################################
-//#   primitives/dictionary
-//#####################################################################
-
-
-SPAN.__NS__dictionary > SPAN {
-    color: #9C9C9C;
-}
-
-SPAN.__NS__dictionary > SPAN.collapsed {
-    color: #0000FF;
-    font-weight: normal;
-    padding-left: 5px;
-    padding-right: 5px;
-}
-
-SPAN.__NS__dictionary > SPAN.summary {
-    color: #0000FF;
-    font-weight: normal;
-    padding-left: 5px;
-    padding-right: 5px;
-}
-
-SPAN.__NS__dictionary > SPAN.member {
-    color: #9C9C9C;
-}
-
-SPAN.__NS__dictionary > DIV.member {
-    display: block;
-    padding-left: 20px;
-}
-SPAN.__NS__dictionary > DIV.member.expandable {
-    background-image: url(__RESOURCE__images/twisty-closed.png);
-    background-repeat: no-repeat;
-    background-position: 6px 2px;
-    cursor: pointer;
-}
-SPAN.__NS__dictionary > DIV.member.expandable.expanded {
-    background-image: url(__RESOURCE__images/twisty-open.png);
-}
-
-SPAN.__NS__dictionary > .member > SPAN.name {
-    color: #E59D07;
-    font-weight: normal;
-}
-
-SPAN.__NS__dictionary > .member > SPAN.value {
-    font-weight: normal;
-}
-
-SPAN.__NS__dictionary > .member > SPAN.delimiter,
-SPAN.__NS__dictionary > .member > SPAN.separator,
-SPAN.__NS__dictionary > .member SPAN.more {
-    color: #9C9C9C;
-    padding-left: 2px;
-    padding-right: 2px;
-}
-
-
-///*######################################################################
-//#   primitives/unknown
-//#####################################################################
-
-
-SPAN.__NS__unknown {
-    color: #FFFFFF;
-    background-color: red;
-}
-
-
-///*######################################################################
-//#   structures/trace
-//#####################################################################
-
-SPAN.__NS__structures-trace {
-    background-image: url(__RESOURCE__images/edit-rule.png);
-    background-repeat: no-repeat;
-    background-position: 4px 1px;
-    padding-left: 25px;
-    font-weight: bold;
-}
-
-DIV.__NS__structures-trace {
-    padding: 0px;
-    margin: 0px;
-}
-
-DIV.__NS__structures-trace TABLE {
-  border-bottom: 1px solid #D7D7D7;
-}
-
-DIV.__NS__structures-trace TABLE TBODY TR TH,
-DIV.__NS__structures-trace TABLE TBODY TR TD {
-    padding: 3px;
-    padding-left: 10px;
-    padding-right: 10px;
-}
-
-DIV.__NS__structures-trace TABLE TBODY TR TH.header-file {
-  white-space:nowrap;
-  font-weight: bold;
-  text-align: left;
-}
-
-DIV.__NS__structures-trace TABLE TBODY TR TH.header-line {
-  white-space:nowrap;
-  font-weight: bold;
-  text-align: right;
-}
-DIV.__NS__structures-trace TABLE TBODY TR TH.header-inst {
-  white-space:nowrap;
-  font-weight: bold;
-  text-align: left;
-}
-
-DIV.__NS__structures-trace TABLE TBODY TR TD.cell-file {
-  vertical-align: top;
-  border: 1px solid #D7D7D7;
-  border-bottom: 0px;
-  border-right: 0px;
-}
-DIV.__NS__structures-trace TABLE TBODY TR TD.cell-line {
-  white-space:nowrap;
-  vertical-align: top;
-  text-align: right;
-  border:1px solid #D7D7D7;
-  border-bottom: 0px;
-  border-right: 0px;
-}
-DIV.__NS__structures-trace TABLE TBODY TR TD.cell-line:hover,
-DIV.__NS__structures-trace TABLE TBODY TR TD.cell-file:hover {
-    background-color: #ffc73d;
-    cursor: pointer;    
-}
-DIV.__NS__structures-trace TABLE TBODY TR TD.cell-inst {
-  vertical-align: top;
-  padding-left: 10px;
-  font-weight: bold;
-  border:1px solid #D7D7D7;
-  border-bottom: 0px;
-}
-
-DIV.__NS__structures-trace TABLE TBODY TR TD.cell-inst DIV.arg {
-  font-weight: normal;
-  padding-left: 3px;
-  padding-right: 3px;
-  display: inline-block;
-}
-DIV.__NS__structures-trace TABLE TBODY TR TD.cell-inst DIV.arg:hover {
-    background-color: #ffc73d;
-    cursor: pointer;    
-}
-
-DIV.__NS__structures-trace TABLE TBODY TR TD.cell-inst .separator {
-    padding-left: 1px;
-    padding-right: 3px;
-}
-
-
-///*######################################################################
-//#   structures/table
-//#####################################################################
-
-SPAN.__NS__structures-table {
-    background-image: url(__RESOURCE__images/table.png);
-    background-repeat: no-repeat;
-    background-position: 4px -1px;
-    padding-left: 25px;
-}
-
-DIV.__NS__structures-table {
-    padding: 0px;
-    margin: 0px;
-}
-
-DIV.__NS__structures-table TABLE {
-  border-bottom: 1px solid #D7D7D7;
-  border-right: 1px solid #D7D7D7;
-}
-
-DIV.__NS__structures-table TABLE TBODY TR.hide {
-  display: none;
-}
-
-DIV.__NS__structures-table TABLE TBODY TR TH.header {
-  vertical-align: top;
-  font-weight: bold;
-  text-align: center;
-  border: 1px solid #D7D7D7;
-  border-bottom: 0px;
-  border-right: 0px;
-  background-color: #ececec;
-  padding: 2px;
-  padding-left: 10px;
-  padding-right: 10px;
-}
-
-DIV.__NS__structures-table TABLE TBODY TR TD.cell {
-  vertical-align: top;
-  padding-right: 10px;
-  border: 1px solid #D7D7D7;
-  border-bottom: 0px;
-  border-right: 0px;
-  padding: 2px;
-  padding-left: 10px;
-  padding-right: 10px;
-}
-
-DIV.__NS__structures-table TABLE TBODY TR TD.cell:hover {
-    background-color: #ffc73d;
-    cursor: pointer;    
-}
-
-
-///*######################################################################
-//#   util/trimmed
-//#####################################################################
-
-SPAN.__NS__util-trimmed {
-    color: #FFFFFF;
-    background-color: blue;
-    padding-left: 5px;
-    padding-right: 5px;
-}
-
-
-
-///*######################################################################
-//#   @anchor wrappers/console
-//#####################################################################
-
-DIV.__NS__console-message {
-    position: relative;
-    margin: 0;
-    border-bottom: 1px solid #D7D7D7;
-    padding: 0px;
-    background-color: #FFFFFF;
-}
-DIV.__NS__console-message.selected {
-    background-color: #35FC03 !important;
-}
-
-DIV.__NS__console-message-group[expanded=true] {
-    background-color: #77CDD9;
-}
-
-DIV.__NS__console-message > DIV.header {
-    position: relative;
-    padding-left: 34px;
-    padding-right: 10px;
-    padding-top: 3px;
-    padding-bottom: 4px;
-    cursor: pointer;
-}
-
-DIV.__NS__console-message[expanded=true] > DIV.header {
-    text-align: right;
-    min-height: 16px;
-}
-
-DIV.__NS__console-message[expanded=false] > DIV.header:hover {
-    background-color: #ffc73d;
-}
-
-DIV.__NS__console-message-group > DIV.header {
-    background: url(__RESOURCE__images/document_page_next.png) no-repeat;
-    background-position: 2px 3px;
-    font-weight: bold;
-    background-color: #77CDD9;
-}
-
-DIV.__NS__console-message > DIV.header-priority-info {
-    background: url(__RESOURCE__images/information.png) no-repeat;
-    background-position: 2px 3px;
-    background-color: #c6eeff;
-}
-
-DIV.__NS__console-message > DIV.header-priority-warn {
-    background: url(__RESOURCE__images/exclamation-diamond.png) no-repeat;
-    background-position: 2px 3px;
-    background-color: #ffe68d;
-}
-
-DIV.__NS__console-message > DIV.header-priority-error {
-    background: url(__RESOURCE__images/exclamation-red.png) no-repeat;
-    background-position: 2px 3px;
-    background-color: #ffa7a7;
-}
-
-DIV.__NS__console-message > DIV.header > DIV.expander {
-    background-color: black;
-    width: 18px;
-    height: 18px;
-    display: inline-block;
-    float: left;
-    position: relative;
-    top: -1px;
-    margin-left: -14px;
-}
-
-DIV.__NS__console-message > DIV.header > DIV.expander:hover {
-    cursor: pointer;
-}
-
-DIV.__NS__console-message[expanded=false] > DIV.header > DIV.expander {
-    background: url(__RESOURCE__images/plus-small-white.png) no-repeat;
-    background-position: 0px 1px;
-}
-
-DIV.__NS__console-message[expanded=true] > DIV.header > DIV.expander {
-    background: url(__RESOURCE__images/minus-small-white.png) no-repeat;
-    background-position: 0px 1px;
-}
-
-DIV.__NS__console-message > DIV.header > SPAN.summary > SPAN.label > SPAN,
-DIV.__NS__console-message > DIV.header > SPAN.fileline > DIV > DIV.label {
-    margin-right: 5px;
-    background-color: rgba(69,68,60,1);
-    padding-left: 5px;
-    padding-right: 5px;
-    color: white;
-    vertical-align: top;
-    margin-top: 1px;
-}
-DIV.__NS__console-message > DIV.header > SPAN.fileline > DIV > DIV.label {
-    float: left;
-    margin-top: 0px;
-}
-
-DIV.__NS__console-message > DIV.header > SPAN.summary > SPAN > SPAN.count {
-    color: #8c8c8c;
-}
-
-DIV.__NS__console-message > DIV.header > SPAN.fileline {
-    color: #8c8c8c;
-    word-wrap: break-word;
-}
-
-DIV.__NS__console-message[expanded=true] > DIV.header > SPAN.summary {
-    display: none;
-}
-
-DIV.__NS__console-message[keeptitle=true] > DIV.header,
-DIV.__NS__console-message-group > DIV.header {
-    text-align: left !important;
-}
-DIV.__NS__console-message[keeptitle=true] > DIV.header > SPAN.fileline,
-DIV.__NS__console-message-group > DIV.header > SPAN.fileline {
-    display: none !important;
-}
-DIV.__NS__console-message[keeptitle=true] > DIV.header > SPAN.summary,
-DIV.__NS__console-message-group > DIV.header > SPAN.summary {
-    display: inline !important;
-}
-DIV.__NS__console-message-group > DIV.header > DIV.actions {
-    display: none !important;
-}
-DIV.__NS__console-message-group > DIV.header > SPAN.summary > SPAN > SPAN.count {
-    color: #ffffff !important;
-}
-
-
-DIV.__NS__console-message[expanded=false] > DIV.header > SPAN.fileline {
-    display: none;
-}
-
-DIV.__NS__console-message > DIV.header > DIV.actions {
-    display: inline-block;
-    position: relative;
-    top: 0px;
-    left: 10px;
-    float: right;
-    margin-left: 0px;
-    margin-right: 5px;
-}
-
-DIV.__NS__console-message > DIV.header > DIV.actions DIV.inspect {
-    display: inline-block;
-    background: url(__RESOURCE__images/node-magnifier.png) no-repeat;
-    width: 16px;
-    height: 16px;
-    margin-right: 4px;
-}
-DIV.__NS__console-message > DIV.header > DIV.actions > DIV.file {
-    display: inline-block;
-    background: url(__RESOURCE__images/document-binary.png) no-repeat;
-    width: 16px;
-    height: 16px;
-    margin-right: 4px;
-}
-
-DIV.__NS__console-message > DIV.header > DIV.actions > DIV.inspect:hover,
-DIV.__NS__console-message > DIV.header > DIV.actions > DIV.file:hover {
-    cursor: pointer;
-}
-
-DIV.__NS__console-message > DIV.body {
-    padding: 6px;
-    margin: 3px;
-    margin-top: 0px;
-}
-
-DIV.__NS__console-message[expanded=false] > DIV.body {
-    display: none;
-}
-
-DIV.__NS__console-message-group > DIV.body {
-    padding: 0px;
-    margin: 0px;
-    margin-left: 20px;
-    border-top: 1px solid #000000;
-    border-left: 1px solid #000000;
-    margin-bottom: -1px;
-}
-
-DIV.__NS__console-message > DIV.body-priority-info {
-    border: 3px solid #c6eeff;
-    margin: 0px;
-    border-top: 0px;
-}
-
-DIV.__NS__console-message > DIV.body-priority-warn {
-    border: 3px solid #ffe68d;
-    margin: 0px;
-    border-top: 0px;
-}
-
-DIV.__NS__console-message > DIV.body-priority-error {
-    border: 3px solid #ffa7a7;
-    margin: 0px;
-    border-top: 0px;
-}
-
-DIV.__NS__console-message > DIV.body > DIV.group-no-messages {
-    background-color: white;
-    padding-left: 4px;
-    padding-right: 4px;
-    padding-top: 3px;
-    padding-bottom: 3px;
-    color: gray;
-}
-
-DIV.__NS__console-message .hidden {
-    display: none !important;
-}
-
-
-///*######################################################################
-//#   wrappers/viewer
-//#####################################################################
-
-DIV.__NS__viewer-harness {
-    padding: 2px 4px 1px 6px;
-    font-family: Lucida Grande, Tahoma, sans-serif;
-    font-size: 11px;
-}
-
-
-///*######################################################################
-//#   firebug console
-//#####################################################################
-
-DIV.devcomp-request-group {
-  background: url(__RESOURCE__images/firebug_request_group_bg.png) repeat-x #FFFFFF;
-}
-
-DIV.devcomp-request-group > DIV.logGroupLabel {
-  min-height: 16px !important;
-  background: url(__RESOURCE__images/devcomp_16.png) !important;
-  background-repeat: no-repeat !important;
-  background-position: 3px 1px !important;
-  padding-left: 24px !important;
-}
-
-DIV.devcomp-request-group > DIV.logGroupLabel > SPAN.objectBox {
-  color: #445777;
-  font-family: Lucida Grande, Tahoma, sans-serif;
-  font-size: 11px;
-}
-
-DIV.devcomp-request-group > DIV.logGroupBody > DIV > DIV.title > DIV.actions > DIV {
-    display: none !important;
-}
-
-
-*/}
-
-},{}],161:[function(require,module,exports){
-
-module.id = module.id || "insight_pack";
-
-require("../pack-helper").init(exports, module, {
-    css: require("./pack.css.js").toString().split("\n").slice(1, -1).filter(function (line) {
-        if (/^\/\//.test(line)) {
-            return false;
-        }
-        return true;
-    }).join("\n"),
-    getTemplates: function()
-    {
-        require("./wrappers/console");
-        require("./wrappers/viewer");
-
-        return [
-            // First: Match by node.meta.renderer
-            require("./structures/trace"),
-            require("./structures/table"),
-
-            // Second: Utility messages matched by various specific criteria
-            require("./util/trimmed"),
-
-            // Third: Match by node.type
-            require("./primitives/text"),
-            require("./primitives/constant"),
-            require("./primitives/array"),
-            require("./primitives/map"),
-            require("./primitives/reference"),
-            require("./primitives/dictionary"),
-
-            // Last: Catch any nodes that did not match above
-            require("./primitives/unknown")
-        ];
-    }
-});
-
-},{"../pack-helper":174,"./pack.css.js":160,"./primitives/array":162,"./primitives/constant":163,"./primitives/dictionary":164,"./primitives/map":165,"./primitives/reference":166,"./primitives/text":167,"./primitives/unknown":168,"./structures/table":169,"./structures/trace":170,"./util/trimmed":171,"./wrappers/console":172,"./wrappers/viewer":173}],162:[function(require,module,exports){
-
-var PACK = require("../pack");
-
-PACK.initTemplate(require, exports, module, {
-
-    type: "array",
-
-    initRep: function(DOMPLATE, helpers)
-    {
-        with(DOMPLATE.tags)
-        {
-            return DOMPLATE.domplate({
-    
-                VAR_label: "array",
-    
-                CONST_Normal: "tag",
-                CONST_Short: "shortTag",
-                CONST_Collapsed: "collapsedTag",
-        
-                tag:
-                    SPAN({"class": PACK.__NS__+"array"}, SPAN("$VAR_label("),
-                        FOR("element", "$node,$CONST_Normal|elementIterator",
-                            DIV({"class": "element", "$expandable":"$element.expandable", "_elementObject": "$element", "onclick": "$onClick"},
-                                SPAN({"class": "value"},
-                                    TAG("$element.tag", {"element": "$element", "node": "$element.node"})
-                                ),
-                                IF("$element.more", SPAN({"class": "separator"}, ","))
-                            )
-                        ),
-                    SPAN(")")),
-        
-                collapsedTag:
-                    SPAN({"class": PACK.__NS__+"array"}, SPAN("$VAR_label("),
-                        SPAN({"class": "collapsed"}, "... $node|getElementCount ..."),
-                    SPAN(")")),
-        
-                shortTag:
-                    SPAN({"class": PACK.__NS__+"array"}, SPAN("$VAR_label("),
-                        FOR("element", "$node,$CONST_Short|elementIterator",
-                            SPAN({"class": "element"},
-                                SPAN({"class": "value"},
-                                    TAG("$element.tag", {"element": "$element", "node": "$element.node"})
-                                ),
-                                IF("$element.more", SPAN({"class": "separator"}, ","))
-                            )
-                        ),
-                    SPAN(")")),
-        
-                expandableStub:
-                    TAG("$element,$CONST_Collapsed|getTag", {"node": "$element.node"}),
-                    
-                expandedStub:
-                    TAG("$tag", {"node": "$node", "element": "$element"}),
-        
-                moreTag:
-                    SPAN(" ... "),
-        
-                getElementCount: function(node) {
-                    if(!node.value) return 0;
-                    return node.value.length || 0;
-                },
-        
-                getTag: function(element, type) {
-                    if(type===this.CONST_Short) {
-                        return helpers.getTemplateForNode(element.node).shortTag;
-                    } else
-                    if(type===this.CONST_Normal) {
-                        if(element.expandable) {
-                            return this.expandableStub;
-                        } else {
-                            return helpers.getTemplateForNode(element.node).tag;
-                        }
-                    } else
-                    if(type===this.CONST_Collapsed) {
-                        var rep = helpers.getTemplateForNode(element.node);
-                        if(!rep.collapsedTag) {
-                            throw "no 'collapsedTag' property in rep: " + rep.toString();
-                        }
-                        return rep.collapsedTag;
-                    }
-                },
-        
-                elementIterator: function(node, type) {
-                    var elements = [];
-                    if(!node.value) return elements;
-                    for( var i=0 ; i<node.value.length ; i++ ) {
-                        
-                        var element = {
-                            "node": helpers.util.merge(node.value[i], {"wrapped": true}),
-                            "more": (i<node.value.length-1),
-                            "expandable": this.isExpandable(node.value[i])
-                        };
-        
-                        if(i>2 && type==this.CONST_Short) {
-                            element["tag"] = this.moreTag;
-                        } else {
-                            element["tag"] = this.getTag(element, type);
-                        }
-        
-                        elements.push(element);
-        
-                        if(i>2 && type==this.CONST_Short) {
-                            elements[elements.length-1].more = false;
-                            break;
-                        }
-                    }
-                    return elements;
-                },
-        
-                isExpandable: function(node) {
-                    return (node.type=="reference" ||
-                            node.type=="dictionary" ||
-                            node.type=="map" ||
-                            node.type=="array");
-                },
-                
-                onClick: function(event) {
-                    if (!helpers.util.isLeftClick(event)) {
-                        return;
-                    }
-                    var row = helpers.util.getAncestorByClass(event.target, "element");
-                    if(helpers.util.hasClass(row, "expandable")) {
-                        this.toggleRow(row);
-                    }
-                    event.stopPropagation();
-                },
-                
-                toggleRow: function(row)
-                {
-                    var valueElement = helpers.util.getElementByClass(row, "value");
-                    if (helpers.util.hasClass(row, "expanded"))
-                    {
-                        helpers.util.removeClass(row, "expanded");
-                        this.expandedStub.replace({
-                            "tag": this.expandableStub,
-                            "element": row.elementObject,
-                            "node": row.elementObject.node
-                        }, valueElement);
-                    } else {
-                        helpers.util.setClass(row, "expanded");
-                        this.expandedStub.replace({
-                            "tag": helpers.getTemplateForNode(row.elementObject.node).tag,
-                            "element": row.elementObject,
-                            "node": row.elementObject.node
-                        }, valueElement);
-                    }
-                }        
-            });
-        }  
-    }
-});
-
-},{"../pack":161}],163:[function(require,module,exports){
-
-var PACK = require("../pack");
-
-PACK.initTemplate(require, exports, module, {
-
-    type: "constant",
-
-    initRep: function(DOMPLATE, helpers)
-    {
-        with(DOMPLATE.tags)
-        {
-            return DOMPLATE.domplate({
-
-                tag: SPAN({"class": PACK.__NS__+"constant"},
-                          "$node.value"),
-
-                shortTag: SPAN({"class": PACK.__NS__+"constant"},
-                               "$node.value")
-            });
-        }        
-    }
-});
-
-},{"../pack":161}],164:[function(require,module,exports){
-
-var PACK = require("../pack");
-
-PACK.initTemplate(require, exports, module, {
-
-    type: "dictionary",
-
-    initRep: function(DOMPLATE, helpers)
-    {
-        with(DOMPLATE.tags)
-        {
-            return DOMPLATE.domplate({
-        
-                CONST_Normal: "tag",
-                CONST_Short: "shortTag",
-                CONST_Collapsed: "collapsedTag",
-        
-                tag:
-                    SPAN({"class": PACK.__NS__+"dictionary"}, SPAN("$node|getLabel("),
-                        FOR("member", "$node,$CONST_Normal|dictionaryIterator",
-                            DIV({"class": "member", "$expandable":"$member.expandable", "_memberObject": "$member", "onclick": "$onClick"},
-                                SPAN({"class": "name", "decorator": "$member|getMemberNameDecorator"}, "$member.name"),
-                                SPAN({"class": "delimiter"}, ":"),
-                                SPAN({"class": "value"},
-                                    TAG("$member.tag", {"member": "$member", "node": "$member.node"})
-                                ),
-                                IF("$member.more", SPAN({"class": "separator"}, ","))
-                            )
-                        ),
-                    SPAN(")")),
-        
-                shortTag:
-                    SPAN({"class": PACK.__NS__+"dictionary"}, SPAN("$node|getLabel("),
-                        FOR("member", "$node,$CONST_Short|dictionaryIterator",
-                            SPAN({"class": "member"},
-                                SPAN({"class": "name"}, "$member.name"),
-                                SPAN({"class": "delimiter"}, ":"),
-                                SPAN({"class": "value"},
-                                    TAG("$member.tag", {"member": "$member", "node": "$member.node"})
-                                ),
-                                IF("$member.more", SPAN({"class": "separator"}, ","))
-                            )
-                        ),
-                    SPAN(")")),
-        
-                collapsedTag:
-                    SPAN({"class": PACK.__NS__+"dictionary"}, SPAN("$node|getLabel("),
-                        SPAN({"class": "collapsed"}, "... $node|getMemberCount ..."),
-                    SPAN(")")),
-        
-                expandableStub:
-                    TAG("$member,$CONST_Collapsed|getTag", {"node": "$member.node"}),
-                    
-                expandedStub:
-                    TAG("$tag", {"node": "$node", "member": "$member"}),
-        
-                moreTag:
-                    SPAN({"class": "more"}, " ... "),
-                
-                getLabel: function(node) {
-                    return "dictionary";
-                },
-                
-                getMemberNameDecorator: function(member) {
-                    return "";
-                },
-                
-                getMemberCount: function(node) {
-                    if(!node.value) return 0;
-                    var count = 0;
-                    for( var name in node.value ) {
-                        count++;
-                    }
-                    return count;
-                },
-                
-                getTag: function(member, type) {
-                    if(type===this.CONST_Short) {
-                        return helpers.getTemplateForNode(member.node).shortTag;
-                    } else
-                    if(type===this.CONST_Normal) {
-                        if(member.expandable) {
-                            return this.expandableStub;
-                        } else {
-                            return helpers.getTemplateForNode(member.node).tag;
-                        }
-                    } else
-                    if(type===this.CONST_Collapsed) {
-                        var rep = helpers.getTemplateForNode(member.node);
-                        if(!rep.collapsedTag) {
-                            throw "no 'collapsedTag' property in rep: " + rep.toString();
-                        }
-                        return rep.collapsedTag;
-                    }
-                },
-                
-                dictionaryIterator: function(node, type) {
-                    var members = [];
-                    if(!node.value || node.value.length==0) return members;
-                    for( var name in node.value ) {
-        
-                        var member = {
-                            "name": name,
-                            "node": helpers.util.merge(node.value[name], {"wrapped": true}),
-                            "more": true,
-                            "expandable": this.isExpandable(node.value[name])
-                        };
-        
-                        if(members.length>1 && type==this.CONST_Short) {
-                            member["tag"] = this.moreTag;
-                        } else {
-                            member["tag"] = this.getTag(member, type);
-                        }
-                        
-                        members.push(member);
-        
-                        if(members.length>2 && type==this.CONST_Short) {
-                            break;
-                        }
-                    }
-                    if(members.length>0) {
-                        members[members.length-1]["more"] = false;
-                    }
-                    
-                    return members;
-                },
-                
-                isExpandable: function(node) {
-                    return (node.type=="reference" ||
-                            node.type=="dictionary" ||
-                            node.type=="map" ||
-                            node.type=="array");
-                },
-                
-                onClick: function(event) {
-                    if (!helpers.util.isLeftClick(event)) {
-                        return;
-                    }
-                    var row = helpers.util.getAncestorByClass(event.target, "member");
-                    if(helpers.util.hasClass(row, "expandable")) {
-                        this.toggleRow(row);
-                    }
-                    event.stopPropagation();
-                },
-                
-                toggleRow: function(row)
-                {
-                    var valueElement = helpers.util.getElementByClass(row, "value");
-                    if (helpers.util.hasClass(row, "expanded"))
-                    {
-                        helpers.util.removeClass(row, "expanded");
-                        this.expandedStub.replace({
-                            "tag": this.expandableStub,
-                            "member": row.memberObject,
-                            "node": row.memberObject.node
-                        }, valueElement);
-                    } else {
-                        helpers.util.setClass(row, "expanded");
-                        this.expandedStub.replace({
-                            "tag": helpers.getTemplateForNode(row.memberObject.node).tag,
-                            "member": row.memberObject,
-                            "node": row.memberObject.node
-                        }, valueElement);
-                    }
-                }
-            });
-        }        
-    }
-});
-
-},{"../pack":161}],165:[function(require,module,exports){
-
-var PACK = require("../pack");
-
-PACK.initTemplate(require, exports, module, {
-
-    type: "map",
-
-    initRep: function(DOMPLATE, helpers)
-    {
-        with(DOMPLATE.tags)
-        {
-            return DOMPLATE.domplate({
-                
-                VAR_label: "map",
-        
-                CONST_Normal: "tag",
-                CONST_Short: "shortTag",
-        
-                tag:
-                    SPAN({"class": PACK.__NS__+"map", "_nodeObject": "$node"}, SPAN("$VAR_label("),
-                        FOR("pair", "$node,$CONST_Normal|mapIterator",
-                            DIV({"class": "pair"},
-                                TAG("$pair.key.tag", {"node": "$pair.key.node"}),
-                                SPAN({"class": "delimiter"}, "=>"),
-                                SPAN({
-                                        "class": "value",
-                                        "onclick": "$onClick",
-                                        "_nodeObject": "$pair.value.node",
-                                        "_expandable": "$pair.value.expandable"
-                                    },
-                                    TAG("$pair.value.tag", {"node": "$pair.value.node"})
-                                    ),
-                                IF("$pair.more", SPAN({"class": "separator"}, ","))
-                            )
-                        ),
-                    SPAN(")")),
-        
-                shortTag:
-                    SPAN({"class": PACK.__NS__+"map", "_nodeObject": "$node"}, SPAN("$VAR_label("),
-                        FOR("pair", "$node,$CONST_Short|mapIterator",
-                            SPAN({"class": "pair"},
-                                TAG("$pair.key.tag", {"node": "$pair.key.node"}),
-                                SPAN({"class": "delimiter"}, "=>"),
-                                SPAN({
-                                        "class": "value",
-                                        "onclick": "$onClick",
-                                        "_nodeObject": "$pair.value.node",
-                                        "_expandable": "$pair.value.expandable"
-                                    },
-                                    TAG("$pair.value.tag", {"node": "$pair.value.node"})
-                                    ),
-                                IF("$pair.more", SPAN({"class": "separator"}, ","))
-                            )
-                        ),
-                    SPAN(")")),
-        
-                collapsedTag: 
-                    SPAN({"class": PACK.__NS__+"map"}, SPAN("$VAR_label("),
-                        SPAN({"class": "collapsed"}, "... $node|getItemCount ..."),
-                    SPAN(")")),
-        
-                moreTag:
-                    SPAN(" ... "),   
-                
-                getItemCount: function(node) {
-                    if(!node.value) return 0;
-                    return node.value.length;
-                },
-
-                onClick: function(event) {
-                    var row = helpers.util.getAncestorByClass(event.target, "value");
-                    if(row.expandable) {
-                        this.toggleRow(row);
-                    }
-                    event.stopPropagation();
-                },
-                
-                toggleRow: function(row)
-                {
-                    var node = null;
-                    if (helpers.util.hasClass(row, "expanded")) {
-                        node = this.collapsedTag.replace({
-                            "node": row.nodeObject
-                        }, row);
-                        helpers.util.removeClass(row, "expanded");
-                    } else {
-                        var valueRep = helpers.getTemplateForNode(row.nodeObject).tag;
-                        node = valueRep.replace({
-                            "node": row.nodeObject
-                        }, row);
-                        helpers.util.setClass(row, "expanded");
-                    }
-                },
-        
-                mapIterator: function(node, type) {
-                    var pairs = [];
-                    if(!node.value) return pairs;
-                    for( var i=0 ; i<node.value.length ; i++ ) {
-
-                        var valueRep = getTag(helpers.getTemplateForNode(node.value[i][1]), type, node.value[i][1]);
-        
-                        if(i>2 && type==this.CONST_Short) {
-                            valueRep = this.moreTag;
-                        }
-
-                        pairs.push({
-                            "key": {
-                                "tag": getTag(helpers.getTemplateForNode(node.value[i][0]), type, node.value[i][0]),
-                                "node": helpers.util.merge(node.value[i][0], {"wrapped": true})
-                            },
-                            "value": {
-                                "tag": valueRep,
-                                "node": helpers.util.merge(node.value[i][1], {"wrapped": true}),
-                                "expandable": isCollapsible(node.value[i][1])
-                            },
-                            "more": (i<node.value.length-1)
-                        });
-        
-                        if(i>2 && type==this.CONST_Short) {
-                            pairs[pairs.length-1].more = false;
-                            break;
-                        }
-                    }
-                    return pairs;
-                }
-            });
-        }        
-    }
-});
-
-function isCollapsible (node) {
-    return (node.type=="reference" ||
-            node.type=="dictionary" ||
-            node.type=="map" ||
-            node.type=="array");
-}    
-
-function getTag (rep, type, node) {
-    if (node.meta.collapsed) {
-        if (isCollapsible(node)) {
-            type = "collapsedTag";
-        } else {
-            type = "shortTag";
-        }
-    }
-    if(!rep[type]) {
-        if(type=="shortTag") {
-            return rep.tag;
-        }
-        throw new Error("Rep does not have tag of type: " + type);
-    }
-    return rep[type];
-}
-
-},{"../pack":161}],166:[function(require,module,exports){
-
-var PACK = require("../pack");
-
-PACK.initTemplate(require, exports, module, {
-
-    type: "reference",
-
-    initRep: function(DOMPLATE, helpers)
-    {
-        with(DOMPLATE.tags)
-        {
-            return DOMPLATE.domplate({
-        
-                CONST_Normal: "tag",
-                CONST_Short: "shortTag",
-                CONST_Collapsed: "collapsedTag",
-        
-                tag:
-                    SPAN({"class": PACK.__NS__+"reference"},
-                    TAG("$node,$CONST_Normal|getTag", {"node": "$node|getInstanceNode"})),
-                
-                shortTag:
-                    SPAN({"class": PACK.__NS__+"reference"},
-                    TAG("$node,$CONST_Collapsed|getTag", {"node": "$node|getInstanceNode"})),
-        
-                collapsedTag:
-                    SPAN({"class": PACK.__NS__+"reference"},
-                    TAG("$node,$CONST_Collapsed|getTag", {"node": "$node|getInstanceNode"})),
-                    
-                getTag: function(node, type) {
-                    return helpers.getTemplateForNode(this.getInstanceNode(node))[type];
-                },
-
-                getInstanceNode: function(node) {
-                    return node.getInstance();
-                }
-            });
-        }        
-    }
-});
-
-},{"../pack":161}],167:[function(require,module,exports){
-
-var PACK = require("../pack");
-
-PACK.initTemplate(require, exports, module, {
-
-    type: "text",
-
-    initRep: function(DOMPLATE, helpers)
-    {
-        with(DOMPLATE.tags)
-        {
-            return DOMPLATE.domplate({
-        
-                tag: SPAN({"class": PACK.__NS__+"text"},
-                          FOR("line", "$node.value|lineIterator", "$line.value",
-                              IF("$line.more", BR())
-                          )
-                     ),
-                
-                shortTag: SPAN({"class": PACK.__NS__+"text"}, "$node|getValue"),
-        
-
-                getValue: function(node) {
-                    if (!node.parentNode || (node.meta && typeof node.meta["string.trim.enabled"] !== "undefined" && node.meta["string.trim.enabled"]===false))
-                        return node.value;
-                    else
-                        return this.cropString(node.value);
-                },
-
-                cropString: function(text, limit){
-                    text = text + "";
-                    limit = limit || 50;
-                    var halfLimit = limit / 2;
-                    if (text.length > limit) {
-                        return this.escapeNewLines(text.substr(0, halfLimit) + "..." + text.substr(text.length - halfLimit));
-                    } else {
-                        return this.escapeNewLines(text);
-                    }
-                },
-                
-                escapeNewLines: function(value) {
-                    return value.replace(/\r/g, "\\r").replace(/\n/g, "\\n");
-                },
-                
-                lineIterator: function(value) {
-                    var parts = (""+value).replace(/\r/g, "\\r").split("\n");
-                    var lines = [];
-                    for( var i=0 ; i<parts.length ; i++ ) {
-                        lines.push({"value": parts[i], "more": (i<parts.length-1)});
-                    }
-                    return lines;
-                }
-            });
-        }        
-    }
-});
-
-},{"../pack":161}],168:[function(require,module,exports){
-
-var PACK = require("../pack");
-
-exports.supportsObjectGraphNode = function(node)
-{
-    return true;
-};
-
-PACK.initTemplate(require, exports, module, {
-
-    initRep: function(DOMPLATE, helpers)
-    {
-        with(DOMPLATE.tags)
-        {
-            return DOMPLATE.domplate({
-        
-                tag: SPAN({"class": PACK.__NS__+"unknown"},
-                          "$node.value"),
-                
-                shortTag: SPAN({"class": PACK.__NS__+"unknown"},
-                               "$node.value")
-
-            });
-        }        
-    }
-});
-
-},{"../pack":161}],169:[function(require,module,exports){
-
-var PACK = require("../pack");
-
-exports.supportsObjectGraphNode = function(node)
-{
-    return (node.meta && typeof node.meta.renderer !== "undefined" && node.meta.renderer === "structures/table")?true:false;
-};
-
-PACK.initTemplate(require, exports, module, {
-    __name: "table",
-    
-    VAR_hideShortTagOnExpand: false,
-    
-    initRep: function(DOMPLATE, helpers)
-    {
-        with(DOMPLATE.tags)
-        {
-            return DOMPLATE.domplate({
-
-                VAR_hideShortTagOnExpand: false,
-
-                tag:
-                    DIV({"class": PACK.__NS__+"structures-table"},
-                        TABLE({"cellpadding": 3, "cellspacing": 0},
-                            TBODY(
-                                TR({"class":"$node|getHeaderClass"},
-                                    FOR("column", "$node|getHeaders",
-                                        TH({"class": "header"}, TAG("$column.tag", {"node": "$column.node"}))
-                                    ),
-                                    IF("$node|hasNoHeader",
-                                        TH()    // needed to fix gecko bug that does not render table border if empty <tr/> in table
-                                    )
-                                ),
-                                FOR("row", "$node|getRows",
-                                    TR(
-                                        FOR("cell", "$row|getCells",
-                                            TD({"class": "cell", "_cellNodeObj": "$cell.node", "onclick":"$onCellClick"},
-                                                TAG("$cell.tag", {"node": "$cell.node"}))
-                                        )
-                                    )
-                                )
-                            )
-                        )
-                    ),
-
-                shortTag:
-                    SPAN({"class": PACK.__NS__+"structures-table"}, TAG("$node|getTitleTag", {"node": "$node|getTitleNode"})),
-
-                getTitleTag: function(node) {
-                    var rep = helpers.getTemplateForNode(this.getTitleNode(node));
-                    return rep.shortTag || rep.tag;
-                },
-
-                getTitleNode: function(node) {
-                    return helpers.util.merge(node.compact().title, {"wrapped": false});
-                },
-                
-                getHeaderClass: function(node)
-                {
-                    if (this.hasNoHeader(node)) {
-                        return "hide";
-                    } else {
-                        return "";
-                    }
-                },
-
-                hasNoHeader: function(node) {
-                    var header = node.compact().header;
-                    if(!header || header.type!="array") {
-                        return true;
-                    }
-                    return false;
-                },
-
-                getHeaders: function(node) {
-                    var header = node.compact().header;
-                    if(!header || header.type!="array") {
-                        return [];
-                    }
-                    var items = [];
-                    for (var i = 0; i < header.value.length; i++) {
-                        var rep = helpers.getTemplateForNode(header.value[i]);
-                        items.push({
-                            "node": helpers.util.merge(header.value[i], {"wrapped": false}),
-                            "tag": rep.shortTag || rep.tag
-                        });
-                    }
-                    return items;
-                },
-        
-                getRows: function(node) {
-                    var data = node.compact().data;
-                    if(!data || data.type!="array") {
-                        return [];
-                    }
-                    return data.value;
-                },
-        
-                getCells: function(node) {
-                    var items = [];
-                    if(node.value) {
-                        for (var i = 0; i < node.value.length; i++) {
-                            var rep = helpers.getTemplateForNode(node.value[i]);
-                            items.push({
-                                "node": helpers.util.merge(node.value[i], {"wrapped": false}),
-                                "tag": rep.shortTag || rep.tag
-                            });
-                        }
-                    } else
-                    if(node.meta && node.meta['encoder.trimmed']) {
-                        var rep = helpers.getTemplateForNode(node);
-                        items.push({
-                            "node": helpers.util.merge(node, {"wrapped": false}),
-                            "tag": rep.shortTag || rep.tag
-                        });
-                    }
-                    return items;
-                },
-        
-                onCellClick: function(event) {
-                    event.stopPropagation();
-
-                    //var masterRow = this._getMasterRow(event.target);
-                    //masterRow.messageObject
-
-                    var tag = event.target;
-                    while(tag.parentNode) {
-                        if (tag.cellNodeObj) {
-                            break;
-                        }
-                        tag = tag.parentNode;
-                    }
-                    helpers.dispatchEvent('inspectNode', [event, {
-                        //"message": masterRow.messageObject,
-                        "args": {"node": tag.cellNodeObj}
-                    }]);
-                },
-
-                _getMasterRow: function(row)
-                {
-                    while(true) {
-                        if(!row.parentNode) {
-                            return null;
-                        }
-                        if(helpers.util.hasClass(row, PACK.__NS__ + "console-message")) {
-                            break;
-                        }
-                        row = row.parentNode;
-                    }
-                    return row;
-                }                
-            });
-        }        
-    }
-});
-
-},{"../pack":161}],170:[function(require,module,exports){
-
-var PACK = require("../pack");
-
-exports.supportsObjectGraphNode = function(node)
-{
-    return (node.meta && typeof node.meta.renderer !== "undefined" && node.meta.renderer === "structures/trace")?true:false;
-};
-
-PACK.initTemplate(require, exports, module, {
-    __name: "trace",
-
-    VAR_hideShortTagOnExpand: false,
-
-    initRep: function(DOMPLATE, helpers)
-    {
-        with(DOMPLATE.tags)
-        {
-            return DOMPLATE.domplate({
-
-                VAR_hideShortTagOnExpand: false,
-                
-                tag:
-                    DIV({"class": PACK.__NS__+"structures-trace"},
-                        TABLE({"cellpadding": 3, "cellspacing": 0},
-                            TBODY(
-                                TR(
-                                    TH({"class": "header-file"}, "File"),
-                                    TH({"class": "header-line"}, "Line"),
-                                    TH({"class": "header-inst"}, "Instruction")
-                                ),
-                                FOR("frame", "$node|getCallList",
-                                    TR({"_frameNodeObj": "$frame.node"},
-                                        TD({"class": "cell-file", "onclick":"$onFileClick"}, "$frame.file"),
-                                        TD({"class": "cell-line", "onclick":"$onFileClick"}, "$frame.line"),
-                                        TD({"class": "cell-inst"},
-                                            DIV("$frame|getFrameLabel(",
-                                                FOR("arg", "$frame|argIterator",
-                                                    DIV({"class": "arg", "_argNodeObj": "$arg.node", "onclick":"$onArgClick"},
-                                                        TAG("$arg.tag", {"node": "$arg.node"}),
-                                                        IF("$arg.more", SPAN({"class": "separator"}, ","))
-                                                    )
-                                                ),
-                                            ")")
-                                        )
-                                    )
-                                )
-                            )
-                        )
-                    ),
-        
-                shortTag:
-                    SPAN({"class": PACK.__NS__+"structures-trace"}, TAG("$node|getCaptionTag", {"node": "$node|getCaptionNode"})),
-        
-        
-                onFileClick: function(event) {
-                    event.stopPropagation();
-                    var node = event.target.parentNode.frameNodeObj,
-                        frame = node.compact();
-                    if(!frame.file || !frame.line) {
-                        return;
-                    }
-                    var args = {
-                        "file": frame.file.value,
-                        "line": frame.line.value
-                    };
-                    if(args["file"] && args["line"]) {
-                        helpers.dispatchEvent('inspectFile', [event, {
-                            "message": node.getObjectGraph().message,
-                            "args": args
-                        }]);
-                    }
-                },
-        
-                onArgClick: function(event) {
-                    event.stopPropagation();
-                    var tag = event.target;
-                    while(tag.parentNode) {
-                        if(tag.argNodeObj) {
-                            break;
-                        }
-                        tag = tag.parentNode;
-                    }
-                    helpers.dispatchEvent('inspectNode', [event, {
-                        "message": tag.argNodeObj.getObjectGraph().message,
-                        "args": {"node": tag.argNodeObj}
-                    }]);
-                },
-        
-                getCaptionTag: function(node) {
-                    var rep = helpers.getTemplateForNode(this.getCaptionNode(node));
-                    return rep.shortTag || rep.tag;
-                },
-        
-                getCaptionNode: function(node) {
-                    if (node.type == "map")
-                        return helpers.util.merge(node.compact().title, {"wrapped": false});
-                    if (node.type == "dictionary")
-                        return helpers.util.merge(node.value.title, {"wrapped": false});
-                },
-
-                getTrace: function(node) {
-                    if (node.type == "map")
-                       return node.compact().trace.value;
-                    if (node.type == "dictionary")
-                       return node.value.trace.value;
-                    helpers.logger.error("Cannot get trace from node", node);
-                },
-
-                postRender: function(node)
-                {
-;debugger;                    
-/*                    
-                    var node = this._getMasterRow(node);
-                    if (node.messageObject && typeof node.messageObject.postRender == "object")
-                    {
-                        if (typeof node.messageObject.postRender.keeptitle !== "undefined")
-                        {
-                            node.setAttribute("keeptitle", node.messageObject.postRender.keeptitle?"true":"false");
-                        }
-                    }
-*/                    
-                },
-
-                getCallList: function(node) {
-
-                    // TODO: Do this in an init method
-/*
-                    if (node.messageObject && typeof node.messageObject.postRender == "object") {
-                        if (typeof node.messageObject.postRender.keeptitle !== "undefined") {
-                            node.setAttribute("keeptitle", "true");
-                        }
-                    }                    
-*/
-                    try {
-                        var list = [];
-                        this.getTrace(node).forEach(function(node) {
-                            frame = node.compact();
-                            list.push({
-                                'node': node,
-                                'file': (frame.file)?frame.file.value:"",
-                                'line': (frame.line)?frame.line.value:"",
-                                'class': (frame["class"])?frame["class"].value:"",
-                                'function': (frame["function"])?frame["function"].value:"",
-                                'type': (frame.type)?frame.type.value:"",
-                                'args': (frame.args)?frame.args.value:false
-                            });
-                        });
-        
-                        // Now that we have all call events, lets see if we can shorten the filenames.
-                        // This only works for unix filepaths for now.
-                        // TODO: Get this working for windows filepaths as well.
-                        try {
-                            if (list[0].file.substr(0, 1) == '/') {
-                                var file_shortest = list[0].file.split('/');
-                                var file_original_length = file_shortest.length;
-                                for (var i = 1; i < list.length; i++) {
-                                    var file = list[i].file.split('/');
-                                    for (var j = 0; j < file_shortest.length; j++) {
-                                        if (file_shortest[j] != file[j]) {
-                                            file_shortest.splice(j, file_shortest.length - j);
-                                            break;
-                                        }
-                                    }
-                                }
-                                if (file_shortest.length > 2) {
-                                    if (file_shortest.length == file_original_length) {
-                                        file_shortest.pop();
-                                    }
-                                    file_shortest = file_shortest.join('/');
-                                    for (var i = 0; i < list.length; i++) {
-                                        list[i].file = '...' + list[i].file.substr(file_shortest.length);
-                                    }
-                                }
-                            }
-                        } catch (e) {}
-        
-                        return list;
-                    } catch(e) {
-                        helpers.logger.error(e);
-                    }
-                },
-        
-                getFrameLabel: function(frame)
-                {
-                    try {
-                        if (frame['class']) {
-                            if (frame['type'] == 'throw') {
-                                return 'throw ' + frame['class'];
-                            } else
-                            if (frame['type'] == 'trigger') {
-                                return 'trigger_error';
-                            } else {
-                                return frame['class'] + frame['type'] + frame['function'];
-                            }
-                        }
-                        return frame['function'];
-                    } catch(e) {
-                        helpers.logger.error(e);
-                    }
-                },
-        
-                argIterator: function(frame)
-                {
-                    try {
-                        if(!frame.args) {
-                            return [];
-                        }
-                        var items = [];
-                        for (var i = 0; i < frame.args.length; i++) {
-                            items.push({
-                                "node": helpers.util.merge(frame.args[i], {"wrapped": true}),
-                                "tag": helpers.getTemplateForNode(frame.args[i]).shortTag,
-                                "more": (i < frame.args.length-1)
-                            });
-                        }
-                        return items;
-                    } catch(e) {
-                        helpers.logger.error(e);
-                    }
-                }
-            });
-        }        
-    }
-});
-
-},{"../pack":161}],171:[function(require,module,exports){
-
-var PACK = require("../pack");
-
-exports.supportsObjectGraphNode = function(node)
-{
-    return (node.meta && node.meta["encoder.trimmed"] && !node.meta["encoder.trimmed.partial"]);
-};
-
-PACK.initTemplate(require, exports, module, {
-
-    initRep: function(DOMPLATE, helpers)
-    {
-        with(DOMPLATE.tags)
-        {
-            return DOMPLATE.domplate({
-        
-                tag:
-                    SPAN({"class": PACK.__NS__+"util-trimmed"},
-                        "$node|getNotice"
-                    ),
-
-                collapsedTag: 
-                    SPAN({"class": PACK.__NS__+"util-trimmed"},
-                        "$node|getNotice"
-                    ),
-
-                getNotice: function(node) {
-                    return node.meta["encoder.notice"];
-                }
-            });
-        }        
-    }
-});
-
-},{"../pack":161}],172:[function(require,module,exports){
-
-var PACK = require("../pack");
-
-exports.supportsObjectGraphNode = function(node)
-{
-    return false;
-};
-
-PACK.initTemplate(require, exports, module, {
-    __name: "console",
-    
-    initRep: function(DOMPLATE, helpers)
-    {
-        with(DOMPLATE.tags)
-        {
-            return DOMPLATE.domplate({
-
-                CONST_Normal: "tag",
-                CONST_Short: "shortTag",
-        
-                tag:
-                    DIV(
-                        {
-                            "class": "$message|_getMessageClass",
-                            "_messageObject": "$message",
-                            "onmouseover":"$onMouseOver",
-                            "onmousemove":"$onMouseMove",
-                            "onmouseout":"$onMouseOut",
-                            "onclick":"$onClick",
-                            "expandable": "$message|_isExpandable",
-                            "expanded": "false",
-                            "_templateObject": "$message|_getTemplateObject"
-                        },
-                        DIV(
-                            {
-                                "class": "$message|_getHeaderClass",
-                                "hideOnExpand": "$message|_getHideShortTagOnExpand"
-                            },
-                            DIV({"class": "expander"}),
-                            DIV({"class": "actions"},
-                                DIV({"class": "inspect", "onclick":"$onClick"}),
-                                DIV({"class": "file $message|_getFileActionClass", "onclick":"$onClick"})
-                            ),
-                            SPAN(
-                                {"class": "summary"},
-                                SPAN({"class": "label"},    // WORKAROUND: IF does not work at top level due to a bug
-                                    IF("$message|_hasLabel", SPAN("$message|_getLabel"))
-                                ),
-                                TAG("$message,$CONST_Short|_getTag", {
-                                    "node": "$message|_getValue",
-                                    "message": "$message"
-                                })
-                            ),
-                            SPAN({"class": "fileline"}, 
-                                DIV(  // WORKAROUND: IF does not work at top level due to a bug
-                                    IF("$message|_hasLabel", DIV({"class": "label"}, "$message|_getLabel"))
-                                ),
-                                DIV("$message|_getFileLine"))
-                        ),
-                        DIV({"class": "$message|_getBodyClass"})
-                    ),
-
-                 groupNoMessagesTag:
-                    DIV({"class": "group-no-messages"}, "No Messages"),    
-
-                _getTemplateObject: function() {
-                    return this;
-                },
-        
-                _getMessageClass: function(message) {
- 
-                    // TODO: Move this into more of an 'init' method
-                    message.postRender = {};
-                    
-                    if(typeof message.meta["group.start"] != "undefined") {
-                        return PACK.__NS__ + "console-message " + PACK.__NS__ + "console-message-group";
-                    } else {
-                        return PACK.__NS__ + "console-message";
-                    }
-                },
-        
-                _getHeaderClass: function(message) {
-                    if(!message.meta || !message.meta["priority"]) {
-                        return "header";
-                    }
-                    return "header header-priority-" + message.meta["priority"];
-                },
-        
-                _getBodyClass: function(message) {
-                    if(!message.meta || !message.meta["priority"]) {
-                        return "body";
-                    }
-                    return "body body-priority-" + message.meta["priority"];
-                },
-                
-                _getFileLine: function(message) {
-                    if(!message.meta) {
-                        return "";
-                    }
-                    var str = [];
-                    if(message.meta["file"]) {
-                        str.push(helpers.util.cropStringLeft(message.meta["file"], 75));
-                    }
-                    if(message.meta["line"]) {
-                        str.push("@");
-                        str.push(message.meta["line"]);
-                    }
-                    return str.join(" ");
-                },
-        
-                // TODO: Need better way to set/determine if tag should be hidden
-                _getHideShortTagOnExpand: function(message) {
-                    if(typeof message.meta["group.start"] != "undefined") {
-                        return "false";
-                    }
-                    var rep = this._getRep(message);
-                    if(rep.VAR_hideShortTagOnExpand===false) {
-                        return "false";
-                        
-                    }
-                    var node = message.og.getOrigin();
-                    if(node.type=="reference") {
-                        node = node.getInstance();
-                        if(node.meta["lang.type"]=="exception") {
-                            return "false";
-                        }
-                    }
-                    return "true";
-                },
-        
-                _isExpandable: function(message) {
-        /*
-                    switch(message.getObjectGraph().getOrigin().type) {
-                        case "array":
-                        case "reference":
-                        case "dictionary":
-                        case "map":
-                        case "text":
-                            break;
-                    }
-        */            
-                    return true;
-                },
-                
-                _getFileActionClass: function(message) {
-                    if(message.meta["file"]) return "";
-                    return "hidden";
-                },
-        
-                _getTag: function(message, type)
-                {
-                    var rep = this._getRep(message);
-                    if(type==this.CONST_Short) {
-                        if(rep.shortTag) {
-                            return rep.shortTag;
-                        }
-                    }
-                    return rep.tag;
-                },
-                
-                _getRep: function(message)
-                {
-                    return message.template;
-/*
-                    var rep;
-                    
-                    if(message.meta && message.meta["renderer"]) {
-                        rep = helpers.getTemplateForId(message.meta["renderer"]);
-                    } else {
-                        rep = helpers.getTemplateForNode(message.getObjectGraph().getOrigin());
-                    }
-                    return rep;
-*/
-                },
-        
-                _hasLabel: function(message)
-                {
-                    if(message.meta && typeof message.meta["label"] != "undefined") {
-                        return true;
-                    } else {
-                        return false;
-                    }
-                },
-        
-                _getLabel: function(message)
-                {
-                    if(this._hasLabel(message)) {
-                        return message.meta["label"];
-                    } else {
-                        return "";
-                    }
-                },
-        
-                _getValue: function(message)
-                {
-                    if(typeof message.meta["group.start"] != "undefined") {
-                        var node = message.og.getOrigin();
-                        node.meta["string.trim.enabled"] = false;
-                        return node;
-                    }
-                    else
-                        return message.og.getOrigin();
-                },
-        
-                onMouseMove: function(event)
-                {
-        /*            
-                    if(activeInfoTip) {
-                        var x = event.clientX, y = event.clientY;
-                        infoTipModule.showInfoTip(activeInfoTip, {
-                            showInfoTip: function() {
-                                return true;
-                            }
-                        }, event.target, x, y, event.rangeParent, event.rangeOffset);
-                    }
-        */            
-                },
-            
-                onMouseOver: function(event)
-                {
-                    // set a class on our logRow parent identifying this log row as fireconsole controlled
-                    // this is used for hover and selected styling
-                    //helpers.util.setClass(this._getMasterRow(event.target).parentNode, "logRow-" + PACK.__NS__ + "console-message");
-        
-                    if(helpers.util.getChildByClass(this._getMasterRow(event.target), "__no_inspect")) {
-                        return;
-                    }
-        
-                    // populate file/line info tip
-        /*            
-                    var meta = this._getMasterRow(event.target).repObject.meta;
-                    if(meta && (meta["fc.msg.file"] || meta["fc.msg.line"])) {
-                        activeInfoTip = event.target.ownerDocument.getElementsByClassName('infoTip')[0];
-                        this.fileLineInfoTipTag.replace({
-                            "file": meta["fc.msg.file"] || "?",
-                            "line": meta["fc.msg.line"] || "?"
-                        }, activeInfoTip);
-                    } else {
-                        activeInfoTip = null;
-                    }
-        */            
-                },
-            
-                onMouseOut: function(event)
-                {
-        //            if(activeInfoTip) {
-        //                infoTipModule.hideInfoTip(activeInfoTip);
-        //            }
-                },
-                
-                onClick: function(event)
-                {
-        //            if(this.util.getChildByClass(this._getMasterRow(event.target), "__no_inspect")) {
-        //                return;
-        //            }
-                    try {
-                        var masterRow = this._getMasterRow(event.target),
-                            headerTag = helpers.util.getChildByClass(masterRow, "header"),
-                            actionsTag = helpers.util.getChildByClass(headerTag, "actions"),
-                            summaryTag = helpers.util.getChildByClass(headerTag, "summary"),
-                            bodyTag = helpers.util.getChildByClass(masterRow, "body");
-
-                        var pointer = {
-                            x: event.clientX,
-                            y: event.clientY
-                        };
-                        var masterRect = {
-                            "left": headerTag.getBoundingClientRect().left-2,
-                            "top": headerTag.getBoundingClientRect().top-2,
-                            // actionsTag.getBoundingClientRect().left is 0 if actions tag not showing
-                            "right": actionsTag.getBoundingClientRect().left || headerTag.getBoundingClientRect().right,
-                            "bottom": headerTag.getBoundingClientRect().bottom+1
-                        };
-            
-                        if(pointer.x >= masterRect.left && pointer.x <= masterRect.right && pointer.y >= masterRect.top && pointer.y <= masterRect.bottom) {
-                            event.stopPropagation();
-                            
-                            if(masterRow.getAttribute("expanded")=="true") {
-            
-                                masterRow.setAttribute("expanded", "false");
-            
-                                helpers.dispatchEvent('contract', [event, {
-                                    "message": masterRow.messageObject,
-                                    "masterTag": masterRow,
-                                    "summaryTag": summaryTag,
-                                    "bodyTag": bodyTag
-                                }]);
-            
-                            } else {
-
-                                masterRow.setAttribute("expanded", "true");
-
-                                helpers.dispatchEvent('expand', [event, {
-                                    "message": masterRow.messageObject,
-                                    "masterTag": masterRow,
-                                    "summaryTag": summaryTag,
-                                    "bodyTag": bodyTag
-                                }]);
-
-                                if(!bodyTag.innerHTML) {
-                                    if(typeof masterRow.messageObject.meta["group.start"] != "undefined") {                                            
-                                        this.groupNoMessagesTag.replace({}, bodyTag, this);
-                                    } else {
-                                        this.expandForMasterRow(masterRow, bodyTag);
-                                    }
-                                    this.postRender(bodyTag);
-                                }
-                            }
-                        } else
-                        if(helpers.util.hasClass(event.target, "inspect")) {
-                            event.stopPropagation();
-                            helpers.dispatchEvent('inspectMessage', [event, {
-                                "message": masterRow.messageObject,
-                                "masterTag": masterRow,
-                                "summaryTag": summaryTag,
-                                "bodyTag": bodyTag,
-                                "args": {
-                                    "node": masterRow.messageObject.og.getOrigin()
-                                }
-                            }]);
-                        } else
-                        if(helpers.util.hasClass(event.target, "file")) {
-                            event.stopPropagation();
-                            var args = {
-                                "file": masterRow.messageObject.meta.file,
-                                "line": masterRow.messageObject.meta.line
-                            };
-                            if(args["file"] && args["line"]) {
-                                helpers.dispatchEvent('inspectFile', [event, {
-                                    "message": masterRow.messageObject,
-                                    "masterTag": masterRow,
-                                    "summaryTag": summaryTag,
-                                    "bodyTag": bodyTag,
-                                    "args": args
-                                }]);
-                            }
-            /*                
-                        } else {
-                            event.stopPropagation();
-                            helpers.dispatchEvent('click', [event, {
-                                "message": masterRow.messageObject,
-                                "masterTag": masterRow,
-                                "valueTag": valueTag,
-                                "bodyTag": bodyTag
-                            }]);
-            */
-                        }
-                    } catch(e) {
-                        helpers.logger.error(e);
-                    }
-                },
-
-                setCount: function(node, count)
-                {
-                    try {
-                        var masterRow = this._getMasterRow(node),
-                            headerTag = helpers.util.getChildByClass(masterRow, "header"),
-                            summaryTag = helpers.util.getChildByClass(headerTag, "summary");
-
-                        summaryTag.children[1].innerHTML += ' <span class="count">(' + count + ')</span>';
-
-                    } catch(e) {
-                        helpers.logger.error("Error setting count for node!: " + e);
-                    }                                                
-                },
-         
-                postRender: function(node)
-                {
-                    var node = this._getMasterRow(node);
-                    if (node.messageObject && typeof node.messageObject.postRender == "object")
-                    {
-                        if (typeof node.messageObject.postRender.keeptitle !== "undefined")
-                        {
-                            node.setAttribute("keeptitle", node.messageObject.postRender.keeptitle?"true":"false");
-                        }
-                    }
-                },
-
-                expandForMasterRow: function(masterRow, bodyTag) {
-                    masterRow.setAttribute("expanded", "true");
-
-                    masterRow.messageObject.render(bodyTag, "detail", masterRow.messageObject);
-
-/*
-                    var rep = this._getRep(masterRow.messageObject, this.CONST_Normal);
-                    rep.tag.replace({
-                        "node": masterRow.messageObject.getObjectGraph().getOrigin(),
-                        "message": masterRow.messageObject
-                    }, bodyTag, rep);
-*/
-                },
-        
-                _getMasterRow: function(row)
-                {
-                    while(true) {
-                        if(!row.parentNode) {
-                            return null;
-                        }
-                        if(helpers.util.hasClass(row, PACK.__NS__ + "console-message")) {
-                            break;
-                        }
-                        row = row.parentNode;
-                    }
-                    return row;
-                }
-            });
-        }        
-    }
-});
-
-exports.renderMessage = function(message, node, options, helpers)
-{
-    exports.getTemplate(helpers).tag.replace({"message": message}, node);
-}
-
-},{"../pack":161}],173:[function(require,module,exports){
-
-var PACK = require("../pack");
-
-exports.supportsObjectGraphNode = function(node)
-{
-    return false;
-};
-
-PACK.initTemplate(require, exports, module, {
-    __name: "viewer",
-    
-    initRep: function(DOMPLATE, helpers)
-    {
-        with(DOMPLATE.tags)
-        {
-            return DOMPLATE.domplate({
-
-                tag:
-                    DIV({
-                        "class": PACK.__NS__ + "viewer-harness"
-                    }, TAG("$message|_getTag", {
-                        "node": "$message|_getValue",
-                        "message": "$message"
-                    })),
-
-                _getTag: function(message)
-                {
-                    return message.template.tag;
-                },
-
-                _getValue: function(message)
-                {
-                    if (typeof message.og != "undefined")
-                        return message.og.getOrigin();
-                    else
-                    if (typeof message.node != "undefined")
-                    {
-                        return message.node;
-                    }
-                    else
-                        helpers.logger.error("Unknown message format in " + module.id);
-                }
-            });
-        }        
-    }
-});
-
-exports.renderMessage = function(message, node, options, helpers)
-{
-    exports.getTemplate(helpers).tag.replace({"message": message}, node);
-}
-
-},{"../pack":161}],174:[function(require,module,exports){
-
-var DOMPLATE = require("domplate/lib/domplate");
-
-
-exports.init = function(packExports, packModule, packOptions) {
-    var templates;
-
-    packExports.__NS__ = "__" + packModule.id.replace(/[\.-\/~]/g, "_") + "__";
-    packExports.getTemplateForNode = function(node) {
-        if (!templates) {
-            templates = packOptions.getTemplates();
-        }
-
-        var found;
-        templates.forEach(function(template) {
-            if (found)
-                return;
-            if (template.supportsObjectGraphNode(node))
-                found = template;
-        });
-        if (!found)
-            return false;
-        return found;
-    }
-
-    var cssImported = false;
-    function importCss(helpers) {
-        if (!cssImported) {
-            cssImported = true;
-
-            var css = packOptions.css;
-
-            css = css.replace(/__NS__/g, packExports.__NS__);
-            css = css.replace(/__RESOURCE__/g, helpers.getResourceBaseUrl(packModule));
-
-            helpers.importCssString(packModule.id, css, helpers.document);
-        }
-    }
-
-    // The wrapper for a template
-    packExports.initTemplate = function(require, exports, module, template) {
-
-        exports.getTemplatePack = function() {
-            return packExports;
-        };
-        exports.getTemplateLocator = function() {
-            var m = module.id.split("/");
-            return {
-                id: "github.com/insight/insight.renderers.default/",
-                module: m.splice(m.length-3,3).join("/")
-            };
-        };
-        if (typeof exports.supportsObjectGraphNode == "undefined") {
-            exports.supportsObjectGraphNode = function(node) {
-                return (node.type == template.type);
-            };
-        }
-
-        exports.getTemplateDeclaration = function () {
-            return template;
-        }
-
-        exports.getTemplate = function(helpers, subclass) {
-
-            if (helpers.debug) {
-                DOMPLATE.DomplateDebug.console = window.console;
-                DOMPLATE.DomplateDebug.setEnabled(true);
-            }
-
-            var rep;
-// NOTE: This needs to go as this gets called multiple times with different 'subclass'
-//            if (typeof rep == "undefined")
-//            {
-                importCss(helpers);
-                rep = template.initRep({
-                    tags: DOMPLATE.tags,
-                    domplate: function(tpl) {
-                        if (subclass) {
-                            tpl = helpers.util.merge(tpl, subclass);
-                        }
-                        if (tpl.inherits) {
-                            var inherits = tpl.inherits;
-                            delete tpl.inherits;
-                            return inherits.getTemplate(helpers, tpl);
-                        } else {
-                            return DOMPLATE.domplate(tpl);
-                        }
-                    }
-                }, helpers);
-                rep.getTemplate = function() {
-                    return exports;
-                };
-//            }
-            return rep;
-        }
-
-        exports.renderObjectGraphToNode = function(ogNode, domNode, options, helpers) {
-            var tpl = exports.getTemplate(helpers);
-            for (var i=0, ic=options.view.length ; i<ic ; i++) {
-                var tag;
-                switch(options.view[i]) {
-                    case "detail":
-                        tag = "tag";
-                        break;
-                    default:
-                    case "summary":
-                        tag = "shortTag";
-                        break;
-                }
-                if (typeof tpl[tag] != "undefined") {
-                    tpl[tag].replace({"node": ogNode}, domNode);
-                    return;
-                }
-            }
-        };
-    }
-}
-
-},{"domplate/lib/domplate":1}],175:[function(require,module,exports){
-
-module.exports = function () {/*
-
-///*######################################################################
-//#   primitives/array
-//#####################################################################
-
-SPAN.__NS__map > SPAN {
-    color: green;
-    font-weight: normal;
-}
-
-SPAN.__NS__map > .pair > SPAN.delimiter,
-SPAN.__NS__map > .pair > SPAN.separator {
-    color: green;
-}
-
-SPAN.__NS__array > SPAN {
-    color: green;
-    font-weight: normal;
-}
-
-SPAN.__NS__array > .element > SPAN.separator {
-    color: green;
-}
-
-///*######################################################################
-//#   primitives/boolean
-//#####################################################################
-
-SPAN.__NS__boolean {
-    color: navy;
-}
-
-
-///*######################################################################
-//#   primitives/exception
-//#####################################################################
-
-SPAN.__NS__exception {
-    font-weight: bold;
-    color: red;
-}
-
-
-///*######################################################################
-//#   primitives/float
-//#####################################################################
-
-SPAN.__NS__float {
-    color: green;
-}
-
-
-///*######################################################################
-//#   primitives/integer
-//#####################################################################
-
-SPAN.__NS__integer {
-    color: green;
-}
-
-
-///*######################################################################
-//#   primitives/null
-//#####################################################################
-
-SPAN.__NS__null {
-    color: navy;
-}
-
-
-///*######################################################################
-//#   primitives/object
-//#####################################################################
-
-
-SPAN.__NS__dictionary > SPAN {
-    color: brown;
-    font-weight: bold;
-}
-
-SPAN.__NS__dictionary > DIV.member {
-    display: block;
-    padding-left: 20px;
-}
-
-SPAN.__NS__dictionary > .member > SPAN.name {
-    color: black;
-    padding-left: 12px;
-}
-
-SPAN.__NS__dictionary > .member > SPAN.name[decorator=private-static] {
-  background: url(__RESOURCE__images/object-member-visibility-sprite.png) no-repeat -4px -2px;
-}
-SPAN.__NS__dictionary > .member > SPAN.name[decorator=protected-static] {
-  background: url(__RESOURCE__images/object-member-visibility-sprite.png) no-repeat -4px -18px;
-}
-SPAN.__NS__dictionary > .member > SPAN.name[decorator=public-static] {
-  background: url(__RESOURCE__images/object-member-visibility-sprite.png) no-repeat -4px -34px;
-}
-SPAN.__NS__dictionary > .member > SPAN.name[decorator=undeclared-static] {
-  background: url(__RESOURCE__images/object-member-visibility-sprite.png) no-repeat -4px -50px;
-}
-SPAN.__NS__dictionary > .member > SPAN.name[decorator=private] {
-  background: url(__RESOURCE__images/object-member-visibility-sprite.png) no-repeat -4px -66px;
-}
-SPAN.__NS__dictionary > .member > SPAN.name[decorator=protected] {
-  background: url(__RESOURCE__images/object-member-visibility-sprite.png) no-repeat -4px -82px;
-}
-SPAN.__NS__dictionary > .member > SPAN.name[decorator=public] {
-  background: url(__RESOURCE__images/object-member-visibility-sprite.png) no-repeat -4px -98px;
-}
-SPAN.__NS__dictionary > .member > SPAN.name[decorator=undeclared] {
-  background: url(__RESOURCE__images/object-member-visibility-sprite.png) no-repeat -4px -114px;
-}
-
-SPAN.__NS__dictionary > .member > SPAN.delimiter,
-SPAN.__NS__dictionary > .member > SPAN.separator,
-SPAN.__NS__dictionary > .member SPAN.more {
-    color: brown;
-}
-
-
-///*######################################################################
-//#   primitives/resource
-//#####################################################################
-
-SPAN.__NS__resource {
-    color: navy;
-}
-
-
-///*######################################################################
-//#   primitives/string
-//#####################################################################
-
-SPAN.__NS__string {
-    color: black;
-}
-
-SPAN.__NS__string[wrapped=true] {
-    color: red;
-}
-
-SPAN.__NS__string > SPAN.special {
-    color: gray;
-    font-weight: bold;
-    padding-left: 3px;
-    padding-right: 3px;
-}
-
-SPAN.__NS__string > SPAN.trimmed {
-    color: #FFFFFF;
-    background-color: blue;
-    padding-left: 5px;
-    padding-right: 5px;
-    margin-left: 5px;
-}
-
-*/}
-
-},{}],176:[function(require,module,exports){
-
-module.id = module.id || "php_pack";
-
-require("../pack-helper").init(exports, module, {
-    css: require("./pack.css.js").toString().split("\n").slice(1, -1).filter(function (line) {
-        if (/^\/\//.test(line)) {
-            return false;
-        }
-        return true;
-    }).join("\n"),
-    getTemplates: function()
-    {
-        return [
-
-            // Second: Utility messages matched by various specific criteria
-            require("../insight/util/trimmed"),
-
-            require("./primitives/array-indexed"),
-            require("./primitives/array-associative"),
-            require("./primitives/boolean"),
-            require("./primitives/exception"),
-            require("./primitives/float"),
-            require("./primitives/integer"),
-            require("./primitives/null"),
-            require("./primitives/object"),
-            require("./primitives/object-reference"),
-            require("./primitives/resource"),
-            require("./primitives/string"),
-            require("./primitives/unknown")
-        ];
-    }
-});
-
-},{"../insight/util/trimmed":171,"../pack-helper":174,"./pack.css.js":175,"./primitives/array-associative":177,"./primitives/array-indexed":178,"./primitives/boolean":179,"./primitives/exception":180,"./primitives/float":181,"./primitives/integer":182,"./primitives/null":183,"./primitives/object":185,"./primitives/object-reference":184,"./primitives/resource":186,"./primitives/string":187,"./primitives/unknown":188}],177:[function(require,module,exports){
-
-var PACK = require("../pack");
-var MAP_TEMPLATE = require("../../insight/primitives/map");
-
-exports.supportsObjectGraphNode = function(node)
-{
-    return (node.type=="map" && node.meta && node.meta["lang.type"]=="array");
-}
-
-PACK.initTemplate(require, exports, module, {
-
-    __name: "array-associative",
-    
-    initRep: function(DOMPLATE, helpers)
-    {
-        with(DOMPLATE.tags)
-        {
-            return DOMPLATE.domplate({
-                
-                inherits: MAP_TEMPLATE,
-        
-                VAR_label: "array"
-            });
-        }        
-    }
-});
-
-},{"../../insight/primitives/map":165,"../pack":176}],178:[function(require,module,exports){
-
-var PACK = require("../pack");
-var ARRAY_TEMPLATE = require("../../insight/primitives/array");
-
-exports.supportsObjectGraphNode = function(node)
-{
-    return (node.type=="array" && node.meta && node.meta["lang.type"]=="array");
-}
-
-PACK.initTemplate(require, exports, module, {
-
-    __name: "array-indexed",
-    
-    initRep: function(DOMPLATE, helpers)
-    {
-        with(DOMPLATE.tags)
-        {
-            return DOMPLATE.domplate({
-                
-                inherits: ARRAY_TEMPLATE,
-        
-                VAR_label: "array"
-            });
-        }        
-    }
-});
-
-},{"../../insight/primitives/array":162,"../pack":176}],179:[function(require,module,exports){
-
-var PACK = require("../pack");
-
-exports.supportsObjectGraphNode = function(node)
-{
-    return (node.meta && node.meta["lang.type"]=="boolean");
-}
-
-PACK.initTemplate(require, exports, module, {
-
-    __name: "boolean",
-    
-    initRep: function(DOMPLATE, helpers)
-    {
-        with(DOMPLATE.tags)
-        {
-            return DOMPLATE.domplate({
-                
-                tag:
-                    SPAN({"class": PACK.__NS__+"boolean"}, "$node|getValue"),
-        
-                shortTag:
-                    SPAN({"class": PACK.__NS__+"boolean"}, "$node|getValue"),
-        
-                getValue: function(node) {
-                    return node.value.toUpperCase();
-                }  
-            });
-        }        
-    }
-});
-
-},{"../pack":176}],180:[function(require,module,exports){
-
-var PACK = require("../pack");
-var TRACE_TEMPLATE = require("../../insight/structures/trace");
-
-exports.supportsObjectGraphNode = function(node)
-{
-    return (node.type=="dictionary" && node.meta && node.meta["lang.type"]=="exception");
-}
-
-PACK.initTemplate(require, exports, module, {
-
-    __name: "exception",
-
-    VAR_hideShortTagOnExpand: false,
-    
-    initRep: function(DOMPLATE, helpers)
-    {
-        with(DOMPLATE.tags)
-        {
-            return DOMPLATE.domplate({
-                
-                inherits: TRACE_TEMPLATE,
-        
-                collapsedTag:
-                    SPAN({"class": PACK.__NS__+"exception"}, "$node|getCaption"),
-                
-                getCaption: function(node) {
-                    return node.meta["lang.class"] + ": " + node.value.message.value;
-                },
-                
-                getTrace: function(node) {
-                    if (node.type=="map")
-                        return [].concat(node.compact().trace.value);
-
-                    if (node.type=="dictionary")
-                        return [].concat(node.value.trace.value);
-                }  
-            });
-        }        
-    }
-});
-
-},{"../../insight/structures/trace":170,"../pack":176}],181:[function(require,module,exports){
-
-var PACK = require("../pack");
-
-exports.supportsObjectGraphNode = function(node)
-{
-    return (node.meta && node.meta["lang.type"]=="float");
-}
-
-PACK.initTemplate(require, exports, module, {
-
-    __name: "float",
-    
-    initRep: function(DOMPLATE, helpers)
-    {
-        with(DOMPLATE.tags)
-        {
-            return DOMPLATE.domplate({
-        
-                tag:
-                    SPAN({"class": PACK.__NS__+"float"}, "$node|getValue"),
-        
-                shortTag:
-                    SPAN({"class": PACK.__NS__+"float"}, "$node|getValue"),
-        
-                getValue: function(node) {
-                    return addCommas(node.value);
-                }    
-
-            });
-        }        
-    }
-});
-
-// @see http://www.mredkj.com/javascript/numberFormat.html
-function addCommas(nStr)
-{
-    nStr += '';
-    x = nStr.split('.');
-    x1 = x[0];
-    x2 = x.length > 1 ? '.' + x[1] : '';
-    var rgx = /(\d+)(\d{3})/;
-    while (rgx.test(x1)) {
-        x1 = x1.replace(rgx, '$1' + ',' + '$2');
-    }
-    return x1 + x2;
-}
-
-},{"../pack":176}],182:[function(require,module,exports){
-
-var PACK = require("../pack");
-
-exports.supportsObjectGraphNode = function(node)
-{
-    return (node.meta && node.meta["lang.type"]=="integer");
-}
-
-PACK.initTemplate(require, exports, module, {
-
-    __name: "integer",
-    
-    initRep: function(DOMPLATE, helpers)
-    {
-        with(DOMPLATE.tags)
-        {
-            return DOMPLATE.domplate({
-        
-                tag:
-                    SPAN({"class": PACK.__NS__+"integer"}, "$node|getValue"),
-        
-                shortTag:
-                    SPAN({"class": PACK.__NS__+"integer"}, "$node|getValue"),
-        
-                getValue: function(node) {
-                    return addCommas(node.value);
-                }    
-
-            });
-        }        
-    }
-});
-
-// @see http://www.mredkj.com/javascript/numberFormat.html
-function addCommas(nStr)
-{
-    nStr += '';
-    x = nStr.split('.');
-    x1 = x[0];
-    x2 = x.length > 1 ? '.' + x[1] : '';
-    var rgx = /(\d+)(\d{3})/;
-    while (rgx.test(x1)) {
-        x1 = x1.replace(rgx, '$1' + ',' + '$2');
-    }
-    return x1 + x2;
-}
-
-},{"../pack":176}],183:[function(require,module,exports){
-
-var PACK = require("../pack");
-
-exports.supportsObjectGraphNode = function(node)
-{
-    return (node.meta && node.meta["lang.type"]=="null");
-}
-
-PACK.initTemplate(require, exports, module, {
-
-    __name: "null",
-    
-    initRep: function(DOMPLATE, helpers)
-    {
-        with(DOMPLATE.tags)
-        {
-            return DOMPLATE.domplate({
-        
-                tag:
-                    SPAN({"class": PACK.__NS__+"null"}, "$node|getValue"),
-
-                shortTag:
-                    SPAN({"class": PACK.__NS__+"null"}, "$node|getValue"),
-
-                getValue: function(node) {
-                    return node.value.toUpperCase();
-                }
-
-            });
-        }        
-    }
-});
-
-},{"../pack":176}],184:[function(require,module,exports){
-
-var PACK = require("../pack");
-var REFERENCE_TEMPLATE = require("../../insight/primitives/reference");
-
-exports.supportsObjectGraphNode = function(node)
-{
-    return (node.type=="reference");
-}
-
-PACK.initTemplate(require, exports, module, {
-
-    __name: "object-reference",
-    
-    initRep: function(DOMPLATE, helpers)
-    {
-        with(DOMPLATE.tags)
-        {
-            return DOMPLATE.domplate({
-
-                inherits: REFERENCE_TEMPLATE
-        
-            });
-        }        
-    }
-});
-
-},{"../../insight/primitives/reference":166,"../pack":176}],185:[function(require,module,exports){
-
-var PACK = require("../pack");
-var DICTIONARY_TEMPLATE = require("../../insight/primitives/dictionary");
-
-exports.supportsObjectGraphNode = function(node)
-{
-    return (node.type=="dictionary" && node.meta && node.meta["lang.type"]=="object");
-}
-
-PACK.initTemplate(require, exports, module, {
-
-    __name: "object",
-    
-    initRep: function(DOMPLATE, helpers)
-    {
-        with(DOMPLATE.tags)
-        {
-            return DOMPLATE.domplate({
-
-                inherits: DICTIONARY_TEMPLATE,
-
-                getLabel: function(node) {
-                    return node.meta["lang.class"];
-                },
-                
-                getMemberNameDecorator: function(member) {
-        
-                    var decorator = [];
-        
-                    if(member.node.meta["lang.visibility"]) {
-                        decorator.push(member.node.meta["lang.visibility"]);
-                    } else
-                    if(member.node.meta["lang.undeclared"]) {
-                        decorator.push("undeclared");
-                    }
-        
-                    if(member.node.meta["lang.static"]) {
-                        decorator.push("static");
-                    }
-        
-                    return decorator.join("-");
-                }
-
-            });
-        }        
-    }
-});
-
-},{"../../insight/primitives/dictionary":164,"../pack":176}],186:[function(require,module,exports){
-
-var PACK = require("../pack");
-
-exports.supportsObjectGraphNode = function(node)
-{
-    return (node.meta && node.meta["lang.type"]=="resource");
-}
-
-PACK.initTemplate(require, exports, module, {
-
-    __name: "resource",
-    
-    initRep: function(DOMPLATE, helpers)
-    {
-        with(DOMPLATE.tags)
-        {
-            return DOMPLATE.domplate({
-
-                tag:
-                    SPAN({"class": PACK.__NS__+"resource"}, "[$node|getValue]"),
-        
-                shortTag:
-                    SPAN({"class": PACK.__NS__+"resource"}, "[$node|getValue]"),
-        
-                getValue: function(node) {
-                    return node.value.toUpperCase();
-                }    
-        
-            });
-        }        
-    }
-});
-
-},{"../pack":176}],187:[function(require,module,exports){
-
-var PACK = require("../pack");
-
-exports.supportsObjectGraphNode = function(node)
-{
-    return (node.meta && node.meta["lang.type"]=="string");
-}
-
-PACK.initTemplate(require, exports, module, {
-
-    __name: "string",
-    
-    initRep: function(DOMPLATE, helpers)
-    {
-        with(DOMPLATE.tags)
-        {
-            return DOMPLATE.domplate({
-                
-                VAR_wrapped: false,
-        
-                tag:
-                    SPAN({"class": PACK.__NS__+"string", "wrapped": "$node.wrapped"},
-                        IF("$node.wrapped", "'"),
-                        FOR("line", "$node|getValue",
-                            "$line.value",
-                            IF("$line.special", SPAN({"class": "special"}, "$line.specialvalue")),
-                            IF("$line.more", BR()),
-                            IF("$line.trimmed", TAG("$node|getTrimmedTag", {"node": "$node"}))
-                        ),
-                        IF("$node.wrapped", "'")),
-        
-                shortTag:
-                    SPAN({"class": PACK.__NS__+"string", "wrapped": "$node.wrapped"},
-                        IF("$node.wrapped", "'"),
-                        FOR("line", "$node|getShortValue",
-                            "$line.value",
-                            IF("$line.special", SPAN({"class": "special"}, "$line.specialvalue")),
-                            IF("$line.more", BR()),
-                            IF("$line.trimmed", TAG("$node|getTrimmedTag", {"node": "$node"}))
-                        ),
-                        IF("$node.wrapped", "'")),
-        
-                // TODO: Should be using the insight/util/trimmed tag but the tag is inclusion not working
-                trimmedNoticeTag: 
-                    SPAN({"class": "trimmed"},
-                        "$node|getNotice"
-                    ),
-        
-                getNotice: function(node) {
-                    return node.meta["encoder.notice"];
-                },
-                        
-                getTrimmedTag: function() {
-                    return this.trimmedNoticeTag;
-                },
-        
-                getValue: function(node) {
-                    var parts = node.value.split("\n");
-                    var lines = [];
-                    for( var i=0,c=parts.length ; i<c ; i++ ) {
-                        lines.push({
-                            "value": parts[i],
-                            "more": (i<c-1)?true:false,
-                            "special": false
-                        });
-                    }
-                    if(node.meta["encoder.trimmed"] && node.meta["encoder.notice"]) {
-                        lines.push({
-                            "value": "",
-                            "trimmed": true
-                        });
-                    }
-                    return lines;
-                },
-                
-                getShortValue: function(node) {
-                    var meta = node.getObjectGraph().getMeta();
-
-                    // TODO: This needs to be optimized
-
-                    var trimEnabled = true;
-                    var trimLength = 50;
-                    var trimNewlines = true;
-                    if(!node.parentNode) {
-                        // if a top-level string display 500 chars (but trim newlines)
-                        // but only if we are not asked to specifically trim
-                        if(typeof meta["string.trim.enabled"] == "undefined" || !meta["string.trim.enabled"]) {
-                            trimLength = 500;
-                        }
-                    }
-                    if(typeof meta["string.trim.enabled"] != "undefined") {
-                        trimEnabled = meta["string.trim.enabled"];
-                    }
-                    if(typeof meta["string.trim.length"] != "undefined" && meta["string.trim.length"]>=5) {
-                        trimLength = meta["string.trim.length"];
-                    }
-                    if(typeof meta["string.trim.newlines"] != "undefined") {
-                        trimNewlines = meta["string.trim.newlines"];
-                    }
-        
-                    var str = node.value;
-                    if(trimEnabled) {
-                        if(trimLength>-1) {
-                            str = cropString(str, trimLength);
-                        }
-                        if(trimNewlines) {
-                            str = escapeNewLines(str);
-                        }
-                    }
-        
-                    var parts = str.split("\n");
-                    var lines = [],
-                        parts2;
-                    for( var i=0,ci=parts.length ; i<ci ; i++ ) {
-                        parts2 = parts[i].split("|:_!_:|");
-                        for( var j=0,cj=parts2.length ; j<cj ; j++ ) {
-                            if(parts2[j]=="STRING_CROP") {
-                                lines.push({
-                                    "value": "",
-                                    "more": false,
-                                    "special": true,
-                                    "specialvalue": "..."
-                                });
-                            } else
-                            if(parts2[j]=="STRING_NEWLINE") {
-                                lines.push({
-                                    "value": "",
-                                    "more": false,
-                                    "special": true,
-                                    "specialvalue": "\\n"
-                                });
-                            } else {
-                                lines.push({
-                                    "value": parts2[j],
-                                    "more": (i<ci-1 && j==cj-1)?true:false
-                                });
-                            }
-                        }
-                    }
-                    if(node.meta["encoder.trimmed"] && node.meta["encoder.notice"]) {
-                        lines.push({
-                            "value": "",
-                            "trimmed": true
-                        });
-                    }
-                    return lines;
-                }
-            });
-        }        
-    }
-});
-
-function cropString(value, limit) {
-    limit = limit || 50;
-    if (value.length > limit) {
-        return value.substr(0, limit/2) + "|:_!_:|STRING_CROP|:_!_:|" + value.substr(value.length-limit/2);
-    } else {
-        return value;
-    }
-}
-
-function escapeNewLines(value) {
-    return (""+value).replace(/\r/g, "\\r").replace(/\n/g, "|:_!_:|STRING_NEWLINE|:_!_:|");
-}
-
-},{"../pack":176}],188:[function(require,module,exports){
-
-var PACK = require("../pack");
-
-exports.supportsObjectGraphNode = function(node)
-{
-    return (node.type=="text" && node.meta && node.meta["lang.type"]=="unknown");
-}
-
-PACK.initTemplate(require, exports, module, {
-
-    __name: "unknown",
-    
-    initRep: function(DOMPLATE, helpers)
-    {
-        with(DOMPLATE.tags)
-        {
-            return DOMPLATE.domplate({
-        
-                tag:
-                    DIV("UNKNOWN EXPANDED"),
-        
-                collapsedTag:
-                    DIV("UNKNOWN COLLAPSED"),
-        
-                shortTag:
-                    DIV("UNKNOWN SHORT")
-
-            });
-        }        
-    }
-});
-
-},{"../pack":176}],189:[function(require,module,exports){
+},{"domplate/lib/util":2,"eventemitter2":3,"insight-for-js/lib/decoder/default":13,"insight-for-js/lib/encoder/default":14,"insight.renderers.default/lib/insight/pack":16,"insight.renderers.default/lib/insight/wrappers/console":27,"insight.renderers.default/lib/insight/wrappers/viewer":28,"insight.renderers.default/lib/php/pack":31,"lodash/clone":153,"lodash/merge":170,"wildfire-for-js/lib/wildfire":185}],187:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -16153,7 +16148,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],190:[function(require,module,exports){
+},{}],188:[function(require,module,exports){
 /*!
  * The buffer module from node.js, for the browser.
  *
@@ -17869,7 +17864,7 @@ function numberIsNaN (obj) {
   return obj !== obj // eslint-disable-line no-self-compare
 }
 
-},{"base64-js":189,"ieee754":191}],191:[function(require,module,exports){
+},{"base64-js":187,"ieee754":189}],189:[function(require,module,exports){
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
   var eLen = nBytes * 8 - mLen - 1
@@ -17955,7 +17950,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],192:[function(require,module,exports){
+},{}],190:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -18141,7 +18136,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}]},{},[155])(155)
+},{}]},{},[186])(186)
 });
 	});
 });

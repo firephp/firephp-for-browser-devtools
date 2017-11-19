@@ -469,8 +469,7 @@ DomplateTag.prototype =
         js = js.replace('__SELF__JS__',js.replace(/\'/g,'\\\''));
         
 //system.print(js,'JS');
-
-
+        
         this.renderMarkup = eval(js);
 
         DomplateDebug.endGroup();
