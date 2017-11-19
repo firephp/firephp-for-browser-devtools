@@ -8,6 +8,7 @@
     "fireconsole.rep.js": "^0.0.6"
   },
   "scripts": {
+    "start": "bash.origin.script ./workspace.sh run",
     "test": "bash.origin.test tests",
     "build": "bash.origin.script ./workspace.sh build",
     "build-via-docker": "bash.origin.script ./src/docker/build.sh"
