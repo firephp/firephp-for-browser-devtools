@@ -64,7 +64,7 @@ CALL_webext run {
                                     "panels": "$__DIRNAME__/../../src/panels.rep.js",
                                     "settings": "$__DIRNAME__/../../src/settings.rep.js",
                                     "inspector": "$__DIRNAME__/../../src/inspector.rep.js",
-                                    "fireconsole": "$__DIRNAME__/../../node_modules/fireconsole.rep.js/src/fireconsole.rep.js",
+                                    "fireconsole": "$__DIRNAME__/../../node_modules/fireconsole.rep.js/dist/fireconsole.rep.js",
                                     "console": "$__DIRNAME__/../../src/console.rep.js"
                                 }
                             }
@@ -80,7 +80,7 @@ CALL_webext run {
         }
     },
     "files": {
-        "/dist/resources/insight.renderers.default/*": "$__DIRNAME__/../../node_modules/fireconsole.rep.js/node_modules/insight.renderers.default/resources"
+        "/dist/resources/insight.renderers.default/*": "$__DIRNAME__/../../node_modules/fireconsole.rep.js/dist/resources/insight.renderers.default"
     },    
     "expect": {
         "exit": true,

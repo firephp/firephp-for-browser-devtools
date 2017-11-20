@@ -5,6 +5,8 @@ PINF.bundle("", function(require) {
 
 ((function() {
 
+    var EVAL = require("./explicit-unsafe-eval");
+
     function Domplate(exports) {
 
 /**
@@ -470,7 +472,13 @@ DomplateTag.prototype =
         
 //system.print(js,'JS');
         
-        this.renderMarkup = eval(js);
+        this.renderMarkup = EVAL.compileMarkup(js, {
+            DomplateDebug: DomplateDebug,
+            __escape__: __escape__,
+            __if__: __if__,
+            __loop__: __loop__,
+            __link__: __link__
+        });
 
         DomplateDebug.endGroup();
     },
@@ -757,7 +765,14 @@ DomplateTag.prototype =
         // Inject the compiled JS so we can view it later in the console when the code runs     
         js = js.replace('__SELF__JS__',js.replace(/\'/g,'\\\''));
 
-        this.renderDOM = eval(js);
+        this.renderDOM = EVAL.compileDOM(js, {
+            DomplateDebug: DomplateDebug,
+            __path__: __path__,
+            __bind__: __bind__,
+            __if__: __if__,
+            __link__:__link__,
+            __loop__: __loop__
+        });
         
         DomplateDebug.endGroup();
     },
@@ -1628,7 +1643,30 @@ defineTags(
 })());
 
 
-},{}],2:[function(require,module,exports){
+},{"./explicit-unsafe-eval":2}],2:[function(require,module,exports){
+
+exports.compileMarkup = function (code, context) {
+    var DomplateDebug = context.DomplateDebug;
+    var __escape__ = context.__escape__;
+    var __if__ = context.__if__;
+    var __loop__ = context.__loop__;
+    var __link__ = context.__link__;
+
+    return eval(code);
+};
+
+exports.compileDOM = function (code, context) {
+    var DomplateDebug = context.DomplateDebug;
+    var __path__ = context.__path__;
+    var __bind__ = context.__bind__;
+    var __if__ = context.__if__;
+    var __link__ = context.__link__;
+    var __loop__ = context.__loop__;
+
+    return eval(code);
+};
+
+},{}],3:[function(require,module,exports){
 
 /*
  * The functions below are taken from Firebug as-is and should be kept in-sync.
@@ -2269,743 +2307,12 @@ this.isArguments = function (object) {
 
 }).apply(exports);
     
-},{}],3:[function(require,module,exports){
-
-var UTIL = require("fp-modules-for-nodejs/lib/util"),
-    JSON = require("fp-modules-for-nodejs/lib/json"),
-    ENCODER = require("../encoder/default");
-
-exports.EXTENDED = "EXTENDED";
-exports.SIMPLE = "SIMPLE";
-
-
-exports.generateFromMessage = function(message, format)
-{
-    format = format || exports.EXTENDED;
-
-    var og = new ObjectGraph();
-
-    var meta = {},
-        data;
-
-    if (typeof message.getMeta == "function")
-    {
-        meta = JSON.decode(message.getMeta() || "{}");
-    }
-    else
-    if (typeof message.meta == "string")
-    {
-        meta = JSON.decode(message.meta);
-    }
-    else
-    if (typeof message.meta == "object")
-    {
-        meta = message.meta;
-    }
-
-    if (typeof message.getData == "function")
-    {
-        data = message.getData();
-    }
-    else
-    if (typeof message.data != "undefined")
-    {
-        data = message.data;
-    }
-    else
-        throw new Error("NYI");
-
-    if(meta["msg.preprocessor"] && meta["msg.preprocessor"]=="FirePHPCoreCompatibility") {
-
-        var parts = convertFirePHPCoreData(meta, data);
-        if (typeof message.setMeta == "function")
-            message.setMeta(JSON.encode(parts[0]));
-        else
-            message.meta = JSON.encode(parts[0]);
-        data = parts[1];
-
-    } else
-    if(typeof data !== "undefined" && data != "") {
-        try {
-
-            data = JSON.decode(data);
-
-        } catch(e) {
-            console.error("Error decoding JSON data: " + data);
-            throw e;
-        }
-    } else {
-        data = {};
-    }
-
-    // assign group title to value if applicable
-    if(typeof meta["group.title"] != "undefined") {
-        data = {
-            "origin": {
-                "type": "text",
-                "text": meta["group.title"]
-            }
-        };
-    }
-
-    if(data.instances) {
-        for( var i=0 ; i<data.instances.length ; i++ ) {
-            data.instances[i] = generateNodesFromData(og, data.instances[i]);
-        }
-        og.setInstances(data.instances);
-    }
-
-    if(meta["lang.id"]) {
-        og.setLanguageId(meta["lang.id"]);
-    }
-
-    og.setMeta(meta);
-
-    if(UTIL.has(data, "origin")) {
-        if(format==exports.EXTENDED) {
-            og.setOrigin(generateNodesFromData(og, data.origin));
-        } else
-        if(format==exports.SIMPLE) {
-            og.setOrigin(generateObjectsFromData(og, data.origin));
-        } else {
-            throw new Error("unsupported format: " + format);
-        }
-    }
-
-    return og;
-}
-
-function generateObjectsFromData(objectGraph, data) {
-
-    var node;
-
-    if(data.type=="array") {
-        node = [];
-        for( var i=0 ; i<data[data.type].length ; i++ ) {
-            node.push(generateObjectsFromData(objectGraph, data[data.type][i]));
-        }
-    } else
-    if(data.type=="map") {
-        node = [];
-        for( var i=0 ; i<data[data.type].length ; i++ ) {
-            node.push([
-                generateObjectsFromData(objectGraph, data[data.type][i][0]),
-                generateObjectsFromData(objectGraph, data[data.type][i][1])
-            ]);
-        }
-    } else
-    if(data.type=="dictionary") {
-        node = {};
-        for( var name in data[data.type] ) {
-            node[name] = generateObjectsFromData(objectGraph, data[data.type][name]);
-        }
-    } else {
-        node = data[data.type];
-    }
-
-    return node;
-}
-
-
-function generateNodesFromData(objectGraph, data, parentNode) {
-    
-    parentNode = parentNode || null;
-    
-    var node = new Node(objectGraph, data, parentNode);
-    
-    if(node.value!==null && typeof node.value != "undefined") {
-        // some types need nested nodes decoded
-        if(node.type=="array") {
-            for( var i=0 ; i<node.value.length ; i++ ) {
-                node.value[i] = generateNodesFromData(objectGraph, node.value[i], node);
-            }
-        } else
-        if(node.type=="map") {
-            for( var i=0 ; i<node.value.length ; i++ ) {
-                node.value[i][0] = generateNodesFromData(objectGraph, node.value[i][0], node);
-                node.value[i][1] = generateNodesFromData(objectGraph, node.value[i][1], node);
-            }
-        } else
-        if(node.type=="dictionary") {
-            for( var name in node.value ) {
-                node.value[name] = generateNodesFromData(objectGraph, node.value[name], node);
-            }
-        }
-    } else {
-        node.value = null;
-    }
-
-    return node;
-}
-
-
-
-var Node = function(objectGraph, data, parentNode) {
-    var self = this;
-    self.parentNode = parentNode || null;
-    self.type = data.type;
-    self.value = data[data.type];
-    self.meta = {};
-    UTIL.every(data, function(item) {
-        if(item[0]!="type" && item[0]!=self.type) {
-            self.meta[item[0]] = item[1];
-        }
-    });
-    if(self.type=="reference") {
-        self.getInstance = function() {
-            return objectGraph.getInstance(self.value);
-        }
-    }
-    self.getObjectGraph = function() {
-        return objectGraph;
-    }
-}
-
-Node.prototype.getTemplateId = function() {
-    if(UTIL.has(this.meta, "tpl.id")) {
-        return this.meta["tpl.id"];
-    }
-    return false;
-}
-
-Node.prototype.compact = function() {
-    if(!this.compacted) {
-        if(this.type=="map") {
-            this.compacted = {};
-            for( var i=0 ; i<this.value.length ; i++ ) {
-                this.compacted[this.value[i][0].value] = this.value[i][1];
-            }
-        }
-    }
-    return this.compacted;
-}
-
-Node.prototype.getPath = function(locateChild) {
-    var path = [];
-    if (this.parentNode)
-        path = path.concat(this.parentNode.getPath(this));
-    else
-        path = path.concat(this.getObjectGraph().getPath(this));
-    if (locateChild)
-    {
-        if(this.type=="map") {
-            for( var i=0 ; i<this.value.length ; i++ ) {
-                if (this.value[i][1] === locateChild)
-                {
-                    path.push("value[" + i + "][1]");
-                    break;
-                }
-            }
-        } else
-        if(this.type=="dictionary") {
-            for (var key in this.value)
-            {
-                if (this.value[key] === locateChild)
-                {
-                    path.push("value['" + key + "']");
-                    break;
-                }
-            }
-        } else
-        if(this.type=="array") {
-            for( var i=0 ; i<this.value.length ; i++ ) {
-                if (this.value[i] === locateChild)
-                {
-                    path.push("value[" + i + "]");
-                    break;
-                }
-            }
-        } else {
-console.error("NYI - getPath() for this.type = '" + this.type + "'", this);            
-        }
-    }
-    return path;
-}
-
-Node.prototype.forPath = function(path) {
-    if (!path || path.length === 0)
-        return this;
-    if(this.type=="map") {
-        var m = path[0].match(/^value\[(\d*)\]\[1\]$/);
-        return this.value[parseInt(m[1])][1].forPath(path.slice(1));
-    } else
-    if(this.type=="dictionary") {
-        var m = path[0].match(/^value\['(.*?)'\]$/);
-        return this.value[m[1]].forPath(path.slice(1));
-    } else
-    if(this.type=="array") {
-        var m = path[0].match(/^value\[(\d*)\]$/);
-        return this.value[parseInt(m[1])].forPath(path.slice(1));
-    } else {
-//console.error("NYI - forPath('" + path + "') for this.type = '" + this.type + "'", this);            
-    }
-    return null;
-}
-
-//Node.prototype.renderIntoViewer = function(viewerDocument, options) {
-//    throw new Error("NYI - Node.prototype.renderIntoViewer in " + module.id);
-//    return RENDERER.renderIntoViewer(this, viewerDocument, options);
-//}
-
-
-var ObjectGraph = function() {
-//    this.message = message;
-}
-//ObjectGraph.prototype = Object.create(new Node());
-
-ObjectGraph.prototype.setOrigin = function(node) {
-    this.origin = node;
-}
-
-ObjectGraph.prototype.getOrigin = function() {
-    return this.origin;
-}
-
-ObjectGraph.prototype.setInstances = function(instances) {
-    this.instances = instances;
-}
-
-ObjectGraph.prototype.getInstance = function(index) {
-    return this.instances[index];
-}
-
-ObjectGraph.prototype.setLanguageId = function(id) {
-    this.languageId = id;
-}
-
-ObjectGraph.prototype.getLanguageId = function() {
-    return this.languageId;
-}
-
-ObjectGraph.prototype.setMeta = function(meta) {
-    this.meta = meta;
-}
-
-ObjectGraph.prototype.getMeta = function() {
-    return this.meta;
-}
-
-ObjectGraph.prototype.getPath = function(locateChild) {
-    if (this.origin === locateChild)
-    {
-        return ["origin"];
-    }
-    for( var i=0 ; i<this.instances.length ; i++ ) {
-        if (this.instances[i] === locateChild)
-        {
-            return ["instances[" + i + "]"];
-        }
-    }
-    throw new Error("Child node not found. We should never reach this!");
-}
-        
-ObjectGraph.prototype.nodeForPath = function(path) {
-    var m = path[0].match(/^instances\[(\d*)\]$/);
-    if (m) {
-        return this.instances[parseInt(m[1])].forPath(path.slice(1));
-    } else {
-        // assume path[0] == 'origin'
-        return this.origin.forPath(path.slice(1));
-    }
-    return node;
-}
-
-
-var encoder = ENCODER.Encoder();
-encoder.setOption("maxObjectDepth", 1000);
-encoder.setOption("maxArrayDepth", 1000);
-encoder.setOption("maxOverallDepth", 1000);
-function convertFirePHPCoreData(meta, data) {
-    data = encoder.encode(JSON.decode(data), null, {
-        "jsonEncode": false
-    });
-    return [meta, data]; 
-}
-
-},{"../encoder/default":4,"fp-modules-for-nodejs/lib/json":5,"fp-modules-for-nodejs/lib/util":6}],4:[function(require,module,exports){
-
-var UTIL = require("fp-modules-for-nodejs/lib/util");
-var JSON = require("fp-modules-for-nodejs/lib/json");
-
-var Encoder = exports.Encoder = function() {
-    if (!(this instanceof exports.Encoder))
-        return new exports.Encoder();
-    this.options = {
-        "maxObjectDepth": 4,
-        "maxArrayDepth": 4,
-        "maxOverallDepth": 6,
-        "includeLanguageMeta": true
-    };
-}
-
-Encoder.prototype.setOption = function(name, value) {
-    this.options[name] = value;
-}
-
-Encoder.prototype.setOrigin = function(variable) {
-    this.origin = variable;
-    // reset some variables
-    this.instances = [];
-    return true;
-}
-
-Encoder.prototype.encode = function(data, meta, options) {
-
-    options = options || {};
-
-    if(typeof data != "undefined") {
-        this.setOrigin(data);
-    }
-
-    // TODO: Use meta["fc.encoder.options"] to control encoding
-
-    var graph = {};
-    
-    try {
-        if(typeof this.origin != "undefined") {
-            graph["origin"] = this.encodeVariable(this.origin);
-        }
-    } catch(err) {
-        console.warn("Error encoding variable", err.stack);
-        throw err;
-    }
-
-    if(UTIL.len(this.instances)>0) {
-        graph["instances"] = [];
-        this.instances.forEach(function(instance) {
-            graph["instances"].push(instance[1]);
-        });
-    }
-
-    if(UTIL.has(options, "jsonEncode") && !options.jsonEncode) {
-        return graph;
-    }
-
-    try {
-        return JSON.encode(graph);
-    } catch(e) {
-        console.warn("Error jsonifying object graph" + e);
-        throw e;
-    }
-    return null;
-}
-
-Encoder.prototype.encodeVariable = function(variable, objectDepth, arrayDepth, overallDepth) {
-    objectDepth = objectDepth || 1;
-    arrayDepth = arrayDepth || 1;
-    overallDepth = overallDepth || 1;
-    
-    if(variable===null) {
-        var ret = {"type": "constant", "constant": "null"};
-        if(this.options["includeLanguageMeta"]) {
-            ret["lang.type"] = "null";
-        }
-        return ret;
-    } else
-    if(variable===true || variable===false) {
-        var ret = {"type": "constant", "constant": (variable===true)?"true":"false"};
-        if(this.options["includeLanguageMeta"]) {
-            ret["lang.type"] = "boolean";
-        }
-        return ret;
-    }
-
-    var type = typeof variable;
-    if(type=="undefined") {
-        var ret = {"type": "constant", "constant": "undefined"};
-        if(this.options["includeLanguageMeta"]) {
-            ret["lang.type"] = "undefined";
-        }
-        return ret;
-    } else
-    if(type=="number") {
-        if(Math.round(variable)==variable) {
-            var ret = {"type": "text", "text": ""+variable};
-            if(this.options["includeLanguageMeta"]) {
-                ret["lang.type"] = "integer";
-            }
-            return ret;
-        } else {
-            var ret = {"type": "text", "text": ""+variable};
-            if(this.options["includeLanguageMeta"]) {
-                ret["lang.type"] = "float";
-            }
-            return ret;
-        }
-    } else
-    if(type=="string") {
-        // HACK: This should be done via an option
-        // FirePHPCore compatibility: Detect resource string
-        if(variable=="** Excluded by Filter **") {
-            var ret = {"type": "text", "text": variable};
-            ret["encoder.notice"] = "Excluded by Filter";
-            ret["encoder.trimmed"] = true;
-            if(this.options["includeLanguageMeta"]) {
-                ret["lang.type"] = "string";
-            }
-            return ret;
-        } else
-        if(variable.match(/^\*\*\sRecursion\s\([^\(]*\)\s\*\*$/)) {
-            var ret = {"type": "text", "text": variable};
-            ret["encoder.notice"] = "Recursion";
-            ret["encoder.trimmed"] = true;
-            if(this.options["includeLanguageMeta"]) {
-                ret["lang.type"] = "string";
-            }
-            return ret;
-        } else
-        if(variable.match(/^\*\*\sResource\sid\s#\d*\s\*\*$/)) {
-            var ret = {"type": "text", "text": variable.substring(3, variable.length-3)};
-            if(this.options["includeLanguageMeta"]) {
-                ret["lang.type"] = "resource";
-            }
-            return ret;
-        } else {
-            var ret = {"type": "text", "text": variable};
-            if(this.options["includeLanguageMeta"]) {
-                ret["lang.type"] = "string";
-            }
-            return ret;
-        }
-    }
-
-    if (variable && variable.__no_serialize === true) {
-        var ret = {"type": "text", "text": "Object"};
-        ret["encoder.notice"] = "Excluded by __no_serialize";
-        ret["encoder.trimmed"] = true;
-        return ret;
-    }
-
-    if(type=="function") {
-        var ret = {"type": "text", "text": ""+variable};
-        if(this.options["includeLanguageMeta"]) {
-            ret["lang.type"] = "function";
-        }
-        return ret;
-    } else
-    if(type=="object") {
-
-        try {
-            if(UTIL.isArrayLike(variable)) {
-                var ret = {
-                    "type": "array",
-                    "array": this.encodeArray(variable, objectDepth, arrayDepth, overallDepth)
-                };
-                if(this.options["includeLanguageMeta"]) {
-                    ret["lang.type"] = "array";
-                }
-                return ret;
-            }
-        } catch (err) {
-// TODO: Find a better way to encode variables that cause security exceptions when accessed etc...
-            var ret = {"type": "text", "text": "Cannot serialize"};
-            ret["encoder.notice"] = "Cannot serialize";
-            ret["encoder.trimmed"] = true;
-            return ret;
-        }
-        // HACK: This should be done via an option
-        // FirePHPCore compatibility: we only have an object if a class name is present
-
-        if(typeof variable["__className"] != "undefined"  ) {
-            var ret = {
-                "type": "reference",
-                "reference": this.encodeInstance(variable, objectDepth, arrayDepth, overallDepth)
-            };
-            return ret;
-        } else {
-            var ret;
-            if (/^\[Exception\.\.\.\s/.test(variable)) {
-                ret = {
-                    "type": "map",
-                    "map": this.encodeException(variable, objectDepth, arrayDepth, overallDepth)
-                };
-            } else {
-                ret = {
-                    "type": "map",
-                    "map": this.encodeAssociativeArray(variable, objectDepth, arrayDepth, overallDepth)
-                };
-            }
-            if(this.options["includeLanguageMeta"]) {
-                ret["lang.type"] = "array";
-            }
-            return ret;
-        }
-    }
-
-    var ret = {"type": "text", "text": "Variable with type '" + type + "' unknown: "+variable};
-    if(this.options["includeLanguageMeta"]) {
-        ret["lang.type"] = "unknown";
-    }
-    return ret;
-//    return "["+(typeof variable)+"]["+variable+"]";    
-}
-
-Encoder.prototype.encodeArray = function(variable, objectDepth, arrayDepth, overallDepth) {
-    objectDepth = objectDepth || 1;
-    arrayDepth = arrayDepth || 1;
-    overallDepth = overallDepth || 1;
-    if(arrayDepth > this.options["maxArrayDepth"]) {
-        return {"notice": "Max Array Depth (" + this.options["maxArrayDepth"] + ")"};
-    } else
-    if(overallDepth > this.options["maxOverallDepth"]) {
-        return {"notice": "Max Overall Depth (" + this.options["maxOverallDepth"] + ")"};
-    }
-    var self = this,
-        items = [];
-    UTIL.forEach(variable, function(item) {
-        items.push(self.encodeVariable(item, 1, arrayDepth + 1, overallDepth + 1));
-    });
-    return items;
-}
-
-
-Encoder.prototype.encodeAssociativeArray = function(variable, objectDepth, arrayDepth, overallDepth) {
-    objectDepth = objectDepth || 1;
-    arrayDepth = arrayDepth || 1;
-    overallDepth = overallDepth || 1;
-    if(arrayDepth > this.options["maxArrayDepth"]) {
-        return {"notice": "Max Array Depth (" + this.options["maxArrayDepth"] + ")"};
-    } else
-    if(overallDepth > this.options["maxOverallDepth"]) {
-        return {"notice": "Max Overall Depth (" + this.options["maxOverallDepth"] + ")"};
-    }
-    var self = this,
-        items = [];
-    for (var key in variable) {
-
-        // HACK: This should be done via an option
-        // FirePHPCore compatibility: numeric (integer) strings as keys in associative arrays get converted to integers
-        // http://www.php.net/manual/en/language.types.array.php
-        if(isNumber(key) && Math.round(key)==key) {
-            key = parseInt(key);
-        }
-        
-        items.push([
-            self.encodeVariable(key, 1, arrayDepth + 1, overallDepth + 1),
-            self.encodeVariable(variable[key], 1, arrayDepth + 1, overallDepth + 1)
-        ]);
-    }
-    return items;
-}
-
-
-Encoder.prototype.encodeException = function(variable, objectDepth, arrayDepth, overallDepth) {
-    var self = this,
-        items = [];
-    items.push([
-        self.encodeVariable("message", 1, arrayDepth + 1, overallDepth + 1),
-        self.encodeVariable((""+variable), 1, arrayDepth + 1, overallDepth + 1)
-    ]);
-    return items;
-}
-
-// http://stackoverflow.com/questions/18082/validate-numbers-in-javascript-isnumeric
-function isNumber(n) {
-  return !isNaN(parseFloat(n)) && isFinite(n);
-}
-
-
-
-Encoder.prototype.getInstanceId = function(object) {
-    for( var i=0 ; i<this.instances.length ; i++ ) {
-        if(this.instances[i][0]===object) {
-            return i;
-        }
-    }
-    return null;
-}
-
-Encoder.prototype.encodeInstance = function(object, objectDepth, arrayDepth, overallDepth) {
-    objectDepth = objectDepth || 1;
-    arrayDepth = arrayDepth || 1;
-    overallDepth = overallDepth || 1;
-    var id = this.getInstanceId(object);
-    if(id!=null) {
-        return id;
-    }
-    this.instances.push([
-        object,
-        this.encodeObject(object, objectDepth, arrayDepth, overallDepth)
-    ]);
-    return UTIL.len(this.instances)-1;
-}
-
-Encoder.prototype.encodeObject = function(object, objectDepth, arrayDepth, overallDepth) {
-    objectDepth = objectDepth || 1;
-    arrayDepth = arrayDepth || 1;
-    overallDepth = overallDepth || 1;
-
-    if(arrayDepth > this.options["maxObjectDepth"]) {
-        return {"notice": "Max Object Depth (" + this.options["maxObjectDepth"] + ")"};
-    } else
-    if(overallDepth > this.options["maxOverallDepth"]) {
-        return {"notice": "Max Overall Depth (" + this.options["maxOverallDepth"] + ")"};
-    }
-    
-    var self = this,
-        ret = {"type": "dictionary", "dictionary": {}};
-
-    // HACK: This should be done via an option
-    // FirePHPCore compatibility: we have an object if a class name is present
-    var isPHPClass = false;
-    if(typeof object["__className"] != "undefined") {
-        isPHPClass = true;
-        ret["lang.class"] = object["__className"];
-        delete(object["__className"]);
-        if(this.options["includeLanguageMeta"]) {
-            ret["lang.type"] = "object";
-        }
-    }
-
-    // HACK: This should be done via an option
-    // FirePHPCore compatibility: we have an exception if a class name is present
-    if(typeof object["__isException"] != "undefined" && object["__isException"]) {
-        ret["lang.type"] = "exception";
-    }
-
-    UTIL.forEach(object, function(item) {
-        try {
-            if(item[0]=="__fc_tpl_id") {
-                ret['fc.tpl.id'] = item[1];
-                return;
-            }
-            if(isPHPClass) {
-                var val = self.encodeVariable(item[1], objectDepth + 1, 1, overallDepth + 1),
-                    parts = item[0].split(":"),
-                    name = parts[parts.length-1];
-                if(parts[0]=="public") {
-                    val["lang.visibility"] = "public";
-                } else
-                if(parts[0]=="protected") {
-                    val["lang.visibility"] = "protected";
-                } else
-                if(parts[0]=="private") {
-                    val["lang.visibility"] = "private";
-                } else
-                if(parts[0]=="undeclared") {
-                    val["lang.undeclared"] = 1;
-                }
-                if(parts.length==2 && parts[1]=="static") {
-                    val["lang.static"] = 1;
-                }
-                ret["dictionary"][name] = val;
-            } else {
-                ret["dictionary"][item[0]] = self.encodeVariable(item[1], objectDepth + 1, 1, overallDepth + 1);
-            }
-        } catch(e) {
-            console.warn(e);
-            ret["dictionary"]["__oops__"] = {"notice": "Error encoding member (" + e + ")"};
-        }
-    });
-    
-    return ret;
-}
-},{"fp-modules-for-nodejs/lib/json":5,"fp-modules-for-nodejs/lib/util":6}],5:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 
 exports.encode = JSON.stringify;
 exports.decode = JSON.parse;
 
-},{}],6:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 
 // -- kriskowal Kris Kowal Copyright (C) 2009-2010 MIT License
 // -- isaacs Isaac Schlueter
@@ -4188,7 +3495,738 @@ exports.title = function (value, delimiter) {
 };
 
 
-},{}],7:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
+
+var UTIL = require("fp-modules-for-nodejs/lib/util"),
+    JSON = require("fp-modules-for-nodejs/lib/json"),
+    ENCODER = require("../encoder/default");
+
+exports.EXTENDED = "EXTENDED";
+exports.SIMPLE = "SIMPLE";
+
+
+exports.generateFromMessage = function(message, format)
+{
+    format = format || exports.EXTENDED;
+
+    var og = new ObjectGraph();
+
+    var meta = {},
+        data;
+
+    if (typeof message.getMeta == "function")
+    {
+        meta = JSON.decode(message.getMeta() || "{}");
+    }
+    else
+    if (typeof message.meta == "string")
+    {
+        meta = JSON.decode(message.meta);
+    }
+    else
+    if (typeof message.meta == "object")
+    {
+        meta = message.meta;
+    }
+
+    if (typeof message.getData == "function")
+    {
+        data = message.getData();
+    }
+    else
+    if (typeof message.data != "undefined")
+    {
+        data = message.data;
+    }
+    else
+        throw new Error("NYI");
+
+    if(meta["msg.preprocessor"] && meta["msg.preprocessor"]=="FirePHPCoreCompatibility") {
+
+        var parts = convertFirePHPCoreData(meta, data);
+        if (typeof message.setMeta == "function")
+            message.setMeta(JSON.encode(parts[0]));
+        else
+            message.meta = JSON.encode(parts[0]);
+        data = parts[1];
+
+    } else
+    if(typeof data !== "undefined" && data != "") {
+        try {
+
+            data = JSON.decode(data);
+
+        } catch(e) {
+            console.error("Error decoding JSON data: " + data);
+            throw e;
+        }
+    } else {
+        data = {};
+    }
+
+    // assign group title to value if applicable
+    if(typeof meta["group.title"] != "undefined") {
+        data = {
+            "origin": {
+                "type": "text",
+                "text": meta["group.title"]
+            }
+        };
+    }
+
+    if(data.instances) {
+        for( var i=0 ; i<data.instances.length ; i++ ) {
+            data.instances[i] = generateNodesFromData(og, data.instances[i]);
+        }
+        og.setInstances(data.instances);
+    }
+
+    if(meta["lang.id"]) {
+        og.setLanguageId(meta["lang.id"]);
+    }
+
+    og.setMeta(meta);
+
+    if(UTIL.has(data, "origin")) {
+        if(format==exports.EXTENDED) {
+            og.setOrigin(generateNodesFromData(og, data.origin));
+        } else
+        if(format==exports.SIMPLE) {
+            og.setOrigin(generateObjectsFromData(og, data.origin));
+        } else {
+            throw new Error("unsupported format: " + format);
+        }
+    }
+
+    return og;
+}
+
+function generateObjectsFromData(objectGraph, data) {
+
+    var node;
+
+    if(data.type=="array") {
+        node = [];
+        for( var i=0 ; i<data[data.type].length ; i++ ) {
+            node.push(generateObjectsFromData(objectGraph, data[data.type][i]));
+        }
+    } else
+    if(data.type=="map") {
+        node = [];
+        for( var i=0 ; i<data[data.type].length ; i++ ) {
+            node.push([
+                generateObjectsFromData(objectGraph, data[data.type][i][0]),
+                generateObjectsFromData(objectGraph, data[data.type][i][1])
+            ]);
+        }
+    } else
+    if(data.type=="dictionary") {
+        node = {};
+        for( var name in data[data.type] ) {
+            node[name] = generateObjectsFromData(objectGraph, data[data.type][name]);
+        }
+    } else {
+        node = data[data.type];
+    }
+
+    return node;
+}
+
+
+function generateNodesFromData(objectGraph, data, parentNode) {
+    
+    parentNode = parentNode || null;
+    
+    var node = new Node(objectGraph, data, parentNode);
+    
+    if(node.value!==null && typeof node.value != "undefined") {
+        // some types need nested nodes decoded
+        if(node.type=="array") {
+            for( var i=0 ; i<node.value.length ; i++ ) {
+                node.value[i] = generateNodesFromData(objectGraph, node.value[i], node);
+            }
+        } else
+        if(node.type=="map") {
+            for( var i=0 ; i<node.value.length ; i++ ) {
+                node.value[i][0] = generateNodesFromData(objectGraph, node.value[i][0], node);
+                node.value[i][1] = generateNodesFromData(objectGraph, node.value[i][1], node);
+            }
+        } else
+        if(node.type=="dictionary") {
+            for( var name in node.value ) {
+                node.value[name] = generateNodesFromData(objectGraph, node.value[name], node);
+            }
+        }
+    } else {
+        node.value = null;
+    }
+
+    return node;
+}
+
+
+
+var Node = function(objectGraph, data, parentNode) {
+    var self = this;
+    self.parentNode = parentNode || null;
+    self.type = data.type;
+    self.value = data[data.type];
+    self.meta = {};
+    UTIL.every(data, function(item) {
+        if(item[0]!="type" && item[0]!=self.type) {
+            self.meta[item[0]] = item[1];
+        }
+    });
+    if(self.type=="reference") {
+        self.getInstance = function() {
+            return objectGraph.getInstance(self.value);
+        }
+    }
+    self.getObjectGraph = function() {
+        return objectGraph;
+    }
+}
+
+Node.prototype.getTemplateId = function() {
+    if(UTIL.has(this.meta, "tpl.id")) {
+        return this.meta["tpl.id"];
+    }
+    return false;
+}
+
+Node.prototype.compact = function() {
+    if(!this.compacted) {
+        if(this.type=="map") {
+            this.compacted = {};
+            for( var i=0 ; i<this.value.length ; i++ ) {
+                this.compacted[this.value[i][0].value] = this.value[i][1];
+            }
+        }
+    }
+    return this.compacted;
+}
+
+Node.prototype.getPath = function(locateChild) {
+    var path = [];
+    if (this.parentNode)
+        path = path.concat(this.parentNode.getPath(this));
+    else
+        path = path.concat(this.getObjectGraph().getPath(this));
+    if (locateChild)
+    {
+        if(this.type=="map") {
+            for( var i=0 ; i<this.value.length ; i++ ) {
+                if (this.value[i][1] === locateChild)
+                {
+                    path.push("value[" + i + "][1]");
+                    break;
+                }
+            }
+        } else
+        if(this.type=="dictionary") {
+            for (var key in this.value)
+            {
+                if (this.value[key] === locateChild)
+                {
+                    path.push("value['" + key + "']");
+                    break;
+                }
+            }
+        } else
+        if(this.type=="array") {
+            for( var i=0 ; i<this.value.length ; i++ ) {
+                if (this.value[i] === locateChild)
+                {
+                    path.push("value[" + i + "]");
+                    break;
+                }
+            }
+        } else {
+console.error("NYI - getPath() for this.type = '" + this.type + "'", this);            
+        }
+    }
+    return path;
+}
+
+Node.prototype.forPath = function(path) {
+    if (!path || path.length === 0)
+        return this;
+    if(this.type=="map") {
+        var m = path[0].match(/^value\[(\d*)\]\[1\]$/);
+        return this.value[parseInt(m[1])][1].forPath(path.slice(1));
+    } else
+    if(this.type=="dictionary") {
+        var m = path[0].match(/^value\['(.*?)'\]$/);
+        return this.value[m[1]].forPath(path.slice(1));
+    } else
+    if(this.type=="array") {
+        var m = path[0].match(/^value\[(\d*)\]$/);
+        return this.value[parseInt(m[1])].forPath(path.slice(1));
+    } else {
+//console.error("NYI - forPath('" + path + "') for this.type = '" + this.type + "'", this);            
+    }
+    return null;
+}
+
+//Node.prototype.renderIntoViewer = function(viewerDocument, options) {
+//    throw new Error("NYI - Node.prototype.renderIntoViewer in " + module.id);
+//    return RENDERER.renderIntoViewer(this, viewerDocument, options);
+//}
+
+
+var ObjectGraph = function() {
+//    this.message = message;
+}
+//ObjectGraph.prototype = Object.create(new Node());
+
+ObjectGraph.prototype.setOrigin = function(node) {
+    this.origin = node;
+}
+
+ObjectGraph.prototype.getOrigin = function() {
+    return this.origin;
+}
+
+ObjectGraph.prototype.setInstances = function(instances) {
+    this.instances = instances;
+}
+
+ObjectGraph.prototype.getInstance = function(index) {
+    return this.instances[index];
+}
+
+ObjectGraph.prototype.setLanguageId = function(id) {
+    this.languageId = id;
+}
+
+ObjectGraph.prototype.getLanguageId = function() {
+    return this.languageId;
+}
+
+ObjectGraph.prototype.setMeta = function(meta) {
+    this.meta = meta;
+}
+
+ObjectGraph.prototype.getMeta = function() {
+    return this.meta;
+}
+
+ObjectGraph.prototype.getPath = function(locateChild) {
+    if (this.origin === locateChild)
+    {
+        return ["origin"];
+    }
+    for( var i=0 ; i<this.instances.length ; i++ ) {
+        if (this.instances[i] === locateChild)
+        {
+            return ["instances[" + i + "]"];
+        }
+    }
+    throw new Error("Child node not found. We should never reach this!");
+}
+        
+ObjectGraph.prototype.nodeForPath = function(path) {
+    var m = path[0].match(/^instances\[(\d*)\]$/);
+    if (m) {
+        return this.instances[parseInt(m[1])].forPath(path.slice(1));
+    } else {
+        // assume path[0] == 'origin'
+        return this.origin.forPath(path.slice(1));
+    }
+    return node;
+}
+
+
+var encoder = ENCODER.Encoder();
+encoder.setOption("maxObjectDepth", 1000);
+encoder.setOption("maxArrayDepth", 1000);
+encoder.setOption("maxOverallDepth", 1000);
+function convertFirePHPCoreData(meta, data) {
+    data = encoder.encode(JSON.decode(data), null, {
+        "jsonEncode": false
+    });
+    return [meta, data]; 
+}
+
+},{"../encoder/default":7,"fp-modules-for-nodejs/lib/json":4,"fp-modules-for-nodejs/lib/util":5}],7:[function(require,module,exports){
+
+var UTIL = require("fp-modules-for-nodejs/lib/util");
+var JSON = require("fp-modules-for-nodejs/lib/json");
+
+var Encoder = exports.Encoder = function() {
+    if (!(this instanceof exports.Encoder))
+        return new exports.Encoder();
+    this.options = {
+        "maxObjectDepth": 4,
+        "maxArrayDepth": 4,
+        "maxOverallDepth": 6,
+        "includeLanguageMeta": true
+    };
+}
+
+Encoder.prototype.setOption = function(name, value) {
+    this.options[name] = value;
+}
+
+Encoder.prototype.setOrigin = function(variable) {
+    this.origin = variable;
+    // reset some variables
+    this.instances = [];
+    return true;
+}
+
+Encoder.prototype.encode = function(data, meta, options) {
+
+    options = options || {};
+
+    if(typeof data != "undefined") {
+        this.setOrigin(data);
+    }
+
+    // TODO: Use meta["fc.encoder.options"] to control encoding
+
+    var graph = {};
+    
+    try {
+        if(typeof this.origin != "undefined") {
+            graph["origin"] = this.encodeVariable(this.origin);
+        }
+    } catch(err) {
+        console.warn("Error encoding variable", err.stack);
+        throw err;
+    }
+
+    if(UTIL.len(this.instances)>0) {
+        graph["instances"] = [];
+        this.instances.forEach(function(instance) {
+            graph["instances"].push(instance[1]);
+        });
+    }
+
+    if(UTIL.has(options, "jsonEncode") && !options.jsonEncode) {
+        return graph;
+    }
+
+    try {
+        return JSON.encode(graph);
+    } catch(e) {
+        console.warn("Error jsonifying object graph" + e);
+        throw e;
+    }
+    return null;
+}
+
+Encoder.prototype.encodeVariable = function(variable, objectDepth, arrayDepth, overallDepth) {
+    objectDepth = objectDepth || 1;
+    arrayDepth = arrayDepth || 1;
+    overallDepth = overallDepth || 1;
+    
+    if(variable===null) {
+        var ret = {"type": "constant", "constant": "null"};
+        if(this.options["includeLanguageMeta"]) {
+            ret["lang.type"] = "null";
+        }
+        return ret;
+    } else
+    if(variable===true || variable===false) {
+        var ret = {"type": "constant", "constant": (variable===true)?"true":"false"};
+        if(this.options["includeLanguageMeta"]) {
+            ret["lang.type"] = "boolean";
+        }
+        return ret;
+    }
+
+    var type = typeof variable;
+    if(type=="undefined") {
+        var ret = {"type": "constant", "constant": "undefined"};
+        if(this.options["includeLanguageMeta"]) {
+            ret["lang.type"] = "undefined";
+        }
+        return ret;
+    } else
+    if(type=="number") {
+        if(Math.round(variable)==variable) {
+            var ret = {"type": "text", "text": ""+variable};
+            if(this.options["includeLanguageMeta"]) {
+                ret["lang.type"] = "integer";
+            }
+            return ret;
+        } else {
+            var ret = {"type": "text", "text": ""+variable};
+            if(this.options["includeLanguageMeta"]) {
+                ret["lang.type"] = "float";
+            }
+            return ret;
+        }
+    } else
+    if(type=="string") {
+        // HACK: This should be done via an option
+        // FirePHPCore compatibility: Detect resource string
+        if(variable=="** Excluded by Filter **") {
+            var ret = {"type": "text", "text": variable};
+            ret["encoder.notice"] = "Excluded by Filter";
+            ret["encoder.trimmed"] = true;
+            if(this.options["includeLanguageMeta"]) {
+                ret["lang.type"] = "string";
+            }
+            return ret;
+        } else
+        if(variable.match(/^\*\*\sRecursion\s\([^\(]*\)\s\*\*$/)) {
+            var ret = {"type": "text", "text": variable};
+            ret["encoder.notice"] = "Recursion";
+            ret["encoder.trimmed"] = true;
+            if(this.options["includeLanguageMeta"]) {
+                ret["lang.type"] = "string";
+            }
+            return ret;
+        } else
+        if(variable.match(/^\*\*\sResource\sid\s#\d*\s\*\*$/)) {
+            var ret = {"type": "text", "text": variable.substring(3, variable.length-3)};
+            if(this.options["includeLanguageMeta"]) {
+                ret["lang.type"] = "resource";
+            }
+            return ret;
+        } else {
+            var ret = {"type": "text", "text": variable};
+            if(this.options["includeLanguageMeta"]) {
+                ret["lang.type"] = "string";
+            }
+            return ret;
+        }
+    }
+
+    if (variable && variable.__no_serialize === true) {
+        var ret = {"type": "text", "text": "Object"};
+        ret["encoder.notice"] = "Excluded by __no_serialize";
+        ret["encoder.trimmed"] = true;
+        return ret;
+    }
+
+    if(type=="function") {
+        var ret = {"type": "text", "text": ""+variable};
+        if(this.options["includeLanguageMeta"]) {
+            ret["lang.type"] = "function";
+        }
+        return ret;
+    } else
+    if(type=="object") {
+
+        try {
+            if(UTIL.isArrayLike(variable)) {
+                var ret = {
+                    "type": "array",
+                    "array": this.encodeArray(variable, objectDepth, arrayDepth, overallDepth)
+                };
+                if(this.options["includeLanguageMeta"]) {
+                    ret["lang.type"] = "array";
+                }
+                return ret;
+            }
+        } catch (err) {
+// TODO: Find a better way to encode variables that cause security exceptions when accessed etc...
+            var ret = {"type": "text", "text": "Cannot serialize"};
+            ret["encoder.notice"] = "Cannot serialize";
+            ret["encoder.trimmed"] = true;
+            return ret;
+        }
+        // HACK: This should be done via an option
+        // FirePHPCore compatibility: we only have an object if a class name is present
+
+        if(typeof variable["__className"] != "undefined"  ) {
+            var ret = {
+                "type": "reference",
+                "reference": this.encodeInstance(variable, objectDepth, arrayDepth, overallDepth)
+            };
+            return ret;
+        } else {
+            var ret;
+            if (/^\[Exception\.\.\.\s/.test(variable)) {
+                ret = {
+                    "type": "map",
+                    "map": this.encodeException(variable, objectDepth, arrayDepth, overallDepth)
+                };
+            } else {
+                ret = {
+                    "type": "map",
+                    "map": this.encodeAssociativeArray(variable, objectDepth, arrayDepth, overallDepth)
+                };
+            }
+            if(this.options["includeLanguageMeta"]) {
+                ret["lang.type"] = "array";
+            }
+            return ret;
+        }
+    }
+
+    var ret = {"type": "text", "text": "Variable with type '" + type + "' unknown: "+variable};
+    if(this.options["includeLanguageMeta"]) {
+        ret["lang.type"] = "unknown";
+    }
+    return ret;
+//    return "["+(typeof variable)+"]["+variable+"]";    
+}
+
+Encoder.prototype.encodeArray = function(variable, objectDepth, arrayDepth, overallDepth) {
+    objectDepth = objectDepth || 1;
+    arrayDepth = arrayDepth || 1;
+    overallDepth = overallDepth || 1;
+    if(arrayDepth > this.options["maxArrayDepth"]) {
+        return {"notice": "Max Array Depth (" + this.options["maxArrayDepth"] + ")"};
+    } else
+    if(overallDepth > this.options["maxOverallDepth"]) {
+        return {"notice": "Max Overall Depth (" + this.options["maxOverallDepth"] + ")"};
+    }
+    var self = this,
+        items = [];
+    UTIL.forEach(variable, function(item) {
+        items.push(self.encodeVariable(item, 1, arrayDepth + 1, overallDepth + 1));
+    });
+    return items;
+}
+
+
+Encoder.prototype.encodeAssociativeArray = function(variable, objectDepth, arrayDepth, overallDepth) {
+    objectDepth = objectDepth || 1;
+    arrayDepth = arrayDepth || 1;
+    overallDepth = overallDepth || 1;
+    if(arrayDepth > this.options["maxArrayDepth"]) {
+        return {"notice": "Max Array Depth (" + this.options["maxArrayDepth"] + ")"};
+    } else
+    if(overallDepth > this.options["maxOverallDepth"]) {
+        return {"notice": "Max Overall Depth (" + this.options["maxOverallDepth"] + ")"};
+    }
+    var self = this,
+        items = [];
+    for (var key in variable) {
+
+        // HACK: This should be done via an option
+        // FirePHPCore compatibility: numeric (integer) strings as keys in associative arrays get converted to integers
+        // http://www.php.net/manual/en/language.types.array.php
+        if(isNumber(key) && Math.round(key)==key) {
+            key = parseInt(key);
+        }
+        
+        items.push([
+            self.encodeVariable(key, 1, arrayDepth + 1, overallDepth + 1),
+            self.encodeVariable(variable[key], 1, arrayDepth + 1, overallDepth + 1)
+        ]);
+    }
+    return items;
+}
+
+
+Encoder.prototype.encodeException = function(variable, objectDepth, arrayDepth, overallDepth) {
+    var self = this,
+        items = [];
+    items.push([
+        self.encodeVariable("message", 1, arrayDepth + 1, overallDepth + 1),
+        self.encodeVariable((""+variable), 1, arrayDepth + 1, overallDepth + 1)
+    ]);
+    return items;
+}
+
+// http://stackoverflow.com/questions/18082/validate-numbers-in-javascript-isnumeric
+function isNumber(n) {
+  return !isNaN(parseFloat(n)) && isFinite(n);
+}
+
+
+
+Encoder.prototype.getInstanceId = function(object) {
+    for( var i=0 ; i<this.instances.length ; i++ ) {
+        if(this.instances[i][0]===object) {
+            return i;
+        }
+    }
+    return null;
+}
+
+Encoder.prototype.encodeInstance = function(object, objectDepth, arrayDepth, overallDepth) {
+    objectDepth = objectDepth || 1;
+    arrayDepth = arrayDepth || 1;
+    overallDepth = overallDepth || 1;
+    var id = this.getInstanceId(object);
+    if(id!=null) {
+        return id;
+    }
+    this.instances.push([
+        object,
+        this.encodeObject(object, objectDepth, arrayDepth, overallDepth)
+    ]);
+    return UTIL.len(this.instances)-1;
+}
+
+Encoder.prototype.encodeObject = function(object, objectDepth, arrayDepth, overallDepth) {
+    objectDepth = objectDepth || 1;
+    arrayDepth = arrayDepth || 1;
+    overallDepth = overallDepth || 1;
+
+    if(arrayDepth > this.options["maxObjectDepth"]) {
+        return {"notice": "Max Object Depth (" + this.options["maxObjectDepth"] + ")"};
+    } else
+    if(overallDepth > this.options["maxOverallDepth"]) {
+        return {"notice": "Max Overall Depth (" + this.options["maxOverallDepth"] + ")"};
+    }
+    
+    var self = this,
+        ret = {"type": "dictionary", "dictionary": {}};
+
+    // HACK: This should be done via an option
+    // FirePHPCore compatibility: we have an object if a class name is present
+    var isPHPClass = false;
+    if(typeof object["__className"] != "undefined") {
+        isPHPClass = true;
+        ret["lang.class"] = object["__className"];
+        delete(object["__className"]);
+        if(this.options["includeLanguageMeta"]) {
+            ret["lang.type"] = "object";
+        }
+    }
+
+    // HACK: This should be done via an option
+    // FirePHPCore compatibility: we have an exception if a class name is present
+    if(typeof object["__isException"] != "undefined" && object["__isException"]) {
+        ret["lang.type"] = "exception";
+    }
+
+    UTIL.forEach(object, function(item) {
+        try {
+            if(item[0]=="__fc_tpl_id") {
+                ret['fc.tpl.id'] = item[1];
+                return;
+            }
+            if(isPHPClass) {
+                var val = self.encodeVariable(item[1], objectDepth + 1, 1, overallDepth + 1),
+                    parts = item[0].split(":"),
+                    name = parts[parts.length-1];
+                if(parts[0]=="public") {
+                    val["lang.visibility"] = "public";
+                } else
+                if(parts[0]=="protected") {
+                    val["lang.visibility"] = "protected";
+                } else
+                if(parts[0]=="private") {
+                    val["lang.visibility"] = "private";
+                } else
+                if(parts[0]=="undeclared") {
+                    val["lang.undeclared"] = 1;
+                }
+                if(parts.length==2 && parts[1]=="static") {
+                    val["lang.static"] = 1;
+                }
+                ret["dictionary"][name] = val;
+            } else {
+                ret["dictionary"][item[0]] = self.encodeVariable(item[1], objectDepth + 1, 1, overallDepth + 1);
+            }
+        } catch(e) {
+            console.warn(e);
+            ret["dictionary"]["__oops__"] = {"notice": "Error encoding member (" + e + ")"};
+        }
+    });
+    
+    return ret;
+}
+},{"fp-modules-for-nodejs/lib/json":4,"fp-modules-for-nodejs/lib/util":5}],8:[function(require,module,exports){
 
 module.exports = function () {/*
 
@@ -4786,7 +4824,7 @@ DIV.devcomp-request-group > DIV.logGroupBody > DIV > DIV.title > DIV.actions > D
 
 */}
 
-},{}],8:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 
 module.id = module.id || "insight_pack";
 
@@ -4824,7 +4862,7 @@ require("../pack-helper").init(exports, module, {
     }
 });
 
-},{"../pack-helper":21,"./pack.css.js":7,"./primitives/array":9,"./primitives/constant":10,"./primitives/dictionary":11,"./primitives/map":12,"./primitives/reference":13,"./primitives/text":14,"./primitives/unknown":15,"./structures/table":16,"./structures/trace":17,"./util/trimmed":18,"./wrappers/console":19,"./wrappers/viewer":20}],9:[function(require,module,exports){
+},{"../pack-helper":22,"./pack.css.js":8,"./primitives/array":10,"./primitives/constant":11,"./primitives/dictionary":12,"./primitives/map":13,"./primitives/reference":14,"./primitives/text":15,"./primitives/unknown":16,"./structures/table":17,"./structures/trace":18,"./util/trimmed":19,"./wrappers/console":20,"./wrappers/viewer":21}],10:[function(require,module,exports){
 
 var PACK = require("../pack");
 
@@ -4834,150 +4872,149 @@ PACK.initTemplate(require, exports, module, {
 
     initRep: function(DOMPLATE, helpers)
     {
-        with(DOMPLATE.tags)
-        {
-            return DOMPLATE.domplate({
+        var T = DOMPLATE.tags;
+
+        return DOMPLATE.domplate({
+
+            VAR_label: "array",
+
+            CONST_Normal: "tag",
+            CONST_Short: "shortTag",
+            CONST_Collapsed: "collapsedTag",
     
-                VAR_label: "array",
+            tag:
+                T.SPAN({"class": PACK.__NS__+"array"}, T.SPAN("$VAR_label("),
+                    T.FOR("element", "$node,$CONST_Normal|elementIterator",
+                        T.DIV({"class": "element", "$expandable":"$element.expandable", "_elementObject": "$element", "onclick": "$onClick"},
+                            T.SPAN({"class": "value"},
+                                T.TAG("$element.tag", {"element": "$element", "node": "$element.node"})
+                            ),
+                            T.IF("$element.more", T.SPAN({"class": "separator"}, ","))
+                        )
+                    ),
+                T.SPAN(")")),
     
-                CONST_Normal: "tag",
-                CONST_Short: "shortTag",
-                CONST_Collapsed: "collapsedTag",
-        
-                tag:
-                    SPAN({"class": PACK.__NS__+"array"}, SPAN("$VAR_label("),
-                        FOR("element", "$node,$CONST_Normal|elementIterator",
-                            DIV({"class": "element", "$expandable":"$element.expandable", "_elementObject": "$element", "onclick": "$onClick"},
-                                SPAN({"class": "value"},
-                                    TAG("$element.tag", {"element": "$element", "node": "$element.node"})
-                                ),
-                                IF("$element.more", SPAN({"class": "separator"}, ","))
-                            )
-                        ),
-                    SPAN(")")),
-        
-                collapsedTag:
-                    SPAN({"class": PACK.__NS__+"array"}, SPAN("$VAR_label("),
-                        SPAN({"class": "collapsed"}, "... $node|getElementCount ..."),
-                    SPAN(")")),
-        
-                shortTag:
-                    SPAN({"class": PACK.__NS__+"array"}, SPAN("$VAR_label("),
-                        FOR("element", "$node,$CONST_Short|elementIterator",
-                            SPAN({"class": "element"},
-                                SPAN({"class": "value"},
-                                    TAG("$element.tag", {"element": "$element", "node": "$element.node"})
-                                ),
-                                IF("$element.more", SPAN({"class": "separator"}, ","))
-                            )
-                        ),
-                    SPAN(")")),
-        
-                expandableStub:
-                    TAG("$element,$CONST_Collapsed|getTag", {"node": "$element.node"}),
-                    
-                expandedStub:
-                    TAG("$tag", {"node": "$node", "element": "$element"}),
-        
-                moreTag:
-                    SPAN(" ... "),
-        
-                getElementCount: function(node) {
-                    if(!node.value) return 0;
-                    return node.value.length || 0;
-                },
-        
-                getTag: function(element, type) {
-                    if(type===this.CONST_Short) {
-                        return helpers.getTemplateForNode(element.node).shortTag;
-                    } else
-                    if(type===this.CONST_Normal) {
-                        if(element.expandable) {
-                            return this.expandableStub;
-                        } else {
-                            return helpers.getTemplateForNode(element.node).tag;
-                        }
-                    } else
-                    if(type===this.CONST_Collapsed) {
-                        var rep = helpers.getTemplateForNode(element.node);
-                        if(!rep.collapsedTag) {
-                            throw "no 'collapsedTag' property in rep: " + rep.toString();
-                        }
-                        return rep.collapsedTag;
-                    }
-                },
-        
-                elementIterator: function(node, type) {
-                    var elements = [];
-                    if(!node.value) return elements;
-                    for( var i=0 ; i<node.value.length ; i++ ) {
-                        
-                        var element = {
-                            "node": helpers.util.merge(node.value[i], {"wrapped": true}),
-                            "more": (i<node.value.length-1),
-                            "expandable": this.isExpandable(node.value[i])
-                        };
-        
-                        if(i>2 && type==this.CONST_Short) {
-                            element["tag"] = this.moreTag;
-                        } else {
-                            element["tag"] = this.getTag(element, type);
-                        }
-        
-                        elements.push(element);
-        
-                        if(i>2 && type==this.CONST_Short) {
-                            elements[elements.length-1].more = false;
-                            break;
-                        }
-                    }
-                    return elements;
-                },
-        
-                isExpandable: function(node) {
-                    return (node.type=="reference" ||
-                            node.type=="dictionary" ||
-                            node.type=="map" ||
-                            node.type=="array");
-                },
+            collapsedTag:
+                T.SPAN({"class": PACK.__NS__+"array"}, T.SPAN("$VAR_label("),
+                    T.SPAN({"class": "collapsed"}, "... $node|getElementCount ..."),
+                T.SPAN(")")),
+    
+            shortTag:
+                T.SPAN({"class": PACK.__NS__+"array"}, T.SPAN("$VAR_label("),
+                    T.FOR("element", "$node,$CONST_Short|elementIterator",
+                        T.SPAN({"class": "element"},
+                            T.SPAN({"class": "value"},
+                                T.TAG("$element.tag", {"element": "$element", "node": "$element.node"})
+                            ),
+                            T.IF("$element.more", T.SPAN({"class": "separator"}, ","))
+                        )
+                    ),
+                T.SPAN(")")),
+    
+            expandableStub:
+                T.TAG("$element,$CONST_Collapsed|getTag", {"node": "$element.node"}),
                 
-                onClick: function(event) {
-                    if (!helpers.util.isLeftClick(event)) {
-                        return;
-                    }
-                    var row = helpers.util.getAncestorByClass(event.target, "element");
-                    if(helpers.util.hasClass(row, "expandable")) {
-                        this.toggleRow(row);
-                    }
-                    event.stopPropagation();
-                },
-                
-                toggleRow: function(row)
-                {
-                    var valueElement = helpers.util.getElementByClass(row, "value");
-                    if (helpers.util.hasClass(row, "expanded"))
-                    {
-                        helpers.util.removeClass(row, "expanded");
-                        this.expandedStub.replace({
-                            "tag": this.expandableStub,
-                            "element": row.elementObject,
-                            "node": row.elementObject.node
-                        }, valueElement);
+            expandedStub:
+                T.TAG("$tag", {"node": "$node", "element": "$element"}),
+    
+            moreTag:
+                T.SPAN(" ... "),
+    
+            getElementCount: function(node) {
+                if(!node.value) return 0;
+                return node.value.length || 0;
+            },
+    
+            getTag: function(element, type) {
+                if(type===this.CONST_Short) {
+                    return helpers.getTemplateForNode(element.node).shortTag;
+                } else
+                if(type===this.CONST_Normal) {
+                    if(element.expandable) {
+                        return this.expandableStub;
                     } else {
-                        helpers.util.setClass(row, "expanded");
-                        this.expandedStub.replace({
-                            "tag": helpers.getTemplateForNode(row.elementObject.node).tag,
-                            "element": row.elementObject,
-                            "node": row.elementObject.node
-                        }, valueElement);
+                        return helpers.getTemplateForNode(element.node).tag;
                     }
-                }        
-            });
-        }  
+                } else
+                if(type===this.CONST_Collapsed) {
+                    var rep = helpers.getTemplateForNode(element.node);
+                    if(!rep.collapsedTag) {
+                        throw "no 'collapsedTag' property in rep: " + rep.toString();
+                    }
+                    return rep.collapsedTag;
+                }
+            },
+    
+            elementIterator: function(node, type) {
+                var elements = [];
+                if(!node.value) return elements;
+                for( var i=0 ; i<node.value.length ; i++ ) {
+                    
+                    var element = {
+                        "node": helpers.util.merge(node.value[i], {"wrapped": true}),
+                        "more": (i<node.value.length-1),
+                        "expandable": this.isExpandable(node.value[i])
+                    };
+    
+                    if(i>2 && type==this.CONST_Short) {
+                        element["tag"] = this.moreTag;
+                    } else {
+                        element["tag"] = this.getTag(element, type);
+                    }
+    
+                    elements.push(element);
+    
+                    if(i>2 && type==this.CONST_Short) {
+                        elements[elements.length-1].more = false;
+                        break;
+                    }
+                }
+                return elements;
+            },
+    
+            isExpandable: function(node) {
+                return (node.type=="reference" ||
+                        node.type=="dictionary" ||
+                        node.type=="map" ||
+                        node.type=="array");
+            },
+            
+            onClick: function(event) {
+                if (!helpers.util.isLeftClick(event)) {
+                    return;
+                }
+                var row = helpers.util.getAncestorByClass(event.target, "element");
+                if(helpers.util.hasClass(row, "expandable")) {
+                    this.toggleRow(row);
+                }
+                event.stopPropagation();
+            },
+            
+            toggleRow: function(row)
+            {
+                var valueElement = helpers.util.getElementByClass(row, "value");
+                if (helpers.util.hasClass(row, "expanded"))
+                {
+                    helpers.util.removeClass(row, "expanded");
+                    this.expandedStub.replace({
+                        "tag": this.expandableStub,
+                        "element": row.elementObject,
+                        "node": row.elementObject.node
+                    }, valueElement);
+                } else {
+                    helpers.util.setClass(row, "expanded");
+                    this.expandedStub.replace({
+                        "tag": helpers.getTemplateForNode(row.elementObject.node).tag,
+                        "element": row.elementObject,
+                        "node": row.elementObject.node
+                    }, valueElement);
+                }
+            }        
+        });
     }
 });
 
-},{"../pack":8}],10:[function(require,module,exports){
+},{"../pack":9}],11:[function(require,module,exports){
 
 var PACK = require("../pack");
 
@@ -4987,21 +5024,20 @@ PACK.initTemplate(require, exports, module, {
 
     initRep: function(DOMPLATE, helpers)
     {
-        with(DOMPLATE.tags)
-        {
-            return DOMPLATE.domplate({
+        var T = DOMPLATE.tags;
+        
+        return DOMPLATE.domplate({
 
-                tag: SPAN({"class": PACK.__NS__+"constant"},
-                          "$node.value"),
+            tag: T.SPAN({"class": PACK.__NS__+"constant"},
+                        "$node.value"),
 
-                shortTag: SPAN({"class": PACK.__NS__+"constant"},
-                               "$node.value")
-            });
-        }        
+            shortTag: T.SPAN({"class": PACK.__NS__+"constant"},
+                            "$node.value")
+        });
     }
 });
 
-},{"../pack":8}],11:[function(require,module,exports){
+},{"../pack":9}],12:[function(require,module,exports){
 
 var PACK = require("../pack");
 
@@ -5011,168 +5047,167 @@ PACK.initTemplate(require, exports, module, {
 
     initRep: function(DOMPLATE, helpers)
     {
-        with(DOMPLATE.tags)
-        {
-            return DOMPLATE.domplate({
+        var T = DOMPLATE.tags;
         
-                CONST_Normal: "tag",
-                CONST_Short: "shortTag",
-                CONST_Collapsed: "collapsedTag",
-        
-                tag:
-                    SPAN({"class": PACK.__NS__+"dictionary"}, SPAN("$node|getLabel("),
-                        FOR("member", "$node,$CONST_Normal|dictionaryIterator",
-                            DIV({"class": "member", "$expandable":"$member.expandable", "_memberObject": "$member", "onclick": "$onClick"},
-                                SPAN({"class": "name", "decorator": "$member|getMemberNameDecorator"}, "$member.name"),
-                                SPAN({"class": "delimiter"}, ":"),
-                                SPAN({"class": "value"},
-                                    TAG("$member.tag", {"member": "$member", "node": "$member.node"})
-                                ),
-                                IF("$member.more", SPAN({"class": "separator"}, ","))
-                            )
-                        ),
-                    SPAN(")")),
-        
-                shortTag:
-                    SPAN({"class": PACK.__NS__+"dictionary"}, SPAN("$node|getLabel("),
-                        FOR("member", "$node,$CONST_Short|dictionaryIterator",
-                            SPAN({"class": "member"},
-                                SPAN({"class": "name"}, "$member.name"),
-                                SPAN({"class": "delimiter"}, ":"),
-                                SPAN({"class": "value"},
-                                    TAG("$member.tag", {"member": "$member", "node": "$member.node"})
-                                ),
-                                IF("$member.more", SPAN({"class": "separator"}, ","))
-                            )
-                        ),
-                    SPAN(")")),
-        
-                collapsedTag:
-                    SPAN({"class": PACK.__NS__+"dictionary"}, SPAN("$node|getLabel("),
-                        SPAN({"class": "collapsed"}, "... $node|getMemberCount ..."),
-                    SPAN(")")),
-        
-                expandableStub:
-                    TAG("$member,$CONST_Collapsed|getTag", {"node": "$member.node"}),
-                    
-                expandedStub:
-                    TAG("$tag", {"node": "$node", "member": "$member"}),
-        
-                moreTag:
-                    SPAN({"class": "more"}, " ... "),
+        return DOMPLATE.domplate({
+    
+            CONST_Normal: "tag",
+            CONST_Short: "shortTag",
+            CONST_Collapsed: "collapsedTag",
+    
+            tag:
+                T.SPAN({"class": PACK.__NS__+"dictionary"}, T.SPAN("$node|getLabel("),
+                    T.FOR("member", "$node,$CONST_Normal|dictionaryIterator",
+                        T.DIV({"class": "member", "$expandable":"$member.expandable", "_memberObject": "$member", "onclick": "$onClick"},
+                            T.SPAN({"class": "name", "decorator": "$member|getMemberNameDecorator"}, "$member.name"),
+                            T.SPAN({"class": "delimiter"}, ":"),
+                            T.SPAN({"class": "value"},
+                                T.TAG("$member.tag", {"member": "$member", "node": "$member.node"})
+                            ),
+                            T.IF("$member.more", T.SPAN({"class": "separator"}, ","))
+                        )
+                    ),
+                T.SPAN(")")),
+    
+            shortTag:
+                T.SPAN({"class": PACK.__NS__+"dictionary"}, T.SPAN("$node|getLabel("),
+                    T.FOR("member", "$node,$CONST_Short|dictionaryIterator",
+                        T.SPAN({"class": "member"},
+                            T.SPAN({"class": "name"}, "$member.name"),
+                            T.SPAN({"class": "delimiter"}, ":"),
+                            T.SPAN({"class": "value"},
+                                T.TAG("$member.tag", {"member": "$member", "node": "$member.node"})
+                            ),
+                            T.IF("$member.more", T.SPAN({"class": "separator"}, ","))
+                        )
+                    ),
+                T.SPAN(")")),
+    
+            collapsedTag:
+                T.SPAN({"class": PACK.__NS__+"dictionary"}, T.SPAN("$node|getLabel("),
+                    T.SPAN({"class": "collapsed"}, "... $node|getMemberCount ..."),
+                T.SPAN(")")),
+    
+            expandableStub:
+                T.TAG("$member,$CONST_Collapsed|getTag", {"node": "$member.node"}),
                 
-                getLabel: function(node) {
-                    return "dictionary";
-                },
-                
-                getMemberNameDecorator: function(member) {
-                    return "";
-                },
-                
-                getMemberCount: function(node) {
-                    if(!node.value) return 0;
-                    var count = 0;
-                    for( var name in node.value ) {
-                        count++;
-                    }
-                    return count;
-                },
-                
-                getTag: function(member, type) {
-                    if(type===this.CONST_Short) {
-                        return helpers.getTemplateForNode(member.node).shortTag;
-                    } else
-                    if(type===this.CONST_Normal) {
-                        if(member.expandable) {
-                            return this.expandableStub;
-                        } else {
-                            return helpers.getTemplateForNode(member.node).tag;
-                        }
-                    } else
-                    if(type===this.CONST_Collapsed) {
-                        var rep = helpers.getTemplateForNode(member.node);
-                        if(!rep.collapsedTag) {
-                            throw "no 'collapsedTag' property in rep: " + rep.toString();
-                        }
-                        return rep.collapsedTag;
-                    }
-                },
-                
-                dictionaryIterator: function(node, type) {
-                    var members = [];
-                    if(!node.value || node.value.length==0) return members;
-                    for( var name in node.value ) {
-        
-                        var member = {
-                            "name": name,
-                            "node": helpers.util.merge(node.value[name], {"wrapped": true}),
-                            "more": true,
-                            "expandable": this.isExpandable(node.value[name])
-                        };
-        
-                        if(members.length>1 && type==this.CONST_Short) {
-                            member["tag"] = this.moreTag;
-                        } else {
-                            member["tag"] = this.getTag(member, type);
-                        }
-                        
-                        members.push(member);
-        
-                        if(members.length>2 && type==this.CONST_Short) {
-                            break;
-                        }
-                    }
-                    if(members.length>0) {
-                        members[members.length-1]["more"] = false;
-                    }
-                    
-                    return members;
-                },
-                
-                isExpandable: function(node) {
-                    return (node.type=="reference" ||
-                            node.type=="dictionary" ||
-                            node.type=="map" ||
-                            node.type=="array");
-                },
-                
-                onClick: function(event) {
-                    if (!helpers.util.isLeftClick(event)) {
-                        return;
-                    }
-                    var row = helpers.util.getAncestorByClass(event.target, "member");
-                    if(helpers.util.hasClass(row, "expandable")) {
-                        this.toggleRow(row);
-                    }
-                    event.stopPropagation();
-                },
-                
-                toggleRow: function(row)
-                {
-                    var valueElement = helpers.util.getElementByClass(row, "value");
-                    if (helpers.util.hasClass(row, "expanded"))
-                    {
-                        helpers.util.removeClass(row, "expanded");
-                        this.expandedStub.replace({
-                            "tag": this.expandableStub,
-                            "member": row.memberObject,
-                            "node": row.memberObject.node
-                        }, valueElement);
+            expandedStub:
+                T.TAG("$tag", {"node": "$node", "member": "$member"}),
+    
+            moreTag:
+                T.SPAN({"class": "more"}, " ... "),
+            
+            getLabel: function(node) {
+                return "dictionary";
+            },
+            
+            getMemberNameDecorator: function(member) {
+                return "";
+            },
+            
+            getMemberCount: function(node) {
+                if(!node.value) return 0;
+                var count = 0;
+                for( var name in node.value ) {
+                    count++;
+                }
+                return count;
+            },
+            
+            getTag: function(member, type) {
+                if(type===this.CONST_Short) {
+                    return helpers.getTemplateForNode(member.node).shortTag;
+                } else
+                if(type===this.CONST_Normal) {
+                    if(member.expandable) {
+                        return this.expandableStub;
                     } else {
-                        helpers.util.setClass(row, "expanded");
-                        this.expandedStub.replace({
-                            "tag": helpers.getTemplateForNode(row.memberObject.node).tag,
-                            "member": row.memberObject,
-                            "node": row.memberObject.node
-                        }, valueElement);
+                        return helpers.getTemplateForNode(member.node).tag;
+                    }
+                } else
+                if(type===this.CONST_Collapsed) {
+                    var rep = helpers.getTemplateForNode(member.node);
+                    if(!rep.collapsedTag) {
+                        throw "no 'collapsedTag' property in rep: " + rep.toString();
+                    }
+                    return rep.collapsedTag;
+                }
+            },
+            
+            dictionaryIterator: function(node, type) {
+                var members = [];
+                if(!node.value || node.value.length==0) return members;
+                for( var name in node.value ) {
+    
+                    var member = {
+                        "name": name,
+                        "node": helpers.util.merge(node.value[name], {"wrapped": true}),
+                        "more": true,
+                        "expandable": this.isExpandable(node.value[name])
+                    };
+    
+                    if(members.length>1 && type==this.CONST_Short) {
+                        member["tag"] = this.moreTag;
+                    } else {
+                        member["tag"] = this.getTag(member, type);
+                    }
+                    
+                    members.push(member);
+    
+                    if(members.length>2 && type==this.CONST_Short) {
+                        break;
                     }
                 }
-            });
-        }        
+                if(members.length>0) {
+                    members[members.length-1]["more"] = false;
+                }
+                
+                return members;
+            },
+            
+            isExpandable: function(node) {
+                return (node.type=="reference" ||
+                        node.type=="dictionary" ||
+                        node.type=="map" ||
+                        node.type=="array");
+            },
+            
+            onClick: function(event) {
+                if (!helpers.util.isLeftClick(event)) {
+                    return;
+                }
+                var row = helpers.util.getAncestorByClass(event.target, "member");
+                if(helpers.util.hasClass(row, "expandable")) {
+                    this.toggleRow(row);
+                }
+                event.stopPropagation();
+            },
+            
+            toggleRow: function(row)
+            {
+                var valueElement = helpers.util.getElementByClass(row, "value");
+                if (helpers.util.hasClass(row, "expanded"))
+                {
+                    helpers.util.removeClass(row, "expanded");
+                    this.expandedStub.replace({
+                        "tag": this.expandableStub,
+                        "member": row.memberObject,
+                        "node": row.memberObject.node
+                    }, valueElement);
+                } else {
+                    helpers.util.setClass(row, "expanded");
+                    this.expandedStub.replace({
+                        "tag": helpers.getTemplateForNode(row.memberObject.node).tag,
+                        "member": row.memberObject,
+                        "node": row.memberObject.node
+                    }, valueElement);
+                }
+            }
+        });
     }
 });
 
-},{"../pack":8}],12:[function(require,module,exports){
+},{"../pack":9}],13:[function(require,module,exports){
 
 var PACK = require("../pack");
 
@@ -5182,124 +5217,123 @@ PACK.initTemplate(require, exports, module, {
 
     initRep: function(DOMPLATE, helpers)
     {
-        with(DOMPLATE.tags)
-        {
-            return DOMPLATE.domplate({
-                
-                VAR_label: "map",
+        var T = DOMPLATE.tags;
         
-                CONST_Normal: "tag",
-                CONST_Short: "shortTag",
-        
-                tag:
-                    SPAN({"class": PACK.__NS__+"map", "_nodeObject": "$node"}, SPAN("$VAR_label("),
-                        FOR("pair", "$node,$CONST_Normal|mapIterator",
-                            DIV({"class": "pair"},
-                                TAG("$pair.key.tag", {"node": "$pair.key.node"}),
-                                SPAN({"class": "delimiter"}, "=>"),
-                                SPAN({
-                                        "class": "value",
-                                        "onclick": "$onClick",
-                                        "_nodeObject": "$pair.value.node",
-                                        "_expandable": "$pair.value.expandable"
-                                    },
-                                    TAG("$pair.value.tag", {"node": "$pair.value.node"})
-                                    ),
-                                IF("$pair.more", SPAN({"class": "separator"}, ","))
-                            )
-                        ),
-                    SPAN(")")),
-        
-                shortTag:
-                    SPAN({"class": PACK.__NS__+"map", "_nodeObject": "$node"}, SPAN("$VAR_label("),
-                        FOR("pair", "$node,$CONST_Short|mapIterator",
-                            SPAN({"class": "pair"},
-                                TAG("$pair.key.tag", {"node": "$pair.key.node"}),
-                                SPAN({"class": "delimiter"}, "=>"),
-                                SPAN({
-                                        "class": "value",
-                                        "onclick": "$onClick",
-                                        "_nodeObject": "$pair.value.node",
-                                        "_expandable": "$pair.value.expandable"
-                                    },
-                                    TAG("$pair.value.tag", {"node": "$pair.value.node"})
-                                    ),
-                                IF("$pair.more", SPAN({"class": "separator"}, ","))
-                            )
-                        ),
-                    SPAN(")")),
-        
-                collapsedTag: 
-                    SPAN({"class": PACK.__NS__+"map"}, SPAN("$VAR_label("),
-                        SPAN({"class": "collapsed"}, "... $node|getItemCount ..."),
-                    SPAN(")")),
-        
-                moreTag:
-                    SPAN(" ... "),   
-                
-                getItemCount: function(node) {
-                    if(!node.value) return 0;
-                    return node.value.length;
-                },
+        return DOMPLATE.domplate({
+            
+            VAR_label: "map",
+    
+            CONST_Normal: "tag",
+            CONST_Short: "shortTag",
+    
+            tag:
+                T.SPAN({"class": PACK.__NS__+"map", "_nodeObject": "$node"}, T.SPAN("$VAR_label("),
+                    T.FOR("pair", "$node,$CONST_Normal|mapIterator",
+                        T.DIV({"class": "pair"},
+                            T.TAG("$pair.key.tag", {"node": "$pair.key.node"}),
+                            T.SPAN({"class": "delimiter"}, "=>"),
+                            T.SPAN({
+                                    "class": "value",
+                                    "onclick": "$onClick",
+                                    "_nodeObject": "$pair.value.node",
+                                    "_expandable": "$pair.value.expandable"
+                                },
+                                T.TAG("$pair.value.tag", {"node": "$pair.value.node"})
+                                ),
+                            T.IF("$pair.more", T.SPAN({"class": "separator"}, ","))
+                        )
+                    ),
+                T.SPAN(")")),
+    
+            shortTag:
+                T.SPAN({"class": PACK.__NS__+"map", "_nodeObject": "$node"}, T.SPAN("$VAR_label("),
+                    T.FOR("pair", "$node,$CONST_Short|mapIterator",
+                        T.SPAN({"class": "pair"},
+                            T.TAG("$pair.key.tag", {"node": "$pair.key.node"}),
+                            T.SPAN({"class": "delimiter"}, "=>"),
+                            T.SPAN({
+                                    "class": "value",
+                                    "onclick": "$onClick",
+                                    "_nodeObject": "$pair.value.node",
+                                    "_expandable": "$pair.value.expandable"
+                                },
+                                T.TAG("$pair.value.tag", {"node": "$pair.value.node"})
+                                ),
+                            T.IF("$pair.more", T.SPAN({"class": "separator"}, ","))
+                        )
+                    ),
+                T.SPAN(")")),
+    
+            collapsedTag: 
+                T.SPAN({"class": PACK.__NS__+"map"}, T.SPAN("$VAR_label("),
+                    T.SPAN({"class": "collapsed"}, "... $node|getItemCount ..."),
+                T.SPAN(")")),
+    
+            moreTag:
+                T.SPAN(" ... "),   
+            
+            getItemCount: function(node) {
+                if(!node.value) return 0;
+                return node.value.length;
+            },
 
-                onClick: function(event) {
-                    var row = helpers.util.getAncestorByClass(event.target, "value");
-                    if(row.expandable) {
-                        this.toggleRow(row);
-                    }
-                    event.stopPropagation();
-                },
-                
-                toggleRow: function(row)
-                {
-                    var node = null;
-                    if (helpers.util.hasClass(row, "expanded")) {
-                        node = this.collapsedTag.replace({
-                            "node": row.nodeObject
-                        }, row);
-                        helpers.util.removeClass(row, "expanded");
-                    } else {
-                        var valueRep = helpers.getTemplateForNode(row.nodeObject).tag;
-                        node = valueRep.replace({
-                            "node": row.nodeObject
-                        }, row);
-                        helpers.util.setClass(row, "expanded");
-                    }
-                },
-        
-                mapIterator: function(node, type) {
-                    var pairs = [];
-                    if(!node.value) return pairs;
-                    for( var i=0 ; i<node.value.length ; i++ ) {
-
-                        var valueRep = getTag(helpers.getTemplateForNode(node.value[i][1]), type, node.value[i][1]);
-        
-                        if(i>2 && type==this.CONST_Short) {
-                            valueRep = this.moreTag;
-                        }
-
-                        pairs.push({
-                            "key": {
-                                "tag": getTag(helpers.getTemplateForNode(node.value[i][0]), type, node.value[i][0]),
-                                "node": helpers.util.merge(node.value[i][0], {"wrapped": true})
-                            },
-                            "value": {
-                                "tag": valueRep,
-                                "node": helpers.util.merge(node.value[i][1], {"wrapped": true}),
-                                "expandable": isCollapsible(node.value[i][1])
-                            },
-                            "more": (i<node.value.length-1)
-                        });
-        
-                        if(i>2 && type==this.CONST_Short) {
-                            pairs[pairs.length-1].more = false;
-                            break;
-                        }
-                    }
-                    return pairs;
+            onClick: function(event) {
+                var row = helpers.util.getAncestorByClass(event.target, "value");
+                if(row.expandable) {
+                    this.toggleRow(row);
                 }
-            });
-        }        
+                event.stopPropagation();
+            },
+            
+            toggleRow: function(row)
+            {
+                var node = null;
+                if (helpers.util.hasClass(row, "expanded")) {
+                    node = this.collapsedTag.replace({
+                        "node": row.nodeObject
+                    }, row);
+                    helpers.util.removeClass(row, "expanded");
+                } else {
+                    var valueRep = helpers.getTemplateForNode(row.nodeObject).tag;
+                    node = valueRep.replace({
+                        "node": row.nodeObject
+                    }, row);
+                    helpers.util.setClass(row, "expanded");
+                }
+            },
+    
+            mapIterator: function(node, type) {
+                var pairs = [];
+                if(!node.value) return pairs;
+                for( var i=0 ; i<node.value.length ; i++ ) {
+
+                    var valueRep = getTag(helpers.getTemplateForNode(node.value[i][1]), type, node.value[i][1]);
+    
+                    if(i>2 && type==this.CONST_Short) {
+                        valueRep = this.moreTag;
+                    }
+
+                    pairs.push({
+                        "key": {
+                            "tag": getTag(helpers.getTemplateForNode(node.value[i][0]), type, node.value[i][0]),
+                            "node": helpers.util.merge(node.value[i][0], {"wrapped": true})
+                        },
+                        "value": {
+                            "tag": valueRep,
+                            "node": helpers.util.merge(node.value[i][1], {"wrapped": true}),
+                            "expandable": isCollapsible(node.value[i][1])
+                        },
+                        "more": (i<node.value.length-1)
+                    });
+    
+                    if(i>2 && type==this.CONST_Short) {
+                        pairs[pairs.length-1].more = false;
+                        break;
+                    }
+                }
+                return pairs;
+            }
+        });
     }
 });
 
@@ -5327,7 +5361,7 @@ function getTag (rep, type, node) {
     return rep[type];
 }
 
-},{"../pack":8}],13:[function(require,module,exports){
+},{"../pack":9}],14:[function(require,module,exports){
 
 var PACK = require("../pack");
 
@@ -5337,39 +5371,38 @@ PACK.initTemplate(require, exports, module, {
 
     initRep: function(DOMPLATE, helpers)
     {
-        with(DOMPLATE.tags)
-        {
-            return DOMPLATE.domplate({
+        var T = DOMPLATE.tags;
         
-                CONST_Normal: "tag",
-                CONST_Short: "shortTag",
-                CONST_Collapsed: "collapsedTag",
-        
-                tag:
-                    SPAN({"class": PACK.__NS__+"reference"},
-                    TAG("$node,$CONST_Normal|getTag", {"node": "$node|getInstanceNode"})),
+        return DOMPLATE.domplate({
+    
+            CONST_Normal: "tag",
+            CONST_Short: "shortTag",
+            CONST_Collapsed: "collapsedTag",
+    
+            tag:
+                T.SPAN({"class": PACK.__NS__+"reference"},
+                T.TAG("$node,$CONST_Normal|getTag", {"node": "$node|getInstanceNode"})),
+            
+            shortTag:
+                T.SPAN({"class": PACK.__NS__+"reference"},
+                T.TAG("$node,$CONST_Collapsed|getTag", {"node": "$node|getInstanceNode"})),
+    
+            collapsedTag:
+                T.SPAN({"class": PACK.__NS__+"reference"},
+                T.TAG("$node,$CONST_Collapsed|getTag", {"node": "$node|getInstanceNode"})),
                 
-                shortTag:
-                    SPAN({"class": PACK.__NS__+"reference"},
-                    TAG("$node,$CONST_Collapsed|getTag", {"node": "$node|getInstanceNode"})),
-        
-                collapsedTag:
-                    SPAN({"class": PACK.__NS__+"reference"},
-                    TAG("$node,$CONST_Collapsed|getTag", {"node": "$node|getInstanceNode"})),
-                    
-                getTag: function(node, type) {
-                    return helpers.getTemplateForNode(this.getInstanceNode(node))[type];
-                },
+            getTag: function(node, type) {
+                return helpers.getTemplateForNode(this.getInstanceNode(node))[type];
+            },
 
-                getInstanceNode: function(node) {
-                    return node.getInstance();
-                }
-            });
-        }        
+            getInstanceNode: function(node) {
+                return node.getInstance();
+            }
+        });
     }
 });
 
-},{"../pack":8}],14:[function(require,module,exports){
+},{"../pack":9}],15:[function(require,module,exports){
 
 var PACK = require("../pack");
 
@@ -5379,55 +5412,54 @@ PACK.initTemplate(require, exports, module, {
 
     initRep: function(DOMPLATE, helpers)
     {
-        with(DOMPLATE.tags)
-        {
-            return DOMPLATE.domplate({
+        var T = DOMPLATE.tags;
         
-                tag: SPAN({"class": PACK.__NS__+"text"},
-                          FOR("line", "$node.value|lineIterator", "$line.value",
-                              IF("$line.more", BR())
-                          )
-                     ),
-                
-                shortTag: SPAN({"class": PACK.__NS__+"text"}, "$node|getValue"),
-        
+        return DOMPLATE.domplate({
+    
+            tag: T.SPAN({"class": PACK.__NS__+"text"},
+                        T.FOR("line", "$node.value|lineIterator", "$line.value",
+                            T.IF("$line.more", T.BR())
+                        )
+                    ),
+            
+            shortTag: T.SPAN({"class": PACK.__NS__+"text"}, "$node|getValue"),
+    
 
-                getValue: function(node) {
-                    if (!node.parentNode || (node.meta && typeof node.meta["string.trim.enabled"] !== "undefined" && node.meta["string.trim.enabled"]===false))
-                        return node.value;
-                    else
-                        return this.cropString(node.value);
-                },
+            getValue: function(node) {
+                if (!node.parentNode || (node.meta && typeof node.meta["string.trim.enabled"] !== "undefined" && node.meta["string.trim.enabled"]===false))
+                    return node.value;
+                else
+                    return this.cropString(node.value);
+            },
 
-                cropString: function(text, limit){
-                    text = text + "";
-                    limit = limit || 50;
-                    var halfLimit = limit / 2;
-                    if (text.length > limit) {
-                        return this.escapeNewLines(text.substr(0, halfLimit) + "..." + text.substr(text.length - halfLimit));
-                    } else {
-                        return this.escapeNewLines(text);
-                    }
-                },
-                
-                escapeNewLines: function(value) {
-                    return value.replace(/\r/g, "\\r").replace(/\n/g, "\\n");
-                },
-                
-                lineIterator: function(value) {
-                    var parts = (""+value).replace(/\r/g, "\\r").split("\n");
-                    var lines = [];
-                    for( var i=0 ; i<parts.length ; i++ ) {
-                        lines.push({"value": parts[i], "more": (i<parts.length-1)});
-                    }
-                    return lines;
+            cropString: function(text, limit){
+                text = text + "";
+                limit = limit || 50;
+                var halfLimit = limit / 2;
+                if (text.length > limit) {
+                    return this.escapeNewLines(text.substr(0, halfLimit) + "..." + text.substr(text.length - halfLimit));
+                } else {
+                    return this.escapeNewLines(text);
                 }
-            });
-        }        
+            },
+            
+            escapeNewLines: function(value) {
+                return value.replace(/\r/g, "\\r").replace(/\n/g, "\\n");
+            },
+            
+            lineIterator: function(value) {
+                var parts = (""+value).replace(/\r/g, "\\r").split("\n");
+                var lines = [];
+                for( var i=0 ; i<parts.length ; i++ ) {
+                    lines.push({"value": parts[i], "more": (i<parts.length-1)});
+                }
+                return lines;
+            }
+        });
     }
 });
 
-},{"../pack":8}],15:[function(require,module,exports){
+},{"../pack":9}],16:[function(require,module,exports){
 
 var PACK = require("../pack");
 
@@ -5440,22 +5472,21 @@ PACK.initTemplate(require, exports, module, {
 
     initRep: function(DOMPLATE, helpers)
     {
-        with(DOMPLATE.tags)
-        {
-            return DOMPLATE.domplate({
+        var T = DOMPLATE.tags;
         
-                tag: SPAN({"class": PACK.__NS__+"unknown"},
-                          "$node.value"),
-                
-                shortTag: SPAN({"class": PACK.__NS__+"unknown"},
-                               "$node.value")
+        return DOMPLATE.domplate({
+    
+            tag: T.SPAN({"class": PACK.__NS__+"unknown"},
+                        "$node.value"),
+            
+            shortTag: T.SPAN({"class": PACK.__NS__+"unknown"},
+                            "$node.value")
 
-            });
-        }        
+        });
     }
 });
 
-},{"../pack":8}],16:[function(require,module,exports){
+},{"../pack":9}],17:[function(require,module,exports){
 
 var PACK = require("../pack");
 
@@ -5471,148 +5502,147 @@ PACK.initTemplate(require, exports, module, {
     
     initRep: function(DOMPLATE, helpers)
     {
-        with(DOMPLATE.tags)
-        {
-            return DOMPLATE.domplate({
+        var T = DOMPLATE.tags;
+        
+        return DOMPLATE.domplate({
 
-                VAR_hideShortTagOnExpand: false,
+            VAR_hideShortTagOnExpand: false,
 
-                tag:
-                    DIV({"class": PACK.__NS__+"structures-table"},
-                        TABLE({"cellpadding": 3, "cellspacing": 0},
-                            TBODY(
-                                TR({"class":"$node|getHeaderClass"},
-                                    FOR("column", "$node|getHeaders",
-                                        TH({"class": "header"}, TAG("$column.tag", {"node": "$column.node"}))
-                                    ),
-                                    IF("$node|hasNoHeader",
-                                        TH()    // needed to fix gecko bug that does not render table border if empty <tr/> in table
-                                    )
+            tag:
+                T.DIV({"class": PACK.__NS__+"structures-table"},
+                    T.TABLE({"cellpadding": 3, "cellspacing": 0},
+                        T.TBODY(
+                            T.TR({"class":"$node|getHeaderClass"},
+                                T.FOR("column", "$node|getHeaders",
+                                    T.TH({"class": "header"}, T.TAG("$column.tag", {"node": "$column.node"}))
                                 ),
-                                FOR("row", "$node|getRows",
-                                    TR(
-                                        FOR("cell", "$row|getCells",
-                                            TD({"class": "cell", "_cellNodeObj": "$cell.node", "onclick":"$onCellClick"},
-                                                TAG("$cell.tag", {"node": "$cell.node"}))
-                                        )
+                                T.IF("$node|hasNoHeader",
+                                    T.TH()    // needed to fix gecko bug that does not render table border if empty <tr/> in table
+                                )
+                            ),
+                            T.FOR("row", "$node|getRows",
+                                T.TR(
+                                    T.FOR("cell", "$row|getCells",
+                                        T.TD({"class": "cell", "_cellNodeObj": "$cell.node", "onclick":"$onCellClick"},
+                                            T.TAG("$cell.tag", {"node": "$cell.node"}))
                                     )
                                 )
                             )
                         )
-                    ),
+                    )
+                ),
 
-                shortTag:
-                    SPAN({"class": PACK.__NS__+"structures-table"}, TAG("$node|getTitleTag", {"node": "$node|getTitleNode"})),
+            shortTag:
+                T.SPAN({"class": PACK.__NS__+"structures-table"}, T.TAG("$node|getTitleTag", {"node": "$node|getTitleNode"})),
 
-                getTitleTag: function(node) {
-                    var rep = helpers.getTemplateForNode(this.getTitleNode(node));
-                    return rep.shortTag || rep.tag;
-                },
+            getTitleTag: function(node) {
+                var rep = helpers.getTemplateForNode(this.getTitleNode(node));
+                return rep.shortTag || rep.tag;
+            },
 
-                getTitleNode: function(node) {
-                    return helpers.util.merge(node.compact().title, {"wrapped": false});
-                },
-                
-                getHeaderClass: function(node)
-                {
-                    if (this.hasNoHeader(node)) {
-                        return "hide";
-                    } else {
-                        return "";
-                    }
-                },
+            getTitleNode: function(node) {
+                return helpers.util.merge(node.compact().title, {"wrapped": false});
+            },
+            
+            getHeaderClass: function(node)
+            {
+                if (this.hasNoHeader(node)) {
+                    return "hide";
+                } else {
+                    return "";
+                }
+            },
 
-                hasNoHeader: function(node) {
-                    var header = node.compact().header;
-                    if(!header || header.type!="array") {
-                        return true;
-                    }
-                    return false;
-                },
+            hasNoHeader: function(node) {
+                var header = node.compact().header;
+                if(!header || header.type!="array") {
+                    return true;
+                }
+                return false;
+            },
 
-                getHeaders: function(node) {
-                    var header = node.compact().header;
-                    if(!header || header.type!="array") {
-                        return [];
-                    }
-                    var items = [];
-                    for (var i = 0; i < header.value.length; i++) {
-                        var rep = helpers.getTemplateForNode(header.value[i]);
+            getHeaders: function(node) {
+                var header = node.compact().header;
+                if(!header || header.type!="array") {
+                    return [];
+                }
+                var items = [];
+                for (var i = 0; i < header.value.length; i++) {
+                    var rep = helpers.getTemplateForNode(header.value[i]);
+                    items.push({
+                        "node": helpers.util.merge(header.value[i], {"wrapped": false}),
+                        "tag": rep.shortTag || rep.tag
+                    });
+                }
+                return items;
+            },
+    
+            getRows: function(node) {
+                var data = node.compact().data;
+                if(!data || data.type!="array") {
+                    return [];
+                }
+                return data.value;
+            },
+    
+            getCells: function(node) {
+                var items = [];
+                if(node.value) {
+                    for (var i = 0; i < node.value.length; i++) {
+                        var rep = helpers.getTemplateForNode(node.value[i]);
                         items.push({
-                            "node": helpers.util.merge(header.value[i], {"wrapped": false}),
+                            "node": helpers.util.merge(node.value[i], {"wrapped": false}),
                             "tag": rep.shortTag || rep.tag
                         });
                     }
-                    return items;
-                },
-        
-                getRows: function(node) {
-                    var data = node.compact().data;
-                    if(!data || data.type!="array") {
-                        return [];
-                    }
-                    return data.value;
-                },
-        
-                getCells: function(node) {
-                    var items = [];
-                    if(node.value) {
-                        for (var i = 0; i < node.value.length; i++) {
-                            var rep = helpers.getTemplateForNode(node.value[i]);
-                            items.push({
-                                "node": helpers.util.merge(node.value[i], {"wrapped": false}),
-                                "tag": rep.shortTag || rep.tag
-                            });
-                        }
-                    } else
-                    if(node.meta && node.meta['encoder.trimmed']) {
-                        var rep = helpers.getTemplateForNode(node);
-                        items.push({
-                            "node": helpers.util.merge(node, {"wrapped": false}),
-                            "tag": rep.shortTag || rep.tag
-                        });
-                    }
-                    return items;
-                },
-        
-                onCellClick: function(event) {
-                    event.stopPropagation();
+                } else
+                if(node.meta && node.meta['encoder.trimmed']) {
+                    var rep = helpers.getTemplateForNode(node);
+                    items.push({
+                        "node": helpers.util.merge(node, {"wrapped": false}),
+                        "tag": rep.shortTag || rep.tag
+                    });
+                }
+                return items;
+            },
+    
+            onCellClick: function(event) {
+                event.stopPropagation();
 
-                    //var masterRow = this._getMasterRow(event.target);
-                    //masterRow.messageObject
+                //var masterRow = this._getMasterRow(event.target);
+                //masterRow.messageObject
 
-                    var tag = event.target;
-                    while(tag.parentNode) {
-                        if (tag.cellNodeObj) {
-                            break;
-                        }
-                        tag = tag.parentNode;
+                var tag = event.target;
+                while(tag.parentNode) {
+                    if (tag.cellNodeObj) {
+                        break;
                     }
-                    helpers.dispatchEvent('inspectNode', [event, {
-                        //"message": masterRow.messageObject,
-                        "args": {"node": tag.cellNodeObj}
-                    }]);
-                },
+                    tag = tag.parentNode;
+                }
+                helpers.dispatchEvent('inspectNode', [event, {
+                    //"message": masterRow.messageObject,
+                    "args": {"node": tag.cellNodeObj}
+                }]);
+            },
 
-                _getMasterRow: function(row)
-                {
-                    while(true) {
-                        if(!row.parentNode) {
-                            return null;
-                        }
-                        if(helpers.util.hasClass(row, PACK.__NS__ + "console-message")) {
-                            break;
-                        }
-                        row = row.parentNode;
+            _getMasterRow: function(row)
+            {
+                while(true) {
+                    if(!row.parentNode) {
+                        return null;
                     }
-                    return row;
-                }                
-            });
-        }        
+                    if(helpers.util.hasClass(row, PACK.__NS__ + "console-message")) {
+                        break;
+                    }
+                    row = row.parentNode;
+                }
+                return row;
+            }                
+        });
     }
 });
 
-},{"../pack":8}],17:[function(require,module,exports){
+},{"../pack":9}],18:[function(require,module,exports){
 
 var PACK = require("../pack");
 
@@ -5628,217 +5658,216 @@ PACK.initTemplate(require, exports, module, {
 
     initRep: function(DOMPLATE, helpers)
     {
-        with(DOMPLATE.tags)
-        {
-            return DOMPLATE.domplate({
+        var T = DOMPLATE.tags;
+        
+        return DOMPLATE.domplate({
 
-                VAR_hideShortTagOnExpand: false,
-                
-                tag:
-                    DIV({"class": PACK.__NS__+"structures-trace"},
-                        TABLE({"cellpadding": 3, "cellspacing": 0},
-                            TBODY(
-                                TR(
-                                    TH({"class": "header-file"}, "File"),
-                                    TH({"class": "header-line"}, "Line"),
-                                    TH({"class": "header-inst"}, "Instruction")
-                                ),
-                                FOR("frame", "$node|getCallList",
-                                    TR({"_frameNodeObj": "$frame.node"},
-                                        TD({"class": "cell-file", "onclick":"$onFileClick"}, "$frame.file"),
-                                        TD({"class": "cell-line", "onclick":"$onFileClick"}, "$frame.line"),
-                                        TD({"class": "cell-inst"},
-                                            DIV("$frame|getFrameLabel(",
-                                                FOR("arg", "$frame|argIterator",
-                                                    DIV({"class": "arg", "_argNodeObj": "$arg.node", "onclick":"$onArgClick"},
-                                                        TAG("$arg.tag", {"node": "$arg.node"}),
-                                                        IF("$arg.more", SPAN({"class": "separator"}, ","))
-                                                    )
-                                                ),
-                                            ")")
-                                        )
+            VAR_hideShortTagOnExpand: false,
+            
+            tag:
+                T.DIV({"class": PACK.__NS__+"structures-trace"},
+                    T.TABLE({"cellpadding": 3, "cellspacing": 0},
+                        T.TBODY(
+                            T.TR(
+                                T.TH({"class": "header-file"}, "File"),
+                                T.TH({"class": "header-line"}, "Line"),
+                                T.TH({"class": "header-inst"}, "Instruction")
+                            ),
+                            T.FOR("frame", "$node|getCallList",
+                                T.TR({"_frameNodeObj": "$frame.node"},
+                                    T.TD({"class": "cell-file", "onclick":"$onFileClick"}, "$frame.file"),
+                                    T.TD({"class": "cell-line", "onclick":"$onFileClick"}, "$frame.line"),
+                                    T.TD({"class": "cell-inst"},
+                                        T.DIV("$frame|getFrameLabel(",
+                                            T.FOR("arg", "$frame|argIterator",
+                                                T.DIV({"class": "arg", "_argNodeObj": "$arg.node", "onclick":"$onArgClick"},
+                                                    T.TAG("$arg.tag", {"node": "$arg.node"}),
+                                                    T.IF("$arg.more", T.SPAN({"class": "separator"}, ","))
+                                                )
+                                            ),
+                                        ")")
                                     )
                                 )
                             )
                         )
-                    ),
-        
-                shortTag:
-                    SPAN({"class": PACK.__NS__+"structures-trace"}, TAG("$node|getCaptionTag", {"node": "$node|getCaptionNode"})),
-        
-        
-                onFileClick: function(event) {
-                    event.stopPropagation();
-                    var node = event.target.parentNode.frameNodeObj,
-                        frame = node.compact();
-                    if(!frame.file || !frame.line) {
-                        return;
-                    }
-                    var args = {
-                        "file": frame.file.value,
-                        "line": frame.line.value
-                    };
-                    if(args["file"] && args["line"]) {
-                        helpers.dispatchEvent('inspectFile', [event, {
-                            "message": node.getObjectGraph().message,
-                            "args": args
-                        }]);
-                    }
-                },
-        
-                onArgClick: function(event) {
-                    event.stopPropagation();
-                    var tag = event.target;
-                    while(tag.parentNode) {
-                        if(tag.argNodeObj) {
-                            break;
-                        }
-                        tag = tag.parentNode;
-                    }
-                    helpers.dispatchEvent('inspectNode', [event, {
-                        "message": tag.argNodeObj.getObjectGraph().message,
-                        "args": {"node": tag.argNodeObj}
+                    )
+                ),
+    
+            shortTag:
+                T.SPAN({"class": PACK.__NS__+"structures-trace"}, T.TAG("$node|getCaptionTag", {"node": "$node|getCaptionNode"})),
+    
+    
+            onFileClick: function(event) {
+                event.stopPropagation();
+                var node = event.target.parentNode.frameNodeObj,
+                    frame = node.compact();
+                if(!frame.file || !frame.line) {
+                    return;
+                }
+                var args = {
+                    "file": frame.file.value,
+                    "line": frame.line.value
+                };
+                if(args["file"] && args["line"]) {
+                    helpers.dispatchEvent('inspectFile', [event, {
+                        "message": node.getObjectGraph().message,
+                        "args": args
                     }]);
-                },
-        
-                getCaptionTag: function(node) {
-                    var rep = helpers.getTemplateForNode(this.getCaptionNode(node));
-                    return rep.shortTag || rep.tag;
-                },
-        
-                getCaptionNode: function(node) {
-                    if (node.type == "map")
-                        return helpers.util.merge(node.compact().title, {"wrapped": false});
-                    if (node.type == "dictionary")
-                        return helpers.util.merge(node.value.title, {"wrapped": false});
-                },
+                }
+            },
+    
+            onArgClick: function(event) {
+                event.stopPropagation();
+                var tag = event.target;
+                while(tag.parentNode) {
+                    if(tag.argNodeObj) {
+                        break;
+                    }
+                    tag = tag.parentNode;
+                }
+                helpers.dispatchEvent('inspectNode', [event, {
+                    "message": tag.argNodeObj.getObjectGraph().message,
+                    "args": {"node": tag.argNodeObj}
+                }]);
+            },
+    
+            getCaptionTag: function(node) {
+                var rep = helpers.getTemplateForNode(this.getCaptionNode(node));
+                return rep.shortTag || rep.tag;
+            },
+    
+            getCaptionNode: function(node) {
+                if (node.type == "map")
+                    return helpers.util.merge(node.compact().title, {"wrapped": false});
+                if (node.type == "dictionary")
+                    return helpers.util.merge(node.value.title, {"wrapped": false});
+            },
 
-                getTrace: function(node) {
-                    if (node.type == "map")
-                       return node.compact().trace.value;
-                    if (node.type == "dictionary")
-                       return node.value.trace.value;
-                    helpers.logger.error("Cannot get trace from node", node);
-                },
+            getTrace: function(node) {
+                if (node.type == "map")
+                    return node.compact().trace.value;
+                if (node.type == "dictionary")
+                    return node.value.trace.value;
+                helpers.logger.error("Cannot get trace from node", node);
+            },
 
-                postRender: function(node)
-                {
+            postRender: function(node)
+            {
 ;debugger;                    
 /*                    
-                    var node = this._getMasterRow(node);
-                    if (node.messageObject && typeof node.messageObject.postRender == "object")
+                var node = this._getMasterRow(node);
+                if (node.messageObject && typeof node.messageObject.postRender == "object")
+                {
+                    if (typeof node.messageObject.postRender.keeptitle !== "undefined")
                     {
-                        if (typeof node.messageObject.postRender.keeptitle !== "undefined")
-                        {
-                            node.setAttribute("keeptitle", node.messageObject.postRender.keeptitle?"true":"false");
-                        }
-                    }
-*/                    
-                },
-
-                getCallList: function(node) {
-
-                    // TODO: Do this in an init method
-/*
-                    if (node.messageObject && typeof node.messageObject.postRender == "object") {
-                        if (typeof node.messageObject.postRender.keeptitle !== "undefined") {
-                            node.setAttribute("keeptitle", "true");
-                        }
-                    }                    
-*/
-                    try {
-                        var list = [];
-                        this.getTrace(node).forEach(function(node) {
-                            frame = node.compact();
-                            list.push({
-                                'node': node,
-                                'file': (frame.file)?frame.file.value:"",
-                                'line': (frame.line)?frame.line.value:"",
-                                'class': (frame["class"])?frame["class"].value:"",
-                                'function': (frame["function"])?frame["function"].value:"",
-                                'type': (frame.type)?frame.type.value:"",
-                                'args': (frame.args)?frame.args.value:false
-                            });
-                        });
-        
-                        // Now that we have all call events, lets see if we can shorten the filenames.
-                        // This only works for unix filepaths for now.
-                        // TODO: Get this working for windows filepaths as well.
-                        try {
-                            if (list[0].file.substr(0, 1) == '/') {
-                                var file_shortest = list[0].file.split('/');
-                                var file_original_length = file_shortest.length;
-                                for (var i = 1; i < list.length; i++) {
-                                    var file = list[i].file.split('/');
-                                    for (var j = 0; j < file_shortest.length; j++) {
-                                        if (file_shortest[j] != file[j]) {
-                                            file_shortest.splice(j, file_shortest.length - j);
-                                            break;
-                                        }
-                                    }
-                                }
-                                if (file_shortest.length > 2) {
-                                    if (file_shortest.length == file_original_length) {
-                                        file_shortest.pop();
-                                    }
-                                    file_shortest = file_shortest.join('/');
-                                    for (var i = 0; i < list.length; i++) {
-                                        list[i].file = '...' + list[i].file.substr(file_shortest.length);
-                                    }
-                                }
-                            }
-                        } catch (e) {}
-        
-                        return list;
-                    } catch(e) {
-                        helpers.logger.error(e);
-                    }
-                },
-        
-                getFrameLabel: function(frame)
-                {
-                    try {
-                        if (frame['class']) {
-                            if (frame['type'] == 'throw') {
-                                return 'throw ' + frame['class'];
-                            } else
-                            if (frame['type'] == 'trigger') {
-                                return 'trigger_error';
-                            } else {
-                                return frame['class'] + frame['type'] + frame['function'];
-                            }
-                        }
-                        return frame['function'];
-                    } catch(e) {
-                        helpers.logger.error(e);
-                    }
-                },
-        
-                argIterator: function(frame)
-                {
-                    try {
-                        if(!frame.args) {
-                            return [];
-                        }
-                        var items = [];
-                        for (var i = 0; i < frame.args.length; i++) {
-                            items.push({
-                                "node": helpers.util.merge(frame.args[i], {"wrapped": true}),
-                                "tag": helpers.getTemplateForNode(frame.args[i]).shortTag,
-                                "more": (i < frame.args.length-1)
-                            });
-                        }
-                        return items;
-                    } catch(e) {
-                        helpers.logger.error(e);
+                        node.setAttribute("keeptitle", node.messageObject.postRender.keeptitle?"true":"false");
                     }
                 }
-            });
-        }        
+*/                    
+            },
+
+            getCallList: function(node) {
+
+                // TODO: Do this in an init method
+/*
+                if (node.messageObject && typeof node.messageObject.postRender == "object") {
+                    if (typeof node.messageObject.postRender.keeptitle !== "undefined") {
+                        node.setAttribute("keeptitle", "true");
+                    }
+                }                    
+*/
+                try {
+                    var list = [];
+                    this.getTrace(node).forEach(function(node) {
+                        frame = node.compact();
+                        list.push({
+                            'node': node,
+                            'file': (frame.file)?frame.file.value:"",
+                            'line': (frame.line)?frame.line.value:"",
+                            'class': (frame["class"])?frame["class"].value:"",
+                            'function': (frame["function"])?frame["function"].value:"",
+                            'type': (frame.type)?frame.type.value:"",
+                            'args': (frame.args)?frame.args.value:false
+                        });
+                    });
+    
+                    // Now that we have all call events, lets see if we can shorten the filenames.
+                    // This only works for unix filepaths for now.
+                    // TODO: Get this working for windows filepaths as well.
+                    try {
+                        if (list[0].file.substr(0, 1) == '/') {
+                            var file_shortest = list[0].file.split('/');
+                            var file_original_length = file_shortest.length;
+                            for (var i = 1; i < list.length; i++) {
+                                var file = list[i].file.split('/');
+                                for (var j = 0; j < file_shortest.length; j++) {
+                                    if (file_shortest[j] != file[j]) {
+                                        file_shortest.splice(j, file_shortest.length - j);
+                                        break;
+                                    }
+                                }
+                            }
+                            if (file_shortest.length > 2) {
+                                if (file_shortest.length == file_original_length) {
+                                    file_shortest.pop();
+                                }
+                                file_shortest = file_shortest.join('/');
+                                for (var i = 0; i < list.length; i++) {
+                                    list[i].file = '...' + list[i].file.substr(file_shortest.length);
+                                }
+                            }
+                        }
+                    } catch (e) {}
+    
+                    return list;
+                } catch(e) {
+                    helpers.logger.error(e);
+                }
+            },
+    
+            getFrameLabel: function(frame)
+            {
+                try {
+                    if (frame['class']) {
+                        if (frame['type'] == 'throw') {
+                            return 'throw ' + frame['class'];
+                        } else
+                        if (frame['type'] == 'trigger') {
+                            return 'trigger_error';
+                        } else {
+                            return frame['class'] + frame['type'] + frame['function'];
+                        }
+                    }
+                    return frame['function'];
+                } catch(e) {
+                    helpers.logger.error(e);
+                }
+            },
+    
+            argIterator: function(frame)
+            {
+                try {
+                    if(!frame.args) {
+                        return [];
+                    }
+                    var items = [];
+                    for (var i = 0; i < frame.args.length; i++) {
+                        items.push({
+                            "node": helpers.util.merge(frame.args[i], {"wrapped": true}),
+                            "tag": helpers.getTemplateForNode(frame.args[i]).shortTag,
+                            "more": (i < frame.args.length-1)
+                        });
+                    }
+                    return items;
+                } catch(e) {
+                    helpers.logger.error(e);
+                }
+            }
+        });
     }
 });
 
-},{"../pack":8}],18:[function(require,module,exports){
+},{"../pack":9}],19:[function(require,module,exports){
 
 var PACK = require("../pack");
 
@@ -5851,29 +5880,28 @@ PACK.initTemplate(require, exports, module, {
 
     initRep: function(DOMPLATE, helpers)
     {
-        with(DOMPLATE.tags)
-        {
-            return DOMPLATE.domplate({
+        var T = DOMPLATE.tags;
         
-                tag:
-                    SPAN({"class": PACK.__NS__+"util-trimmed"},
-                        "$node|getNotice"
-                    ),
+        return DOMPLATE.domplate({
+    
+            tag:
+                T.SPAN({"class": PACK.__NS__+"util-trimmed"},
+                    "$node|getNotice"
+                ),
 
-                collapsedTag: 
-                    SPAN({"class": PACK.__NS__+"util-trimmed"},
-                        "$node|getNotice"
-                    ),
+            collapsedTag: 
+                T.SPAN({"class": PACK.__NS__+"util-trimmed"},
+                    "$node|getNotice"
+                ),
 
-                getNotice: function(node) {
-                    return node.meta["encoder.notice"];
-                }
-            });
-        }        
+            getNotice: function(node) {
+                return node.meta["encoder.notice"];
+            }
+        });
     }
 });
 
-},{"../pack":8}],19:[function(require,module,exports){
+},{"../pack":9}],20:[function(require,module,exports){
 
 var PACK = require("../pack");
 
@@ -5887,400 +5915,399 @@ PACK.initTemplate(require, exports, module, {
     
     initRep: function(DOMPLATE, helpers)
     {
-        with(DOMPLATE.tags)
-        {
-            return DOMPLATE.domplate({
-
-                CONST_Normal: "tag",
-                CONST_Short: "shortTag",
+        var T = DOMPLATE.tags;
         
-                tag:
-                    DIV(
+        return DOMPLATE.domplate({
+
+            CONST_Normal: "tag",
+            CONST_Short: "shortTag",
+    
+            tag:
+                T.DIV(
+                    {
+                        "class": "$message|_getMessageClass",
+                        "_messageObject": "$message",
+                        "onmouseover":"$onMouseOver",
+                        "onmousemove":"$onMouseMove",
+                        "onmouseout":"$onMouseOut",
+                        "onclick":"$onClick",
+                        "expandable": "$message|_isExpandable",
+                        "expanded": "false",
+                        "_templateObject": "$message|_getTemplateObject"
+                    },
+                    T.DIV(
                         {
-                            "class": "$message|_getMessageClass",
-                            "_messageObject": "$message",
-                            "onmouseover":"$onMouseOver",
-                            "onmousemove":"$onMouseMove",
-                            "onmouseout":"$onMouseOut",
-                            "onclick":"$onClick",
-                            "expandable": "$message|_isExpandable",
-                            "expanded": "false",
-                            "_templateObject": "$message|_getTemplateObject"
+                            "class": "$message|_getHeaderClass",
+                            "hideOnExpand": "$message|_getHideShortTagOnExpand"
                         },
-                        DIV(
-                            {
-                                "class": "$message|_getHeaderClass",
-                                "hideOnExpand": "$message|_getHideShortTagOnExpand"
-                            },
-                            DIV({"class": "expander"}),
-                            DIV({"class": "actions"},
-                                DIV({"class": "inspect", "onclick":"$onClick"}),
-                                DIV({"class": "file $message|_getFileActionClass", "onclick":"$onClick"})
-                            ),
-                            SPAN(
-                                {"class": "summary"},
-                                SPAN({"class": "label"},    // WORKAROUND: IF does not work at top level due to a bug
-                                    IF("$message|_hasLabel", SPAN("$message|_getLabel"))
-                                ),
-                                TAG("$message,$CONST_Short|_getTag", {
-                                    "node": "$message|_getValue",
-                                    "message": "$message"
-                                })
-                            ),
-                            SPAN({"class": "fileline"}, 
-                                DIV(  // WORKAROUND: IF does not work at top level due to a bug
-                                    IF("$message|_hasLabel", DIV({"class": "label"}, "$message|_getLabel"))
-                                ),
-                                DIV("$message|_getFileLine"))
+                        T.DIV({"class": "expander"}),
+                        T.DIV({"class": "actions"},
+                            T.DIV({"class": "inspect", "onclick":"$onClick"}),
+                            T.DIV({"class": "file $message|_getFileActionClass", "onclick":"$onClick"})
                         ),
-                        DIV({"class": "$message|_getBodyClass"})
+                        T.SPAN(
+                            {"class": "summary"},
+                            T.SPAN({"class": "label"},    // WORKAROUND: T.IF does not work at top level due to a bug
+                                T.IF("$message|_hasLabel", T.SPAN("$message|_getLabel"))
+                            ),
+                            T.TAG("$message,$CONST_Short|_getTag", {
+                                "node": "$message|_getValue",
+                                "message": "$message"
+                            })
+                        ),
+                        T.SPAN({"class": "fileline"}, 
+                            T.DIV(  // WORKAROUND: T.IF does not work at top level due to a bug
+                                T.IF("$message|_hasLabel", T.DIV({"class": "label"}, "$message|_getLabel"))
+                            ),
+                            T.DIV("$message|_getFileLine"))
                     ),
+                    T.DIV({"class": "$message|_getBodyClass"})
+                ),
 
-                 groupNoMessagesTag:
-                    DIV({"class": "group-no-messages"}, "No Messages"),    
+                groupNoMessagesTag:
+                T.DIV({"class": "group-no-messages"}, "No Messages"),    
 
-                _getTemplateObject: function() {
-                    return this;
-                },
-        
-                _getMessageClass: function(message) {
- 
-                    // TODO: Move this into more of an 'init' method
-                    message.postRender = {};
+            _getTemplateObject: function() {
+                return this;
+            },
+    
+            _getMessageClass: function(message) {
+
+                // TODO: Move this into more of an 'init' method
+                message.postRender = {};
+                
+                if(typeof message.meta["group.start"] != "undefined") {
+                    return PACK.__NS__ + "console-message " + PACK.__NS__ + "console-message-group";
+                } else {
+                    return PACK.__NS__ + "console-message";
+                }
+            },
+    
+            _getHeaderClass: function(message) {
+                if(!message.meta || !message.meta["priority"]) {
+                    return "header";
+                }
+                return "header header-priority-" + message.meta["priority"];
+            },
+    
+            _getBodyClass: function(message) {
+                if(!message.meta || !message.meta["priority"]) {
+                    return "body";
+                }
+                return "body body-priority-" + message.meta["priority"];
+            },
+            
+            _getFileLine: function(message) {
+                if(!message.meta) {
+                    return "";
+                }
+                var str = [];
+                if(message.meta["file"]) {
+                    str.push(helpers.util.cropStringLeft(message.meta["file"], 75));
+                }
+                if(message.meta["line"]) {
+                    str.push("@");
+                    str.push(message.meta["line"]);
+                }
+                return str.join(" ");
+            },
+    
+            // TODO: Need better way to set/determine if tag should be hidden
+            _getHideShortTagOnExpand: function(message) {
+                if(typeof message.meta["group.start"] != "undefined") {
+                    return "false";
+                }
+                var rep = this._getRep(message);
+                if(rep.VAR_hideShortTagOnExpand===false) {
+                    return "false";
                     
-                    if(typeof message.meta["group.start"] != "undefined") {
-                        return PACK.__NS__ + "console-message " + PACK.__NS__ + "console-message-group";
-                    } else {
-                        return PACK.__NS__ + "console-message";
-                    }
-                },
-        
-                _getHeaderClass: function(message) {
-                    if(!message.meta || !message.meta["priority"]) {
-                        return "header";
-                    }
-                    return "header header-priority-" + message.meta["priority"];
-                },
-        
-                _getBodyClass: function(message) {
-                    if(!message.meta || !message.meta["priority"]) {
-                        return "body";
-                    }
-                    return "body body-priority-" + message.meta["priority"];
-                },
-                
-                _getFileLine: function(message) {
-                    if(!message.meta) {
-                        return "";
-                    }
-                    var str = [];
-                    if(message.meta["file"]) {
-                        str.push(helpers.util.cropStringLeft(message.meta["file"], 75));
-                    }
-                    if(message.meta["line"]) {
-                        str.push("@");
-                        str.push(message.meta["line"]);
-                    }
-                    return str.join(" ");
-                },
-        
-                // TODO: Need better way to set/determine if tag should be hidden
-                _getHideShortTagOnExpand: function(message) {
-                    if(typeof message.meta["group.start"] != "undefined") {
+                }
+                var node = message.og.getOrigin();
+                if(node.type=="reference") {
+                    node = node.getInstance();
+                    if(node.meta["lang.type"]=="exception") {
                         return "false";
                     }
-                    var rep = this._getRep(message);
-                    if(rep.VAR_hideShortTagOnExpand===false) {
-                        return "false";
-                        
+                }
+                return "true";
+            },
+    
+            _isExpandable: function(message) {
+    /*
+                switch(message.getObjectGraph().getOrigin().type) {
+                    case "array":
+                    case "reference":
+                    case "dictionary":
+                    case "map":
+                    case "text":
+                        break;
+                }
+    */            
+                return true;
+            },
+            
+            _getFileActionClass: function(message) {
+                if(message.meta["file"]) return "";
+                return "hidden";
+            },
+    
+            _getTag: function(message, type)
+            {
+                var rep = this._getRep(message);
+                if(type==this.CONST_Short) {
+                    if(rep.shortTag) {
+                        return rep.shortTag;
                     }
-                    var node = message.og.getOrigin();
-                    if(node.type=="reference") {
-                        node = node.getInstance();
-                        if(node.meta["lang.type"]=="exception") {
-                            return "false";
-                        }
-                    }
-                    return "true";
-                },
-        
-                _isExpandable: function(message) {
-        /*
-                    switch(message.getObjectGraph().getOrigin().type) {
-                        case "array":
-                        case "reference":
-                        case "dictionary":
-                        case "map":
-                        case "text":
-                            break;
-                    }
-        */            
-                    return true;
-                },
-                
-                _getFileActionClass: function(message) {
-                    if(message.meta["file"]) return "";
-                    return "hidden";
-                },
-        
-                _getTag: function(message, type)
-                {
-                    var rep = this._getRep(message);
-                    if(type==this.CONST_Short) {
-                        if(rep.shortTag) {
-                            return rep.shortTag;
-                        }
-                    }
-                    return rep.tag;
-                },
-                
-                _getRep: function(message)
-                {
-                    return message.template;
+                }
+                return rep.tag;
+            },
+            
+            _getRep: function(message)
+            {
+                return message.template;
 /*
-                    var rep;
-                    
-                    if(message.meta && message.meta["renderer"]) {
-                        rep = helpers.getTemplateForId(message.meta["renderer"]);
-                    } else {
-                        rep = helpers.getTemplateForNode(message.getObjectGraph().getOrigin());
-                    }
-                    return rep;
-*/
-                },
-        
-                _hasLabel: function(message)
-                {
-                    if(message.meta && typeof message.meta["label"] != "undefined") {
-                        return true;
-                    } else {
-                        return false;
-                    }
-                },
-        
-                _getLabel: function(message)
-                {
-                    if(this._hasLabel(message)) {
-                        return message.meta["label"];
-                    } else {
-                        return "";
-                    }
-                },
-        
-                _getValue: function(message)
-                {
-                    if(typeof message.meta["group.start"] != "undefined") {
-                        var node = message.og.getOrigin();
-                        node.meta["string.trim.enabled"] = false;
-                        return node;
-                    }
-                    else
-                        return message.og.getOrigin();
-                },
-        
-                onMouseMove: function(event)
-                {
-        /*            
-                    if(activeInfoTip) {
-                        var x = event.clientX, y = event.clientY;
-                        infoTipModule.showInfoTip(activeInfoTip, {
-                            showInfoTip: function() {
-                                return true;
-                            }
-                        }, event.target, x, y, event.rangeParent, event.rangeOffset);
-                    }
-        */            
-                },
-            
-                onMouseOver: function(event)
-                {
-                    // set a class on our logRow parent identifying this log row as fireconsole controlled
-                    // this is used for hover and selected styling
-                    //helpers.util.setClass(this._getMasterRow(event.target).parentNode, "logRow-" + PACK.__NS__ + "console-message");
-        
-                    if(helpers.util.getChildByClass(this._getMasterRow(event.target), "__no_inspect")) {
-                        return;
-                    }
-        
-                    // populate file/line info tip
-        /*            
-                    var meta = this._getMasterRow(event.target).repObject.meta;
-                    if(meta && (meta["fc.msg.file"] || meta["fc.msg.line"])) {
-                        activeInfoTip = event.target.ownerDocument.getElementsByClassName('infoTip')[0];
-                        this.fileLineInfoTipTag.replace({
-                            "file": meta["fc.msg.file"] || "?",
-                            "line": meta["fc.msg.line"] || "?"
-                        }, activeInfoTip);
-                    } else {
-                        activeInfoTip = null;
-                    }
-        */            
-                },
-            
-                onMouseOut: function(event)
-                {
-        //            if(activeInfoTip) {
-        //                infoTipModule.hideInfoTip(activeInfoTip);
-        //            }
-                },
+                var rep;
                 
-                onClick: function(event)
-                {
-        //            if(this.util.getChildByClass(this._getMasterRow(event.target), "__no_inspect")) {
-        //                return;
-        //            }
-                    try {
-                        var masterRow = this._getMasterRow(event.target),
-                            headerTag = helpers.util.getChildByClass(masterRow, "header"),
-                            actionsTag = helpers.util.getChildByClass(headerTag, "actions"),
-                            summaryTag = helpers.util.getChildByClass(headerTag, "summary"),
-                            bodyTag = helpers.util.getChildByClass(masterRow, "body");
-
-                        var pointer = {
-                            x: event.clientX,
-                            y: event.clientY
-                        };
-                        var masterRect = {
-                            "left": headerTag.getBoundingClientRect().left-2,
-                            "top": headerTag.getBoundingClientRect().top-2,
-                            // actionsTag.getBoundingClientRect().left is 0 if actions tag not showing
-                            "right": actionsTag.getBoundingClientRect().left || headerTag.getBoundingClientRect().right,
-                            "bottom": headerTag.getBoundingClientRect().bottom+1
-                        };
+                if(message.meta && message.meta["renderer"]) {
+                    rep = helpers.getTemplateForId(message.meta["renderer"]);
+                } else {
+                    rep = helpers.getTemplateForNode(message.getObjectGraph().getOrigin());
+                }
+                return rep;
+*/
+            },
+    
+            _hasLabel: function(message)
+            {
+                if(message.meta && typeof message.meta["label"] != "undefined") {
+                    return true;
+                } else {
+                    return false;
+                }
+            },
+    
+            _getLabel: function(message)
+            {
+                if(this._hasLabel(message)) {
+                    return message.meta["label"];
+                } else {
+                    return "";
+                }
+            },
+    
+            _getValue: function(message)
+            {
+                if(typeof message.meta["group.start"] != "undefined") {
+                    var node = message.og.getOrigin();
+                    node.meta["string.trim.enabled"] = false;
+                    return node;
+                }
+                else
+                    return message.og.getOrigin();
+            },
+    
+            onMouseMove: function(event)
+            {
+    /*            
+                if(activeInfoTip) {
+                    var x = event.clientX, y = event.clientY;
+                    infoTipModule.showInfoTip(activeInfoTip, {
+                        showInfoTip: function() {
+                            return true;
+                        }
+                    }, event.target, x, y, event.rangeParent, event.rangeOffset);
+                }
+    */            
+            },
+        
+            onMouseOver: function(event)
+            {
+                // set a class on our logRow parent identifying this log row as fireconsole controlled
+                // this is used for hover and selected styling
+                //helpers.util.setClass(this._getMasterRow(event.target).parentNode, "logRow-" + PACK.__NS__ + "console-message");
+    
+                if(helpers.util.getChildByClass(this._getMasterRow(event.target), "__no_inspect")) {
+                    return;
+                }
+    
+                // populate file/line info tip
+    /*            
+                var meta = this._getMasterRow(event.target).repObject.meta;
+                if(meta && (meta["fc.msg.file"] || meta["fc.msg.line"])) {
+                    activeInfoTip = event.target.ownerDocument.getElementsByClassName('infoTip')[0];
+                    this.fileLineInfoTipTag.replace({
+                        "file": meta["fc.msg.file"] || "?",
+                        "line": meta["fc.msg.line"] || "?"
+                    }, activeInfoTip);
+                } else {
+                    activeInfoTip = null;
+                }
+    */            
+            },
+        
+            onMouseOut: function(event)
+            {
+    //            if(activeInfoTip) {
+    //                infoTipModule.hideInfoTip(activeInfoTip);
+    //            }
+            },
             
-                        if(pointer.x >= masterRect.left && pointer.x <= masterRect.right && pointer.y >= masterRect.top && pointer.y <= masterRect.bottom) {
-                            event.stopPropagation();
-                            
-                            if(masterRow.getAttribute("expanded")=="true") {
-            
-                                masterRow.setAttribute("expanded", "false");
-            
-                                helpers.dispatchEvent('contract', [event, {
-                                    "message": masterRow.messageObject,
-                                    "masterTag": masterRow,
-                                    "summaryTag": summaryTag,
-                                    "bodyTag": bodyTag
-                                }]);
-            
-                            } else {
+            onClick: function(event)
+            {
+    //            if(this.util.getChildByClass(this._getMasterRow(event.target), "__no_inspect")) {
+    //                return;
+    //            }
+                try {
+                    var masterRow = this._getMasterRow(event.target),
+                        headerTag = helpers.util.getChildByClass(masterRow, "header"),
+                        actionsTag = helpers.util.getChildByClass(headerTag, "actions"),
+                        summaryTag = helpers.util.getChildByClass(headerTag, "summary"),
+                        bodyTag = helpers.util.getChildByClass(masterRow, "body");
 
-                                masterRow.setAttribute("expanded", "true");
+                    var pointer = {
+                        x: event.clientX,
+                        y: event.clientY
+                    };
+                    var masterRect = {
+                        "left": headerTag.getBoundingClientRect().left-2,
+                        "top": headerTag.getBoundingClientRect().top-2,
+                        // actionsTag.getBoundingClientRect().left is 0 if actions tag not showing
+                        "right": actionsTag.getBoundingClientRect().left || headerTag.getBoundingClientRect().right,
+                        "bottom": headerTag.getBoundingClientRect().bottom+1
+                    };
+        
+                    if(pointer.x >= masterRect.left && pointer.x <= masterRect.right && pointer.y >= masterRect.top && pointer.y <= masterRect.bottom) {
+                        event.stopPropagation();
+                        
+                        if(masterRow.getAttribute("expanded")=="true") {
+        
+                            masterRow.setAttribute("expanded", "false");
+        
+                            helpers.dispatchEvent('contract', [event, {
+                                "message": masterRow.messageObject,
+                                "masterTag": masterRow,
+                                "summaryTag": summaryTag,
+                                "bodyTag": bodyTag
+                            }]);
+        
+                        } else {
 
-                                helpers.dispatchEvent('expand', [event, {
-                                    "message": masterRow.messageObject,
-                                    "masterTag": masterRow,
-                                    "summaryTag": summaryTag,
-                                    "bodyTag": bodyTag
-                                }]);
+                            masterRow.setAttribute("expanded", "true");
 
-                                if(!bodyTag.innerHTML) {
-                                    if(typeof masterRow.messageObject.meta["group.start"] != "undefined") {                                            
-                                        this.groupNoMessagesTag.replace({}, bodyTag, this);
-                                    } else {
-                                        this.expandForMasterRow(masterRow, bodyTag);
-                                    }
-                                    this.postRender(bodyTag);
+                            helpers.dispatchEvent('expand', [event, {
+                                "message": masterRow.messageObject,
+                                "masterTag": masterRow,
+                                "summaryTag": summaryTag,
+                                "bodyTag": bodyTag
+                            }]);
+
+                            if(!bodyTag.innerHTML) {
+                                if(typeof masterRow.messageObject.meta["group.start"] != "undefined") {                                            
+                                    this.groupNoMessagesTag.replace({}, bodyTag, this);
+                                } else {
+                                    this.expandForMasterRow(masterRow, bodyTag);
                                 }
+                                this.postRender(bodyTag);
                             }
-                        } else
-                        if(helpers.util.hasClass(event.target, "inspect")) {
-                            event.stopPropagation();
-                            helpers.dispatchEvent('inspectMessage', [event, {
+                        }
+                    } else
+                    if(helpers.util.hasClass(event.target, "inspect")) {
+                        event.stopPropagation();
+                        helpers.dispatchEvent('inspectMessage', [event, {
+                            "message": masterRow.messageObject,
+                            "masterTag": masterRow,
+                            "summaryTag": summaryTag,
+                            "bodyTag": bodyTag,
+                            "args": {
+                                "node": masterRow.messageObject.og.getOrigin()
+                            }
+                        }]);
+                    } else
+                    if(helpers.util.hasClass(event.target, "file")) {
+                        event.stopPropagation();
+                        var args = {
+                            "file": masterRow.messageObject.meta.file,
+                            "line": masterRow.messageObject.meta.line
+                        };
+                        if(args["file"] && args["line"]) {
+                            helpers.dispatchEvent('inspectFile', [event, {
                                 "message": masterRow.messageObject,
                                 "masterTag": masterRow,
                                 "summaryTag": summaryTag,
                                 "bodyTag": bodyTag,
-                                "args": {
-                                    "node": masterRow.messageObject.og.getOrigin()
-                                }
+                                "args": args
                             }]);
-                        } else
-                        if(helpers.util.hasClass(event.target, "file")) {
-                            event.stopPropagation();
-                            var args = {
-                                "file": masterRow.messageObject.meta.file,
-                                "line": masterRow.messageObject.meta.line
-                            };
-                            if(args["file"] && args["line"]) {
-                                helpers.dispatchEvent('inspectFile', [event, {
-                                    "message": masterRow.messageObject,
-                                    "masterTag": masterRow,
-                                    "summaryTag": summaryTag,
-                                    "bodyTag": bodyTag,
-                                    "args": args
-                                }]);
-                            }
-            /*                
-                        } else {
-                            event.stopPropagation();
-                            helpers.dispatchEvent('click', [event, {
-                                "message": masterRow.messageObject,
-                                "masterTag": masterRow,
-                                "valueTag": valueTag,
-                                "bodyTag": bodyTag
-                            }]);
-            */
                         }
-                    } catch(e) {
-                        helpers.logger.error(e);
+        /*                
+                    } else {
+                        event.stopPropagation();
+                        helpers.dispatchEvent('click', [event, {
+                            "message": masterRow.messageObject,
+                            "masterTag": masterRow,
+                            "valueTag": valueTag,
+                            "bodyTag": bodyTag
+                        }]);
+        */
                     }
-                },
+                } catch(e) {
+                    helpers.logger.error(e);
+                }
+            },
 
-                setCount: function(node, count)
+            setCount: function(node, count)
+            {
+                try {
+                    var masterRow = this._getMasterRow(node),
+                        headerTag = helpers.util.getChildByClass(masterRow, "header"),
+                        summaryTag = helpers.util.getChildByClass(headerTag, "summary");
+
+                    summaryTag.children[1].innerHTML += ' <span class="count">(' + count + ')</span>';
+
+                } catch(e) {
+                    helpers.logger.error("Error setting count for node!: " + e);
+                }                                                
+            },
+        
+            postRender: function(node)
+            {
+                var node = this._getMasterRow(node);
+                if (node.messageObject && typeof node.messageObject.postRender == "object")
                 {
-                    try {
-                        var masterRow = this._getMasterRow(node),
-                            headerTag = helpers.util.getChildByClass(masterRow, "header"),
-                            summaryTag = helpers.util.getChildByClass(headerTag, "summary");
-
-                        summaryTag.children[1].innerHTML += ' <span class="count">(' + count + ')</span>';
-
-                    } catch(e) {
-                        helpers.logger.error("Error setting count for node!: " + e);
-                    }                                                
-                },
-         
-                postRender: function(node)
-                {
-                    var node = this._getMasterRow(node);
-                    if (node.messageObject && typeof node.messageObject.postRender == "object")
+                    if (typeof node.messageObject.postRender.keeptitle !== "undefined")
                     {
-                        if (typeof node.messageObject.postRender.keeptitle !== "undefined")
-                        {
-                            node.setAttribute("keeptitle", node.messageObject.postRender.keeptitle?"true":"false");
-                        }
+                        node.setAttribute("keeptitle", node.messageObject.postRender.keeptitle?"true":"false");
                     }
-                },
+                }
+            },
 
-                expandForMasterRow: function(masterRow, bodyTag) {
-                    masterRow.setAttribute("expanded", "true");
+            expandForMasterRow: function(masterRow, bodyTag) {
+                masterRow.setAttribute("expanded", "true");
 
-                    masterRow.messageObject.render(bodyTag, "detail", masterRow.messageObject);
+                masterRow.messageObject.render(bodyTag, "detail", masterRow.messageObject);
 
 /*
-                    var rep = this._getRep(masterRow.messageObject, this.CONST_Normal);
-                    rep.tag.replace({
-                        "node": masterRow.messageObject.getObjectGraph().getOrigin(),
-                        "message": masterRow.messageObject
-                    }, bodyTag, rep);
+                var rep = this._getRep(masterRow.messageObject, this.CONST_Normal);
+                rep.tag.replace({
+                    "node": masterRow.messageObject.getObjectGraph().getOrigin(),
+                    "message": masterRow.messageObject
+                }, bodyTag, rep);
 */
-                },
-        
-                _getMasterRow: function(row)
-                {
-                    while(true) {
-                        if(!row.parentNode) {
-                            return null;
-                        }
-                        if(helpers.util.hasClass(row, PACK.__NS__ + "console-message")) {
-                            break;
-                        }
-                        row = row.parentNode;
+            },
+    
+            _getMasterRow: function(row)
+            {
+                while(true) {
+                    if(!row.parentNode) {
+                        return null;
                     }
-                    return row;
+                    if(helpers.util.hasClass(row, PACK.__NS__ + "console-message")) {
+                        break;
+                    }
+                    row = row.parentNode;
                 }
-            });
-        }        
+                return row;
+            }
+        });
     }
 });
 
@@ -6289,7 +6316,7 @@ exports.renderMessage = function(message, node, options, helpers)
     exports.getTemplate(helpers).tag.replace({"message": message}, node);
 }
 
-},{"../pack":8}],20:[function(require,module,exports){
+},{"../pack":9}],21:[function(require,module,exports){
 
 var PACK = require("../pack");
 
@@ -6303,37 +6330,36 @@ PACK.initTemplate(require, exports, module, {
     
     initRep: function(DOMPLATE, helpers)
     {
-        with(DOMPLATE.tags)
-        {
-            return DOMPLATE.domplate({
+        var T = DOMPLATE.tags;
+        
+        return DOMPLATE.domplate({
 
-                tag:
-                    DIV({
-                        "class": PACK.__NS__ + "viewer-harness"
-                    }, TAG("$message|_getTag", {
-                        "node": "$message|_getValue",
-                        "message": "$message"
-                    })),
+            tag:
+                T.DIV({
+                    "class": PACK.__NS__ + "viewer-harness"
+                }, T.TAG("$message|_getTag", {
+                    "node": "$message|_getValue",
+                    "message": "$message"
+                })),
 
-                _getTag: function(message)
+            _getTag: function(message)
+            {
+                return message.template.tag;
+            },
+
+            _getValue: function(message)
+            {
+                if (typeof message.og != "undefined")
+                    return message.og.getOrigin();
+                else
+                if (typeof message.node != "undefined")
                 {
-                    return message.template.tag;
-                },
-
-                _getValue: function(message)
-                {
-                    if (typeof message.og != "undefined")
-                        return message.og.getOrigin();
-                    else
-                    if (typeof message.node != "undefined")
-                    {
-                        return message.node;
-                    }
-                    else
-                        helpers.logger.error("Unknown message format in " + module.id);
+                    return message.node;
                 }
-            });
-        }        
+                else
+                    helpers.logger.error("Unknown message format in " + module.id);
+            }
+        });
     }
 });
 
@@ -6342,7 +6368,7 @@ exports.renderMessage = function(message, node, options, helpers)
     exports.getTemplate(helpers).tag.replace({"message": message}, node);
 }
 
-},{"../pack":8}],21:[function(require,module,exports){
+},{"../pack":9}],22:[function(require,module,exports){
 
 var DOMPLATE = require("domplate/lib/domplate");
 
@@ -6461,7 +6487,7 @@ exports.init = function(packExports, packModule, packOptions) {
     }
 }
 
-},{"domplate/lib/domplate":1}],22:[function(require,module,exports){
+},{"domplate/lib/domplate":1}],23:[function(require,module,exports){
 var getNative = require('./_getNative'),
     root = require('./_root');
 
@@ -6470,7 +6496,7 @@ var DataView = getNative(root, 'DataView');
 
 module.exports = DataView;
 
-},{"./_getNative":83,"./_root":121}],23:[function(require,module,exports){
+},{"./_getNative":84,"./_root":122}],24:[function(require,module,exports){
 var hashClear = require('./_hashClear'),
     hashDelete = require('./_hashDelete'),
     hashGet = require('./_hashGet'),
@@ -6504,7 +6530,7 @@ Hash.prototype.set = hashSet;
 
 module.exports = Hash;
 
-},{"./_hashClear":90,"./_hashDelete":91,"./_hashGet":92,"./_hashHas":93,"./_hashSet":94}],24:[function(require,module,exports){
+},{"./_hashClear":91,"./_hashDelete":92,"./_hashGet":93,"./_hashHas":94,"./_hashSet":95}],25:[function(require,module,exports){
 var listCacheClear = require('./_listCacheClear'),
     listCacheDelete = require('./_listCacheDelete'),
     listCacheGet = require('./_listCacheGet'),
@@ -6538,7 +6564,7 @@ ListCache.prototype.set = listCacheSet;
 
 module.exports = ListCache;
 
-},{"./_listCacheClear":103,"./_listCacheDelete":104,"./_listCacheGet":105,"./_listCacheHas":106,"./_listCacheSet":107}],25:[function(require,module,exports){
+},{"./_listCacheClear":104,"./_listCacheDelete":105,"./_listCacheGet":106,"./_listCacheHas":107,"./_listCacheSet":108}],26:[function(require,module,exports){
 var getNative = require('./_getNative'),
     root = require('./_root');
 
@@ -6547,7 +6573,7 @@ var Map = getNative(root, 'Map');
 
 module.exports = Map;
 
-},{"./_getNative":83,"./_root":121}],26:[function(require,module,exports){
+},{"./_getNative":84,"./_root":122}],27:[function(require,module,exports){
 var mapCacheClear = require('./_mapCacheClear'),
     mapCacheDelete = require('./_mapCacheDelete'),
     mapCacheGet = require('./_mapCacheGet'),
@@ -6581,7 +6607,7 @@ MapCache.prototype.set = mapCacheSet;
 
 module.exports = MapCache;
 
-},{"./_mapCacheClear":108,"./_mapCacheDelete":109,"./_mapCacheGet":110,"./_mapCacheHas":111,"./_mapCacheSet":112}],27:[function(require,module,exports){
+},{"./_mapCacheClear":109,"./_mapCacheDelete":110,"./_mapCacheGet":111,"./_mapCacheHas":112,"./_mapCacheSet":113}],28:[function(require,module,exports){
 var getNative = require('./_getNative'),
     root = require('./_root');
 
@@ -6590,7 +6616,7 @@ var Promise = getNative(root, 'Promise');
 
 module.exports = Promise;
 
-},{"./_getNative":83,"./_root":121}],28:[function(require,module,exports){
+},{"./_getNative":84,"./_root":122}],29:[function(require,module,exports){
 var getNative = require('./_getNative'),
     root = require('./_root');
 
@@ -6599,7 +6625,7 @@ var Set = getNative(root, 'Set');
 
 module.exports = Set;
 
-},{"./_getNative":83,"./_root":121}],29:[function(require,module,exports){
+},{"./_getNative":84,"./_root":122}],30:[function(require,module,exports){
 var ListCache = require('./_ListCache'),
     stackClear = require('./_stackClear'),
     stackDelete = require('./_stackDelete'),
@@ -6628,7 +6654,7 @@ Stack.prototype.set = stackSet;
 
 module.exports = Stack;
 
-},{"./_ListCache":24,"./_stackClear":125,"./_stackDelete":126,"./_stackGet":127,"./_stackHas":128,"./_stackSet":129}],30:[function(require,module,exports){
+},{"./_ListCache":25,"./_stackClear":126,"./_stackDelete":127,"./_stackGet":128,"./_stackHas":129,"./_stackSet":130}],31:[function(require,module,exports){
 var root = require('./_root');
 
 /** Built-in value references. */
@@ -6636,7 +6662,7 @@ var Symbol = root.Symbol;
 
 module.exports = Symbol;
 
-},{"./_root":121}],31:[function(require,module,exports){
+},{"./_root":122}],32:[function(require,module,exports){
 var root = require('./_root');
 
 /** Built-in value references. */
@@ -6644,7 +6670,7 @@ var Uint8Array = root.Uint8Array;
 
 module.exports = Uint8Array;
 
-},{"./_root":121}],32:[function(require,module,exports){
+},{"./_root":122}],33:[function(require,module,exports){
 var getNative = require('./_getNative'),
     root = require('./_root');
 
@@ -6653,7 +6679,7 @@ var WeakMap = getNative(root, 'WeakMap');
 
 module.exports = WeakMap;
 
-},{"./_getNative":83,"./_root":121}],33:[function(require,module,exports){
+},{"./_getNative":84,"./_root":122}],34:[function(require,module,exports){
 /**
  * Adds the key-value `pair` to `map`.
  *
@@ -6670,7 +6696,7 @@ function addMapEntry(map, pair) {
 
 module.exports = addMapEntry;
 
-},{}],34:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 /**
  * Adds `value` to `set`.
  *
@@ -6687,7 +6713,7 @@ function addSetEntry(set, value) {
 
 module.exports = addSetEntry;
 
-},{}],35:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 /**
  * A faster alternative to `Function#apply`, this function invokes `func`
  * with the `this` binding of `thisArg` and the arguments of `args`.
@@ -6710,7 +6736,7 @@ function apply(func, thisArg, args) {
 
 module.exports = apply;
 
-},{}],36:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 /**
  * A specialized version of `_.forEach` for arrays without support for
  * iteratee shorthands.
@@ -6734,7 +6760,7 @@ function arrayEach(array, iteratee) {
 
 module.exports = arrayEach;
 
-},{}],37:[function(require,module,exports){
+},{}],38:[function(require,module,exports){
 /**
  * A specialized version of `_.filter` for arrays without support for
  * iteratee shorthands.
@@ -6761,7 +6787,7 @@ function arrayFilter(array, predicate) {
 
 module.exports = arrayFilter;
 
-},{}],38:[function(require,module,exports){
+},{}],39:[function(require,module,exports){
 var baseTimes = require('./_baseTimes'),
     isArguments = require('./isArguments'),
     isArray = require('./isArray'),
@@ -6812,7 +6838,7 @@ function arrayLikeKeys(value, inherited) {
 
 module.exports = arrayLikeKeys;
 
-},{"./_baseTimes":61,"./_isIndex":98,"./isArguments":135,"./isArray":136,"./isBuffer":139,"./isTypedArray":145}],39:[function(require,module,exports){
+},{"./_baseTimes":62,"./_isIndex":99,"./isArguments":136,"./isArray":137,"./isBuffer":140,"./isTypedArray":146}],40:[function(require,module,exports){
 /**
  * Appends the elements of `values` to `array`.
  *
@@ -6834,7 +6860,7 @@ function arrayPush(array, values) {
 
 module.exports = arrayPush;
 
-},{}],40:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 /**
  * A specialized version of `_.reduce` for arrays without support for
  * iteratee shorthands.
@@ -6862,7 +6888,7 @@ function arrayReduce(array, iteratee, accumulator, initAccum) {
 
 module.exports = arrayReduce;
 
-},{}],41:[function(require,module,exports){
+},{}],42:[function(require,module,exports){
 var baseAssignValue = require('./_baseAssignValue'),
     eq = require('./eq');
 
@@ -6884,7 +6910,7 @@ function assignMergeValue(object, key, value) {
 
 module.exports = assignMergeValue;
 
-},{"./_baseAssignValue":46,"./eq":133}],42:[function(require,module,exports){
+},{"./_baseAssignValue":47,"./eq":134}],43:[function(require,module,exports){
 var baseAssignValue = require('./_baseAssignValue'),
     eq = require('./eq');
 
@@ -6914,7 +6940,7 @@ function assignValue(object, key, value) {
 
 module.exports = assignValue;
 
-},{"./_baseAssignValue":46,"./eq":133}],43:[function(require,module,exports){
+},{"./_baseAssignValue":47,"./eq":134}],44:[function(require,module,exports){
 var eq = require('./eq');
 
 /**
@@ -6937,7 +6963,7 @@ function assocIndexOf(array, key) {
 
 module.exports = assocIndexOf;
 
-},{"./eq":133}],44:[function(require,module,exports){
+},{"./eq":134}],45:[function(require,module,exports){
 var copyObject = require('./_copyObject'),
     keys = require('./keys');
 
@@ -6956,7 +6982,7 @@ function baseAssign(object, source) {
 
 module.exports = baseAssign;
 
-},{"./_copyObject":72,"./keys":146}],45:[function(require,module,exports){
+},{"./_copyObject":73,"./keys":147}],46:[function(require,module,exports){
 var copyObject = require('./_copyObject'),
     keysIn = require('./keysIn');
 
@@ -6975,7 +7001,7 @@ function baseAssignIn(object, source) {
 
 module.exports = baseAssignIn;
 
-},{"./_copyObject":72,"./keysIn":147}],46:[function(require,module,exports){
+},{"./_copyObject":73,"./keysIn":148}],47:[function(require,module,exports){
 var defineProperty = require('./_defineProperty');
 
 /**
@@ -7002,7 +7028,7 @@ function baseAssignValue(object, key, value) {
 
 module.exports = baseAssignValue;
 
-},{"./_defineProperty":78}],47:[function(require,module,exports){
+},{"./_defineProperty":79}],48:[function(require,module,exports){
 var Stack = require('./_Stack'),
     arrayEach = require('./_arrayEach'),
     assignValue = require('./_assignValue'),
@@ -7157,7 +7183,7 @@ function baseClone(value, bitmask, customizer, key, object, stack) {
 
 module.exports = baseClone;
 
-},{"./_Stack":29,"./_arrayEach":36,"./_assignValue":42,"./_baseAssign":44,"./_baseAssignIn":45,"./_cloneBuffer":64,"./_copyArray":71,"./_copySymbols":73,"./_copySymbolsIn":74,"./_getAllKeys":80,"./_getAllKeysIn":81,"./_getTag":88,"./_initCloneArray":95,"./_initCloneByTag":96,"./_initCloneObject":97,"./isArray":136,"./isBuffer":139,"./isObject":142,"./keys":146}],48:[function(require,module,exports){
+},{"./_Stack":30,"./_arrayEach":37,"./_assignValue":43,"./_baseAssign":45,"./_baseAssignIn":46,"./_cloneBuffer":65,"./_copyArray":72,"./_copySymbols":74,"./_copySymbolsIn":75,"./_getAllKeys":81,"./_getAllKeysIn":82,"./_getTag":89,"./_initCloneArray":96,"./_initCloneByTag":97,"./_initCloneObject":98,"./isArray":137,"./isBuffer":140,"./isObject":143,"./keys":147}],49:[function(require,module,exports){
 var isObject = require('./isObject');
 
 /** Built-in value references. */
@@ -7189,7 +7215,7 @@ var baseCreate = (function() {
 
 module.exports = baseCreate;
 
-},{"./isObject":142}],49:[function(require,module,exports){
+},{"./isObject":143}],50:[function(require,module,exports){
 var createBaseFor = require('./_createBaseFor');
 
 /**
@@ -7207,7 +7233,7 @@ var baseFor = createBaseFor();
 
 module.exports = baseFor;
 
-},{"./_createBaseFor":77}],50:[function(require,module,exports){
+},{"./_createBaseFor":78}],51:[function(require,module,exports){
 var arrayPush = require('./_arrayPush'),
     isArray = require('./isArray');
 
@@ -7229,7 +7255,7 @@ function baseGetAllKeys(object, keysFunc, symbolsFunc) {
 
 module.exports = baseGetAllKeys;
 
-},{"./_arrayPush":39,"./isArray":136}],51:[function(require,module,exports){
+},{"./_arrayPush":40,"./isArray":137}],52:[function(require,module,exports){
 var Symbol = require('./_Symbol'),
     getRawTag = require('./_getRawTag'),
     objectToString = require('./_objectToString');
@@ -7259,7 +7285,7 @@ function baseGetTag(value) {
 
 module.exports = baseGetTag;
 
-},{"./_Symbol":30,"./_getRawTag":85,"./_objectToString":118}],52:[function(require,module,exports){
+},{"./_Symbol":31,"./_getRawTag":86,"./_objectToString":119}],53:[function(require,module,exports){
 var baseGetTag = require('./_baseGetTag'),
     isObjectLike = require('./isObjectLike');
 
@@ -7279,7 +7305,7 @@ function baseIsArguments(value) {
 
 module.exports = baseIsArguments;
 
-},{"./_baseGetTag":51,"./isObjectLike":143}],53:[function(require,module,exports){
+},{"./_baseGetTag":52,"./isObjectLike":144}],54:[function(require,module,exports){
 var isFunction = require('./isFunction'),
     isMasked = require('./_isMasked'),
     isObject = require('./isObject'),
@@ -7328,7 +7354,7 @@ function baseIsNative(value) {
 
 module.exports = baseIsNative;
 
-},{"./_isMasked":101,"./_toSource":130,"./isFunction":140,"./isObject":142}],54:[function(require,module,exports){
+},{"./_isMasked":102,"./_toSource":131,"./isFunction":141,"./isObject":143}],55:[function(require,module,exports){
 var baseGetTag = require('./_baseGetTag'),
     isLength = require('./isLength'),
     isObjectLike = require('./isObjectLike');
@@ -7390,7 +7416,7 @@ function baseIsTypedArray(value) {
 
 module.exports = baseIsTypedArray;
 
-},{"./_baseGetTag":51,"./isLength":141,"./isObjectLike":143}],55:[function(require,module,exports){
+},{"./_baseGetTag":52,"./isLength":142,"./isObjectLike":144}],56:[function(require,module,exports){
 var isPrototype = require('./_isPrototype'),
     nativeKeys = require('./_nativeKeys');
 
@@ -7422,7 +7448,7 @@ function baseKeys(object) {
 
 module.exports = baseKeys;
 
-},{"./_isPrototype":102,"./_nativeKeys":115}],56:[function(require,module,exports){
+},{"./_isPrototype":103,"./_nativeKeys":116}],57:[function(require,module,exports){
 var isObject = require('./isObject'),
     isPrototype = require('./_isPrototype'),
     nativeKeysIn = require('./_nativeKeysIn');
@@ -7457,7 +7483,7 @@ function baseKeysIn(object) {
 
 module.exports = baseKeysIn;
 
-},{"./_isPrototype":102,"./_nativeKeysIn":116,"./isObject":142}],57:[function(require,module,exports){
+},{"./_isPrototype":103,"./_nativeKeysIn":117,"./isObject":143}],58:[function(require,module,exports){
 var Stack = require('./_Stack'),
     assignMergeValue = require('./_assignMergeValue'),
     baseFor = require('./_baseFor'),
@@ -7500,7 +7526,7 @@ function baseMerge(object, source, srcIndex, customizer, stack) {
 
 module.exports = baseMerge;
 
-},{"./_Stack":29,"./_assignMergeValue":41,"./_baseFor":49,"./_baseMergeDeep":58,"./isObject":142,"./keysIn":147}],58:[function(require,module,exports){
+},{"./_Stack":30,"./_assignMergeValue":42,"./_baseFor":50,"./_baseMergeDeep":59,"./isObject":143,"./keysIn":148}],59:[function(require,module,exports){
 var assignMergeValue = require('./_assignMergeValue'),
     cloneBuffer = require('./_cloneBuffer'),
     cloneTypedArray = require('./_cloneTypedArray'),
@@ -7595,7 +7621,7 @@ function baseMergeDeep(object, source, key, srcIndex, mergeFunc, customizer, sta
 
 module.exports = baseMergeDeep;
 
-},{"./_assignMergeValue":41,"./_cloneBuffer":64,"./_cloneTypedArray":70,"./_copyArray":71,"./_initCloneObject":97,"./isArguments":135,"./isArray":136,"./isArrayLikeObject":138,"./isBuffer":139,"./isFunction":140,"./isObject":142,"./isPlainObject":144,"./isTypedArray":145,"./toPlainObject":151}],59:[function(require,module,exports){
+},{"./_assignMergeValue":42,"./_cloneBuffer":65,"./_cloneTypedArray":71,"./_copyArray":72,"./_initCloneObject":98,"./isArguments":136,"./isArray":137,"./isArrayLikeObject":139,"./isBuffer":140,"./isFunction":141,"./isObject":143,"./isPlainObject":145,"./isTypedArray":146,"./toPlainObject":152}],60:[function(require,module,exports){
 var identity = require('./identity'),
     overRest = require('./_overRest'),
     setToString = require('./_setToString');
@@ -7614,7 +7640,7 @@ function baseRest(func, start) {
 
 module.exports = baseRest;
 
-},{"./_overRest":120,"./_setToString":123,"./identity":134}],60:[function(require,module,exports){
+},{"./_overRest":121,"./_setToString":124,"./identity":135}],61:[function(require,module,exports){
 var constant = require('./constant'),
     defineProperty = require('./_defineProperty'),
     identity = require('./identity');
@@ -7638,7 +7664,7 @@ var baseSetToString = !defineProperty ? identity : function(func, string) {
 
 module.exports = baseSetToString;
 
-},{"./_defineProperty":78,"./constant":132,"./identity":134}],61:[function(require,module,exports){
+},{"./_defineProperty":79,"./constant":133,"./identity":135}],62:[function(require,module,exports){
 /**
  * The base implementation of `_.times` without support for iteratee shorthands
  * or max array length checks.
@@ -7660,7 +7686,7 @@ function baseTimes(n, iteratee) {
 
 module.exports = baseTimes;
 
-},{}],62:[function(require,module,exports){
+},{}],63:[function(require,module,exports){
 /**
  * The base implementation of `_.unary` without support for storing metadata.
  *
@@ -7676,7 +7702,7 @@ function baseUnary(func) {
 
 module.exports = baseUnary;
 
-},{}],63:[function(require,module,exports){
+},{}],64:[function(require,module,exports){
 var Uint8Array = require('./_Uint8Array');
 
 /**
@@ -7694,7 +7720,7 @@ function cloneArrayBuffer(arrayBuffer) {
 
 module.exports = cloneArrayBuffer;
 
-},{"./_Uint8Array":31}],64:[function(require,module,exports){
+},{"./_Uint8Array":32}],65:[function(require,module,exports){
 var root = require('./_root');
 
 /** Detect free variable `exports`. */
@@ -7731,7 +7757,7 @@ function cloneBuffer(buffer, isDeep) {
 
 module.exports = cloneBuffer;
 
-},{"./_root":121}],65:[function(require,module,exports){
+},{"./_root":122}],66:[function(require,module,exports){
 var cloneArrayBuffer = require('./_cloneArrayBuffer');
 
 /**
@@ -7749,7 +7775,7 @@ function cloneDataView(dataView, isDeep) {
 
 module.exports = cloneDataView;
 
-},{"./_cloneArrayBuffer":63}],66:[function(require,module,exports){
+},{"./_cloneArrayBuffer":64}],67:[function(require,module,exports){
 var addMapEntry = require('./_addMapEntry'),
     arrayReduce = require('./_arrayReduce'),
     mapToArray = require('./_mapToArray');
@@ -7773,7 +7799,7 @@ function cloneMap(map, isDeep, cloneFunc) {
 
 module.exports = cloneMap;
 
-},{"./_addMapEntry":33,"./_arrayReduce":40,"./_mapToArray":113}],67:[function(require,module,exports){
+},{"./_addMapEntry":34,"./_arrayReduce":41,"./_mapToArray":114}],68:[function(require,module,exports){
 /** Used to match `RegExp` flags from their coerced string values. */
 var reFlags = /\w*$/;
 
@@ -7792,7 +7818,7 @@ function cloneRegExp(regexp) {
 
 module.exports = cloneRegExp;
 
-},{}],68:[function(require,module,exports){
+},{}],69:[function(require,module,exports){
 var addSetEntry = require('./_addSetEntry'),
     arrayReduce = require('./_arrayReduce'),
     setToArray = require('./_setToArray');
@@ -7816,7 +7842,7 @@ function cloneSet(set, isDeep, cloneFunc) {
 
 module.exports = cloneSet;
 
-},{"./_addSetEntry":34,"./_arrayReduce":40,"./_setToArray":122}],69:[function(require,module,exports){
+},{"./_addSetEntry":35,"./_arrayReduce":41,"./_setToArray":123}],70:[function(require,module,exports){
 var Symbol = require('./_Symbol');
 
 /** Used to convert symbols to primitives and strings. */
@@ -7836,7 +7862,7 @@ function cloneSymbol(symbol) {
 
 module.exports = cloneSymbol;
 
-},{"./_Symbol":30}],70:[function(require,module,exports){
+},{"./_Symbol":31}],71:[function(require,module,exports){
 var cloneArrayBuffer = require('./_cloneArrayBuffer');
 
 /**
@@ -7854,7 +7880,7 @@ function cloneTypedArray(typedArray, isDeep) {
 
 module.exports = cloneTypedArray;
 
-},{"./_cloneArrayBuffer":63}],71:[function(require,module,exports){
+},{"./_cloneArrayBuffer":64}],72:[function(require,module,exports){
 /**
  * Copies the values of `source` to `array`.
  *
@@ -7876,7 +7902,7 @@ function copyArray(source, array) {
 
 module.exports = copyArray;
 
-},{}],72:[function(require,module,exports){
+},{}],73:[function(require,module,exports){
 var assignValue = require('./_assignValue'),
     baseAssignValue = require('./_baseAssignValue');
 
@@ -7918,7 +7944,7 @@ function copyObject(source, props, object, customizer) {
 
 module.exports = copyObject;
 
-},{"./_assignValue":42,"./_baseAssignValue":46}],73:[function(require,module,exports){
+},{"./_assignValue":43,"./_baseAssignValue":47}],74:[function(require,module,exports){
 var copyObject = require('./_copyObject'),
     getSymbols = require('./_getSymbols');
 
@@ -7936,7 +7962,7 @@ function copySymbols(source, object) {
 
 module.exports = copySymbols;
 
-},{"./_copyObject":72,"./_getSymbols":86}],74:[function(require,module,exports){
+},{"./_copyObject":73,"./_getSymbols":87}],75:[function(require,module,exports){
 var copyObject = require('./_copyObject'),
     getSymbolsIn = require('./_getSymbolsIn');
 
@@ -7954,7 +7980,7 @@ function copySymbolsIn(source, object) {
 
 module.exports = copySymbolsIn;
 
-},{"./_copyObject":72,"./_getSymbolsIn":87}],75:[function(require,module,exports){
+},{"./_copyObject":73,"./_getSymbolsIn":88}],76:[function(require,module,exports){
 var root = require('./_root');
 
 /** Used to detect overreaching core-js shims. */
@@ -7962,7 +7988,7 @@ var coreJsData = root['__core-js_shared__'];
 
 module.exports = coreJsData;
 
-},{"./_root":121}],76:[function(require,module,exports){
+},{"./_root":122}],77:[function(require,module,exports){
 var baseRest = require('./_baseRest'),
     isIterateeCall = require('./_isIterateeCall');
 
@@ -8001,7 +8027,7 @@ function createAssigner(assigner) {
 
 module.exports = createAssigner;
 
-},{"./_baseRest":59,"./_isIterateeCall":99}],77:[function(require,module,exports){
+},{"./_baseRest":60,"./_isIterateeCall":100}],78:[function(require,module,exports){
 /**
  * Creates a base function for methods like `_.forIn` and `_.forOwn`.
  *
@@ -8028,7 +8054,7 @@ function createBaseFor(fromRight) {
 
 module.exports = createBaseFor;
 
-},{}],78:[function(require,module,exports){
+},{}],79:[function(require,module,exports){
 var getNative = require('./_getNative');
 
 var defineProperty = (function() {
@@ -8041,7 +8067,7 @@ var defineProperty = (function() {
 
 module.exports = defineProperty;
 
-},{"./_getNative":83}],79:[function(require,module,exports){
+},{"./_getNative":84}],80:[function(require,module,exports){
 (function (global){
 /** Detect free variable `global` from Node.js. */
 var freeGlobal = typeof global == 'object' && global && global.Object === Object && global;
@@ -8049,7 +8075,7 @@ var freeGlobal = typeof global == 'object' && global && global.Object === Object
 module.exports = freeGlobal;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],80:[function(require,module,exports){
+},{}],81:[function(require,module,exports){
 var baseGetAllKeys = require('./_baseGetAllKeys'),
     getSymbols = require('./_getSymbols'),
     keys = require('./keys');
@@ -8067,7 +8093,7 @@ function getAllKeys(object) {
 
 module.exports = getAllKeys;
 
-},{"./_baseGetAllKeys":50,"./_getSymbols":86,"./keys":146}],81:[function(require,module,exports){
+},{"./_baseGetAllKeys":51,"./_getSymbols":87,"./keys":147}],82:[function(require,module,exports){
 var baseGetAllKeys = require('./_baseGetAllKeys'),
     getSymbolsIn = require('./_getSymbolsIn'),
     keysIn = require('./keysIn');
@@ -8086,7 +8112,7 @@ function getAllKeysIn(object) {
 
 module.exports = getAllKeysIn;
 
-},{"./_baseGetAllKeys":50,"./_getSymbolsIn":87,"./keysIn":147}],82:[function(require,module,exports){
+},{"./_baseGetAllKeys":51,"./_getSymbolsIn":88,"./keysIn":148}],83:[function(require,module,exports){
 var isKeyable = require('./_isKeyable');
 
 /**
@@ -8106,7 +8132,7 @@ function getMapData(map, key) {
 
 module.exports = getMapData;
 
-},{"./_isKeyable":100}],83:[function(require,module,exports){
+},{"./_isKeyable":101}],84:[function(require,module,exports){
 var baseIsNative = require('./_baseIsNative'),
     getValue = require('./_getValue');
 
@@ -8125,7 +8151,7 @@ function getNative(object, key) {
 
 module.exports = getNative;
 
-},{"./_baseIsNative":53,"./_getValue":89}],84:[function(require,module,exports){
+},{"./_baseIsNative":54,"./_getValue":90}],85:[function(require,module,exports){
 var overArg = require('./_overArg');
 
 /** Built-in value references. */
@@ -8133,7 +8159,7 @@ var getPrototype = overArg(Object.getPrototypeOf, Object);
 
 module.exports = getPrototype;
 
-},{"./_overArg":119}],85:[function(require,module,exports){
+},{"./_overArg":120}],86:[function(require,module,exports){
 var Symbol = require('./_Symbol');
 
 /** Used for built-in method references. */
@@ -8181,7 +8207,7 @@ function getRawTag(value) {
 
 module.exports = getRawTag;
 
-},{"./_Symbol":30}],86:[function(require,module,exports){
+},{"./_Symbol":31}],87:[function(require,module,exports){
 var arrayFilter = require('./_arrayFilter'),
     stubArray = require('./stubArray');
 
@@ -8213,7 +8239,7 @@ var getSymbols = !nativeGetSymbols ? stubArray : function(object) {
 
 module.exports = getSymbols;
 
-},{"./_arrayFilter":37,"./stubArray":149}],87:[function(require,module,exports){
+},{"./_arrayFilter":38,"./stubArray":150}],88:[function(require,module,exports){
 var arrayPush = require('./_arrayPush'),
     getPrototype = require('./_getPrototype'),
     getSymbols = require('./_getSymbols'),
@@ -8240,7 +8266,7 @@ var getSymbolsIn = !nativeGetSymbols ? stubArray : function(object) {
 
 module.exports = getSymbolsIn;
 
-},{"./_arrayPush":39,"./_getPrototype":84,"./_getSymbols":86,"./stubArray":149}],88:[function(require,module,exports){
+},{"./_arrayPush":40,"./_getPrototype":85,"./_getSymbols":87,"./stubArray":150}],89:[function(require,module,exports){
 var DataView = require('./_DataView'),
     Map = require('./_Map'),
     Promise = require('./_Promise'),
@@ -8300,7 +8326,7 @@ if ((DataView && getTag(new DataView(new ArrayBuffer(1))) != dataViewTag) ||
 
 module.exports = getTag;
 
-},{"./_DataView":22,"./_Map":25,"./_Promise":27,"./_Set":28,"./_WeakMap":32,"./_baseGetTag":51,"./_toSource":130}],89:[function(require,module,exports){
+},{"./_DataView":23,"./_Map":26,"./_Promise":28,"./_Set":29,"./_WeakMap":33,"./_baseGetTag":52,"./_toSource":131}],90:[function(require,module,exports){
 /**
  * Gets the value at `key` of `object`.
  *
@@ -8315,7 +8341,7 @@ function getValue(object, key) {
 
 module.exports = getValue;
 
-},{}],90:[function(require,module,exports){
+},{}],91:[function(require,module,exports){
 var nativeCreate = require('./_nativeCreate');
 
 /**
@@ -8332,7 +8358,7 @@ function hashClear() {
 
 module.exports = hashClear;
 
-},{"./_nativeCreate":114}],91:[function(require,module,exports){
+},{"./_nativeCreate":115}],92:[function(require,module,exports){
 /**
  * Removes `key` and its value from the hash.
  *
@@ -8351,7 +8377,7 @@ function hashDelete(key) {
 
 module.exports = hashDelete;
 
-},{}],92:[function(require,module,exports){
+},{}],93:[function(require,module,exports){
 var nativeCreate = require('./_nativeCreate');
 
 /** Used to stand-in for `undefined` hash values. */
@@ -8383,7 +8409,7 @@ function hashGet(key) {
 
 module.exports = hashGet;
 
-},{"./_nativeCreate":114}],93:[function(require,module,exports){
+},{"./_nativeCreate":115}],94:[function(require,module,exports){
 var nativeCreate = require('./_nativeCreate');
 
 /** Used for built-in method references. */
@@ -8408,7 +8434,7 @@ function hashHas(key) {
 
 module.exports = hashHas;
 
-},{"./_nativeCreate":114}],94:[function(require,module,exports){
+},{"./_nativeCreate":115}],95:[function(require,module,exports){
 var nativeCreate = require('./_nativeCreate');
 
 /** Used to stand-in for `undefined` hash values. */
@@ -8433,7 +8459,7 @@ function hashSet(key, value) {
 
 module.exports = hashSet;
 
-},{"./_nativeCreate":114}],95:[function(require,module,exports){
+},{"./_nativeCreate":115}],96:[function(require,module,exports){
 /** Used for built-in method references. */
 var objectProto = Object.prototype;
 
@@ -8461,7 +8487,7 @@ function initCloneArray(array) {
 
 module.exports = initCloneArray;
 
-},{}],96:[function(require,module,exports){
+},{}],97:[function(require,module,exports){
 var cloneArrayBuffer = require('./_cloneArrayBuffer'),
     cloneDataView = require('./_cloneDataView'),
     cloneMap = require('./_cloneMap'),
@@ -8543,7 +8569,7 @@ function initCloneByTag(object, tag, cloneFunc, isDeep) {
 
 module.exports = initCloneByTag;
 
-},{"./_cloneArrayBuffer":63,"./_cloneDataView":65,"./_cloneMap":66,"./_cloneRegExp":67,"./_cloneSet":68,"./_cloneSymbol":69,"./_cloneTypedArray":70}],97:[function(require,module,exports){
+},{"./_cloneArrayBuffer":64,"./_cloneDataView":66,"./_cloneMap":67,"./_cloneRegExp":68,"./_cloneSet":69,"./_cloneSymbol":70,"./_cloneTypedArray":71}],98:[function(require,module,exports){
 var baseCreate = require('./_baseCreate'),
     getPrototype = require('./_getPrototype'),
     isPrototype = require('./_isPrototype');
@@ -8563,7 +8589,7 @@ function initCloneObject(object) {
 
 module.exports = initCloneObject;
 
-},{"./_baseCreate":48,"./_getPrototype":84,"./_isPrototype":102}],98:[function(require,module,exports){
+},{"./_baseCreate":49,"./_getPrototype":85,"./_isPrototype":103}],99:[function(require,module,exports){
 /** Used as references for various `Number` constants. */
 var MAX_SAFE_INTEGER = 9007199254740991;
 
@@ -8587,7 +8613,7 @@ function isIndex(value, length) {
 
 module.exports = isIndex;
 
-},{}],99:[function(require,module,exports){
+},{}],100:[function(require,module,exports){
 var eq = require('./eq'),
     isArrayLike = require('./isArrayLike'),
     isIndex = require('./_isIndex'),
@@ -8619,7 +8645,7 @@ function isIterateeCall(value, index, object) {
 
 module.exports = isIterateeCall;
 
-},{"./_isIndex":98,"./eq":133,"./isArrayLike":137,"./isObject":142}],100:[function(require,module,exports){
+},{"./_isIndex":99,"./eq":134,"./isArrayLike":138,"./isObject":143}],101:[function(require,module,exports){
 /**
  * Checks if `value` is suitable for use as unique object key.
  *
@@ -8636,7 +8662,7 @@ function isKeyable(value) {
 
 module.exports = isKeyable;
 
-},{}],101:[function(require,module,exports){
+},{}],102:[function(require,module,exports){
 var coreJsData = require('./_coreJsData');
 
 /** Used to detect methods masquerading as native. */
@@ -8658,7 +8684,7 @@ function isMasked(func) {
 
 module.exports = isMasked;
 
-},{"./_coreJsData":75}],102:[function(require,module,exports){
+},{"./_coreJsData":76}],103:[function(require,module,exports){
 /** Used for built-in method references. */
 var objectProto = Object.prototype;
 
@@ -8678,7 +8704,7 @@ function isPrototype(value) {
 
 module.exports = isPrototype;
 
-},{}],103:[function(require,module,exports){
+},{}],104:[function(require,module,exports){
 /**
  * Removes all key-value entries from the list cache.
  *
@@ -8693,7 +8719,7 @@ function listCacheClear() {
 
 module.exports = listCacheClear;
 
-},{}],104:[function(require,module,exports){
+},{}],105:[function(require,module,exports){
 var assocIndexOf = require('./_assocIndexOf');
 
 /** Used for built-in method references. */
@@ -8730,7 +8756,7 @@ function listCacheDelete(key) {
 
 module.exports = listCacheDelete;
 
-},{"./_assocIndexOf":43}],105:[function(require,module,exports){
+},{"./_assocIndexOf":44}],106:[function(require,module,exports){
 var assocIndexOf = require('./_assocIndexOf');
 
 /**
@@ -8751,7 +8777,7 @@ function listCacheGet(key) {
 
 module.exports = listCacheGet;
 
-},{"./_assocIndexOf":43}],106:[function(require,module,exports){
+},{"./_assocIndexOf":44}],107:[function(require,module,exports){
 var assocIndexOf = require('./_assocIndexOf');
 
 /**
@@ -8769,7 +8795,7 @@ function listCacheHas(key) {
 
 module.exports = listCacheHas;
 
-},{"./_assocIndexOf":43}],107:[function(require,module,exports){
+},{"./_assocIndexOf":44}],108:[function(require,module,exports){
 var assocIndexOf = require('./_assocIndexOf');
 
 /**
@@ -8797,7 +8823,7 @@ function listCacheSet(key, value) {
 
 module.exports = listCacheSet;
 
-},{"./_assocIndexOf":43}],108:[function(require,module,exports){
+},{"./_assocIndexOf":44}],109:[function(require,module,exports){
 var Hash = require('./_Hash'),
     ListCache = require('./_ListCache'),
     Map = require('./_Map');
@@ -8820,7 +8846,7 @@ function mapCacheClear() {
 
 module.exports = mapCacheClear;
 
-},{"./_Hash":23,"./_ListCache":24,"./_Map":25}],109:[function(require,module,exports){
+},{"./_Hash":24,"./_ListCache":25,"./_Map":26}],110:[function(require,module,exports){
 var getMapData = require('./_getMapData');
 
 /**
@@ -8840,7 +8866,7 @@ function mapCacheDelete(key) {
 
 module.exports = mapCacheDelete;
 
-},{"./_getMapData":82}],110:[function(require,module,exports){
+},{"./_getMapData":83}],111:[function(require,module,exports){
 var getMapData = require('./_getMapData');
 
 /**
@@ -8858,7 +8884,7 @@ function mapCacheGet(key) {
 
 module.exports = mapCacheGet;
 
-},{"./_getMapData":82}],111:[function(require,module,exports){
+},{"./_getMapData":83}],112:[function(require,module,exports){
 var getMapData = require('./_getMapData');
 
 /**
@@ -8876,7 +8902,7 @@ function mapCacheHas(key) {
 
 module.exports = mapCacheHas;
 
-},{"./_getMapData":82}],112:[function(require,module,exports){
+},{"./_getMapData":83}],113:[function(require,module,exports){
 var getMapData = require('./_getMapData');
 
 /**
@@ -8900,7 +8926,7 @@ function mapCacheSet(key, value) {
 
 module.exports = mapCacheSet;
 
-},{"./_getMapData":82}],113:[function(require,module,exports){
+},{"./_getMapData":83}],114:[function(require,module,exports){
 /**
  * Converts `map` to its key-value pairs.
  *
@@ -8920,7 +8946,7 @@ function mapToArray(map) {
 
 module.exports = mapToArray;
 
-},{}],114:[function(require,module,exports){
+},{}],115:[function(require,module,exports){
 var getNative = require('./_getNative');
 
 /* Built-in method references that are verified to be native. */
@@ -8928,7 +8954,7 @@ var nativeCreate = getNative(Object, 'create');
 
 module.exports = nativeCreate;
 
-},{"./_getNative":83}],115:[function(require,module,exports){
+},{"./_getNative":84}],116:[function(require,module,exports){
 var overArg = require('./_overArg');
 
 /* Built-in method references for those with the same name as other `lodash` methods. */
@@ -8936,7 +8962,7 @@ var nativeKeys = overArg(Object.keys, Object);
 
 module.exports = nativeKeys;
 
-},{"./_overArg":119}],116:[function(require,module,exports){
+},{"./_overArg":120}],117:[function(require,module,exports){
 /**
  * This function is like
  * [`Object.keys`](http://ecma-international.org/ecma-262/7.0/#sec-object.keys)
@@ -8958,7 +8984,7 @@ function nativeKeysIn(object) {
 
 module.exports = nativeKeysIn;
 
-},{}],117:[function(require,module,exports){
+},{}],118:[function(require,module,exports){
 var freeGlobal = require('./_freeGlobal');
 
 /** Detect free variable `exports`. */
@@ -8982,7 +9008,7 @@ var nodeUtil = (function() {
 
 module.exports = nodeUtil;
 
-},{"./_freeGlobal":79}],118:[function(require,module,exports){
+},{"./_freeGlobal":80}],119:[function(require,module,exports){
 /** Used for built-in method references. */
 var objectProto = Object.prototype;
 
@@ -9006,7 +9032,7 @@ function objectToString(value) {
 
 module.exports = objectToString;
 
-},{}],119:[function(require,module,exports){
+},{}],120:[function(require,module,exports){
 /**
  * Creates a unary function that invokes `func` with its argument transformed.
  *
@@ -9023,7 +9049,7 @@ function overArg(func, transform) {
 
 module.exports = overArg;
 
-},{}],120:[function(require,module,exports){
+},{}],121:[function(require,module,exports){
 var apply = require('./_apply');
 
 /* Built-in method references for those with the same name as other `lodash` methods. */
@@ -9061,7 +9087,7 @@ function overRest(func, start, transform) {
 
 module.exports = overRest;
 
-},{"./_apply":35}],121:[function(require,module,exports){
+},{"./_apply":36}],122:[function(require,module,exports){
 var freeGlobal = require('./_freeGlobal');
 
 /** Detect free variable `self`. */
@@ -9072,7 +9098,7 @@ var root = freeGlobal || freeSelf || Function('return this')();
 
 module.exports = root;
 
-},{"./_freeGlobal":79}],122:[function(require,module,exports){
+},{"./_freeGlobal":80}],123:[function(require,module,exports){
 /**
  * Converts `set` to an array of its values.
  *
@@ -9092,7 +9118,7 @@ function setToArray(set) {
 
 module.exports = setToArray;
 
-},{}],123:[function(require,module,exports){
+},{}],124:[function(require,module,exports){
 var baseSetToString = require('./_baseSetToString'),
     shortOut = require('./_shortOut');
 
@@ -9108,7 +9134,7 @@ var setToString = shortOut(baseSetToString);
 
 module.exports = setToString;
 
-},{"./_baseSetToString":60,"./_shortOut":124}],124:[function(require,module,exports){
+},{"./_baseSetToString":61,"./_shortOut":125}],125:[function(require,module,exports){
 /** Used to detect hot functions by number of calls within a span of milliseconds. */
 var HOT_COUNT = 800,
     HOT_SPAN = 16;
@@ -9147,7 +9173,7 @@ function shortOut(func) {
 
 module.exports = shortOut;
 
-},{}],125:[function(require,module,exports){
+},{}],126:[function(require,module,exports){
 var ListCache = require('./_ListCache');
 
 /**
@@ -9164,7 +9190,7 @@ function stackClear() {
 
 module.exports = stackClear;
 
-},{"./_ListCache":24}],126:[function(require,module,exports){
+},{"./_ListCache":25}],127:[function(require,module,exports){
 /**
  * Removes `key` and its value from the stack.
  *
@@ -9184,7 +9210,7 @@ function stackDelete(key) {
 
 module.exports = stackDelete;
 
-},{}],127:[function(require,module,exports){
+},{}],128:[function(require,module,exports){
 /**
  * Gets the stack value for `key`.
  *
@@ -9200,7 +9226,7 @@ function stackGet(key) {
 
 module.exports = stackGet;
 
-},{}],128:[function(require,module,exports){
+},{}],129:[function(require,module,exports){
 /**
  * Checks if a stack value for `key` exists.
  *
@@ -9216,7 +9242,7 @@ function stackHas(key) {
 
 module.exports = stackHas;
 
-},{}],129:[function(require,module,exports){
+},{}],130:[function(require,module,exports){
 var ListCache = require('./_ListCache'),
     Map = require('./_Map'),
     MapCache = require('./_MapCache');
@@ -9252,7 +9278,7 @@ function stackSet(key, value) {
 
 module.exports = stackSet;
 
-},{"./_ListCache":24,"./_Map":25,"./_MapCache":26}],130:[function(require,module,exports){
+},{"./_ListCache":25,"./_Map":26,"./_MapCache":27}],131:[function(require,module,exports){
 /** Used for built-in method references. */
 var funcProto = Function.prototype;
 
@@ -9280,7 +9306,7 @@ function toSource(func) {
 
 module.exports = toSource;
 
-},{}],131:[function(require,module,exports){
+},{}],132:[function(require,module,exports){
 var baseClone = require('./_baseClone');
 
 /** Used to compose bitmasks for cloning. */
@@ -9318,7 +9344,7 @@ function clone(value) {
 
 module.exports = clone;
 
-},{"./_baseClone":47}],132:[function(require,module,exports){
+},{"./_baseClone":48}],133:[function(require,module,exports){
 /**
  * Creates a function that returns `value`.
  *
@@ -9346,7 +9372,7 @@ function constant(value) {
 
 module.exports = constant;
 
-},{}],133:[function(require,module,exports){
+},{}],134:[function(require,module,exports){
 /**
  * Performs a
  * [`SameValueZero`](http://ecma-international.org/ecma-262/7.0/#sec-samevaluezero)
@@ -9385,7 +9411,7 @@ function eq(value, other) {
 
 module.exports = eq;
 
-},{}],134:[function(require,module,exports){
+},{}],135:[function(require,module,exports){
 /**
  * This method returns the first argument it receives.
  *
@@ -9408,7 +9434,7 @@ function identity(value) {
 
 module.exports = identity;
 
-},{}],135:[function(require,module,exports){
+},{}],136:[function(require,module,exports){
 var baseIsArguments = require('./_baseIsArguments'),
     isObjectLike = require('./isObjectLike');
 
@@ -9446,7 +9472,7 @@ var isArguments = baseIsArguments(function() { return arguments; }()) ? baseIsAr
 
 module.exports = isArguments;
 
-},{"./_baseIsArguments":52,"./isObjectLike":143}],136:[function(require,module,exports){
+},{"./_baseIsArguments":53,"./isObjectLike":144}],137:[function(require,module,exports){
 /**
  * Checks if `value` is classified as an `Array` object.
  *
@@ -9474,7 +9500,7 @@ var isArray = Array.isArray;
 
 module.exports = isArray;
 
-},{}],137:[function(require,module,exports){
+},{}],138:[function(require,module,exports){
 var isFunction = require('./isFunction'),
     isLength = require('./isLength');
 
@@ -9509,7 +9535,7 @@ function isArrayLike(value) {
 
 module.exports = isArrayLike;
 
-},{"./isFunction":140,"./isLength":141}],138:[function(require,module,exports){
+},{"./isFunction":141,"./isLength":142}],139:[function(require,module,exports){
 var isArrayLike = require('./isArrayLike'),
     isObjectLike = require('./isObjectLike');
 
@@ -9544,7 +9570,7 @@ function isArrayLikeObject(value) {
 
 module.exports = isArrayLikeObject;
 
-},{"./isArrayLike":137,"./isObjectLike":143}],139:[function(require,module,exports){
+},{"./isArrayLike":138,"./isObjectLike":144}],140:[function(require,module,exports){
 var root = require('./_root'),
     stubFalse = require('./stubFalse');
 
@@ -9584,7 +9610,7 @@ var isBuffer = nativeIsBuffer || stubFalse;
 
 module.exports = isBuffer;
 
-},{"./_root":121,"./stubFalse":150}],140:[function(require,module,exports){
+},{"./_root":122,"./stubFalse":151}],141:[function(require,module,exports){
 var baseGetTag = require('./_baseGetTag'),
     isObject = require('./isObject');
 
@@ -9623,7 +9649,7 @@ function isFunction(value) {
 
 module.exports = isFunction;
 
-},{"./_baseGetTag":51,"./isObject":142}],141:[function(require,module,exports){
+},{"./_baseGetTag":52,"./isObject":143}],142:[function(require,module,exports){
 /** Used as references for various `Number` constants. */
 var MAX_SAFE_INTEGER = 9007199254740991;
 
@@ -9660,7 +9686,7 @@ function isLength(value) {
 
 module.exports = isLength;
 
-},{}],142:[function(require,module,exports){
+},{}],143:[function(require,module,exports){
 /**
  * Checks if `value` is the
  * [language type](http://www.ecma-international.org/ecma-262/7.0/#sec-ecmascript-language-types)
@@ -9693,7 +9719,7 @@ function isObject(value) {
 
 module.exports = isObject;
 
-},{}],143:[function(require,module,exports){
+},{}],144:[function(require,module,exports){
 /**
  * Checks if `value` is object-like. A value is object-like if it's not `null`
  * and has a `typeof` result of "object".
@@ -9724,7 +9750,7 @@ function isObjectLike(value) {
 
 module.exports = isObjectLike;
 
-},{}],144:[function(require,module,exports){
+},{}],145:[function(require,module,exports){
 var baseGetTag = require('./_baseGetTag'),
     getPrototype = require('./_getPrototype'),
     isObjectLike = require('./isObjectLike');
@@ -9788,7 +9814,7 @@ function isPlainObject(value) {
 
 module.exports = isPlainObject;
 
-},{"./_baseGetTag":51,"./_getPrototype":84,"./isObjectLike":143}],145:[function(require,module,exports){
+},{"./_baseGetTag":52,"./_getPrototype":85,"./isObjectLike":144}],146:[function(require,module,exports){
 var baseIsTypedArray = require('./_baseIsTypedArray'),
     baseUnary = require('./_baseUnary'),
     nodeUtil = require('./_nodeUtil');
@@ -9817,7 +9843,7 @@ var isTypedArray = nodeIsTypedArray ? baseUnary(nodeIsTypedArray) : baseIsTypedA
 
 module.exports = isTypedArray;
 
-},{"./_baseIsTypedArray":54,"./_baseUnary":62,"./_nodeUtil":117}],146:[function(require,module,exports){
+},{"./_baseIsTypedArray":55,"./_baseUnary":63,"./_nodeUtil":118}],147:[function(require,module,exports){
 var arrayLikeKeys = require('./_arrayLikeKeys'),
     baseKeys = require('./_baseKeys'),
     isArrayLike = require('./isArrayLike');
@@ -9856,7 +9882,7 @@ function keys(object) {
 
 module.exports = keys;
 
-},{"./_arrayLikeKeys":38,"./_baseKeys":55,"./isArrayLike":137}],147:[function(require,module,exports){
+},{"./_arrayLikeKeys":39,"./_baseKeys":56,"./isArrayLike":138}],148:[function(require,module,exports){
 var arrayLikeKeys = require('./_arrayLikeKeys'),
     baseKeysIn = require('./_baseKeysIn'),
     isArrayLike = require('./isArrayLike');
@@ -9890,7 +9916,7 @@ function keysIn(object) {
 
 module.exports = keysIn;
 
-},{"./_arrayLikeKeys":38,"./_baseKeysIn":56,"./isArrayLike":137}],148:[function(require,module,exports){
+},{"./_arrayLikeKeys":39,"./_baseKeysIn":57,"./isArrayLike":138}],149:[function(require,module,exports){
 var baseMerge = require('./_baseMerge'),
     createAssigner = require('./_createAssigner');
 
@@ -9931,7 +9957,7 @@ var merge = createAssigner(function(object, source, srcIndex) {
 
 module.exports = merge;
 
-},{"./_baseMerge":57,"./_createAssigner":76}],149:[function(require,module,exports){
+},{"./_baseMerge":58,"./_createAssigner":77}],150:[function(require,module,exports){
 /**
  * This method returns a new empty array.
  *
@@ -9956,7 +9982,7 @@ function stubArray() {
 
 module.exports = stubArray;
 
-},{}],150:[function(require,module,exports){
+},{}],151:[function(require,module,exports){
 /**
  * This method returns `false`.
  *
@@ -9976,7 +10002,7 @@ function stubFalse() {
 
 module.exports = stubFalse;
 
-},{}],151:[function(require,module,exports){
+},{}],152:[function(require,module,exports){
 var copyObject = require('./_copyObject'),
     keysIn = require('./keysIn');
 
@@ -10010,7 +10036,7 @@ function toPlainObject(value) {
 
 module.exports = toPlainObject;
 
-},{"./_copyObject":72,"./keysIn":147}],152:[function(require,module,exports){
+},{"./_copyObject":73,"./keysIn":148}],153:[function(require,module,exports){
 "use strict";
 
 var RENDERERS = require("insight.renderers.default/lib/insight/pack");
@@ -10104,8 +10130,7 @@ exports.main = function (JSONREP, node) {
         }
     });
 };
-
-},{"domplate/lib/util":2,"insight-for-js/lib/decoder/default":3,"insight-for-js/lib/encoder/default":4,"insight.renderers.default/lib/insight/pack":8,"lodash/clone":131,"lodash/merge":148}]},{},[152])(152)
+},{"domplate/lib/util":3,"insight-for-js/lib/decoder/default":6,"insight-for-js/lib/encoder/default":7,"insight.renderers.default/lib/insight/pack":9,"lodash/clone":132,"lodash/merge":149}]},{},[153])(153)
 });
 	});
 });

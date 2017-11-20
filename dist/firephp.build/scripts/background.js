@@ -2,2137 +2,6 @@ PINF.bundle("", function(require) {
 	require.memoize("/main.js", function (require, exports, module) {
        var pmodule = module;
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.mainModule = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-
-
-var CHANNEL = require("./channel");
-
-const HEADER_PREFIX = 'x-wf-';
-
-var requestIndex = 0;
-
-
-var HttpHeaderChannel = exports.HttpHeaderChannel = function(options) {
-    if (!(this instanceof exports.HttpHeaderChannel))
-        return new exports.HttpHeaderChannel(options);
-
-    this.__construct(options);
-
-    this.HEADER_PREFIX = HEADER_PREFIX;
-}
-
-HttpHeaderChannel.prototype = CHANNEL.Channel();
-
-HttpHeaderChannel.prototype.getFirebugNetMonitorListener = function() {
-    if(!this.firebugNetMonitorListener) {
-        var self = this;
-        this.firebugNetMonitorListener = {
-            onResponseBody: function(context, file)
-            {
-                if(file) {
-                    try {
-                        
-                        var requestId = false;
-                        for( var i=file.requestHeaders.length-1 ; i>=0 ; i-- ) {
-                            if(file.requestHeaders[i].name=="x-request-id") {
-                                requestId = file.requestHeaders[i].value;
-                                break;
-                            }
-                        }
-
-                        self.parseReceived(file.responseHeaders, {
-                            "FirebugNetMonitorListener": {
-                                "context": context,
-                                "file": file
-                            },
-                            "id": requestId || "id:" + file.href + ":" + requestIndex++,
-                            "url": file.href,
-                            // TODO: add "hostname" (file.request.URI.host?)
-                            // TODO: add "port" (file.request.URI.port?)
-                            "method": file.method,
-                            "requestHeaders": file.requestHeaders
-                        });
-                    } catch(e) {
-                        console.error(e);
-                    }
-                }
-            }
-        }
-    }
-    return this.firebugNetMonitorListener;
-}
-
-HttpHeaderChannel.prototype.getMozillaRequestObserverListener = function(globals) {
-    if(!this.mozillaRequestObserverListener) {
-        var self = this;
-        this.mozillaRequestObserverListener = {
-            observe: function(subject, topic, data)
-            {
-                if (topic == "http-on-examine-response") {
-
-                    var httpChannel = subject.QueryInterface(globals.Ci.nsIHttpChannel);
-
-                    try {
-                        var requestHeaders = [];
-                        var requestId;
-                        httpChannel.visitRequestHeaders({
-                            visitHeader: function(name, value)
-                            {
-                                requestHeaders.push({name: name, value: value});
-                                if(name.toLowerCase()=="x-request-id") {
-                                    requestId = value;
-                                }
-                            }
-                        });
-                        var responseHeaders = [],
-                            contentType = false;
-                        httpChannel.visitResponseHeaders({
-                            visitHeader: function(name, value)
-                            {
-                                responseHeaders.push({name: name, value: value});
-                                if (name.toLowerCase() == "content-type")
-                                    contentType = value;
-                            }
-                        });
-                        self.parseReceived(responseHeaders, {
-                            "MozillaRequestObserverListener": {
-                                "httpChannel": httpChannel
-                            },
-                            "id": requestId || "id:" + httpChannel.URI.spec + ":" + requestIndex++,
-                            "url": httpChannel.URI.spec,
-                            "hostname": httpChannel.URI.host,
-                            "port": httpChannel.URI.port,
-                            "method": httpChannel.requestMethod,
-                            "status": httpChannel.responseStatus,
-                            "contentType": contentType,
-                            "requestHeaders": requestHeaders
-                        });
-                    } catch(e) {
-                        console.error(e);
-                    }
-                }
-            }                
-        }
-    }
-    return this.mozillaRequestObserverListener;
-}
-
-},{"./channel":4}],2:[function(require,module,exports){
-
-var CHANNEL = require("./channel"),
-    UTIL = require("fp-modules-for-nodejs/lib/util");
-
-const HEADER_PREFIX = 'x-wf-';
-
-var PostMessageChannel = exports.PostMessageChannel = function () {
-    if (!(this instanceof exports.PostMessageChannel))
-        return new exports.PostMessageChannel();
-    
-    this.__construct();
-
-    this.HEADER_PREFIX = HEADER_PREFIX;
-    
-    this.postMessageSender = null;
-}
-
-PostMessageChannel.prototype = CHANNEL.Channel();
-
-PostMessageChannel.prototype.enqueueOutgoing = function(message, bypassReceivers)
-{
-    var ret = this._enqueueOutgoing(message, bypassReceivers);
-
-    var parts = {};
-    this.flush({
-        setMessagePart: function(key, value) {
-            parts[key] = value;
-        },
-        getMessagePart: function(key) {
-            if (typeof parts[key] == "undefined")
-                return null;
-            return parts[key];
-        }
-    });
-
-    var self = this;
-
-    var payload = [];
-    UTIL.forEach(parts, function(part)
-    {
-        payload.push(part[0] + ": " + part[1]);
-    });
-    self.postMessageSender(payload.join("\n"));
-    
-    return ret;
-}
-
-PostMessageChannel.prototype.setPostMessageSender = function(postMessage)
-{
-    this.postMessageSender = postMessage;
-}
-
-PostMessageChannel.prototype.parseReceivedPostMessage = function(msg)
-{
-    if (this.status != "open")
-        this.open();
-    this.parseReceived(msg, null, {
-        skipChannelOpen: true,
-        skipChannelClose: true,
-        enableContinuousParsing: true
-    });
-}
-
-},{"./channel":4,"fp-modules-for-nodejs/lib/util":22}],3:[function(require,module,exports){
-
-var CHANNEL = require("./channel");
-
-const HEADER_PREFIX = '#x-wf-';
-
-var ShellCommandChannel = exports.ShellCommandChannel = function () {
-    if (!(this instanceof exports.ShellCommandChannel))
-        return new exports.ShellCommandChannel();
-    
-    this.__construct();
-    
-    this.HEADER_PREFIX = HEADER_PREFIX;
-}
-
-ShellCommandChannel.prototype = CHANNEL.Channel();
-
-},{"./channel":4}],4:[function(require,module,exports){
-
-var UTIL = require("fp-modules-for-nodejs/lib/util");
-var PROTOCOL = require("./protocol");
-var TRANSPORT = require("./transport");
-
-var Channel = exports.Channel = function () {
-    if (!(this instanceof exports.Channel))
-        return new exports.Channel();
-}
-
-Channel.prototype.__construct = function(options) {
-    options = options || {};
-    this.status = "closed";
-    this.receivers = [];
-    this.listeners = [];
-    this.options = {
-        "messagePartMaxLength": 5000
-    }
-    this.outgoingQueue = [];
-
-    this.onError = options.onError || null;
-
-    if(typeof options.enableTransport != "undefined" && options.enableTransport===false) {
-        // do not add transport
-    } else {
-        this.addReceiver(TRANSPORT.newReceiver(this));
-    }
-}
-
-Channel.prototype.enqueueOutgoing = function(message, bypassReceivers) {
-    return this._enqueueOutgoing(message, bypassReceivers);
-}
-
-Channel.prototype._enqueueOutgoing = function(message, bypassReceivers) {
-    if(!bypassReceivers) {
-        // If a receiver with a matching ID is present on the channel we don't
-        // enqueue the message if receiver.onMessageReceived returns FALSE.
-        var enqueue = true;
-        for( var i=0 ; i<this.receivers.length ; i++ ) {
-            if(this.receivers[i].hasId(message.getReceiver())) {
-                if(!this.receivers[i].onMessageReceived(null, message)) enqueue = false;
-            }
-        }
-        if(!enqueue) return true;
-    }
-    this.outgoingQueue.push(this.encode(message));
-    return true;
-}
-
-Channel.prototype.getOutgoing = function() {
-    return this.outgoingQueue;
-}
-
-Channel.prototype.clearOutgoing = function() {
-    this.outgoingQueue = [];
-}
-
-Channel.prototype.setMessagePartMaxLength = function(length) {
-    this.options.messagePartMaxLength = length;
-}
-
-Channel.prototype.flush = function(applicator, bypassTransport) {
-    return this._flush(applicator, bypassTransport);
-}
-
-Channel.prototype._flush = function(applicator, bypassTransport) {
-    // set request ID if not set
-    if(!applicator.getMessagePart("x-request-id")) {
-        applicator.setMessagePart("x-request-id", ""+(new Date().getTime()) + "" + Math.floor(Math.random()*1000+1) );
-    }
-
-    var messages = this.getOutgoing();
-    if(messages.length==0) {
-        return 0;
-    }
-
-    var util = {
-        "applicator": applicator,
-        "HEADER_PREFIX": this.HEADER_PREFIX
-    };
-
-    if(this.transport && !bypassTransport) {
-        util.applicator = this.transport.newApplicator(applicator);
-    }
-
-    for( var i=0 ; i<messages.length ; i++ ) {
-        var headers = messages[i];
-        for( var j=0 ; j<headers.length ; j++ ) {
-            util.applicator.setMessagePart(
-                PROTOCOL.factory(headers[j][0]).encodeKey(util, headers[j][1], headers[j][2]),
-                headers[j][3]
-            );
-        }
-    }
-    
-    var count = messages.length;
-
-    this.clearOutgoing();
-
-    if(util.applicator.flush) {
-        util.applicator.flush(this);
-    }
-
-    return count;
-}
-
-
-Channel.prototype.setMessagePart = function(key, value) {
-    // overwrite in subclass
-}
-
-Channel.prototype.getMessagePart = function(key) {
-    // overwrite in subclass
-    return null;
-}
-
-Channel.prototype.encode = function(message) {
-    var protocol_id = message.getProtocol();
-    if(!protocol_id) {
-        var err = new Error("Protocol not set for message");
-        if (this.onError) {
-            this.onError(err);
-        } else {
-            throw err;
-        }
-    }
-    return PROTOCOL.factory(protocol_id).encodeMessage(this.options, message);
-}
-
-Channel.prototype.setNoReceiverCallback = function(callback) {
-    this.noReceiverCallback = callback;
-}
-
-Channel.prototype.addReceiver = function(receiver) {
-    // avoid duplicates
-    for( var i=0 ; i<this.receivers.length ; i++ ) {
-        if(this.receivers[i]==receiver) {
-            return;
-        }
-    }
-    this.receivers.push(receiver);
-}
-
-Channel.prototype.addListener = function(listener) {
-    // avoid duplicates
-    for( var i=0 ; i<this.listeners.length ; i++ ) {
-        if(this.listeners[i]==listener) {
-            return;
-        }
-    }
-    this.listeners.push(listener);
-}
-
-function dispatch(channel, method, args)
-{
-    args = args || [];
-    for( var i=0 ; i<channel.listeners.length ; i++ ) {
-        if(typeof channel.listeners[i][method] === "function") {
-            channel.listeners[i][method].apply(null, args);
-        }
-    }    
-}
-
-Channel.prototype.open = function(context) {
-    this.status = "open";
-    
-    dispatch(this, "beforeChannelOpen", [context]);
-    
-    for( var i=0 ; i<this.receivers.length ; i++ ) {
-        if(this.receivers[i]["onChannelOpen"]) {
-            this.receivers[i].onChannelOpen(context);
-        }
-    }
-    this.sinks = {
-        protocolBuffers: {},
-        buffers: {},
-        protocols: {},
-        receivers: {},
-        senders: {},
-        messages: {}
-    }
-    dispatch(this, "afterChannelOpen", [context]);
-}
-
-Channel.prototype.close = function(context) {
-    this.status = "close";
-    dispatch(this, "beforeChannelClose", [context]);
-    for( var i=0 ; i<this.receivers.length ; i++ ) {
-        if(this.receivers[i]["onChannelClose"]) {
-            this.receivers[i].onChannelClose(context);
-        }
-    }
-    dispatch(this, "afterChannelClose", [context]);
-}
-
-var parsing = false;
-
-Channel.prototype.parseReceived = function(rawHeaders, context, options) {
-    var self = this;
-
-    if (parsing)
-    {
-        var err = new Error("Already parsing!");
-        if (self.onError) {
-            self.onError(err);
-        } else {
-            throw err;
-        }        
-    }
-
-    options = options || {};
-    options.skipChannelOpen = options.skipChannelOpen || false;
-    options.skipChannelClose = options.skipChannelClose || false;
-    options.enableContinuousParsing = options.enableContinuousParsing || false;
-
-    if (
-        typeof rawHeaders != "object" ||
-        (
-            Array.isArray(rawHeaders) &&
-            typeof rawHeaders[0] === "string"
-        )
-    ) {
-        rawHeaders = text_header_to_object(rawHeaders);
-    }
-
-    var headersFound = false;
-    rawHeaders.forEach(function (header) {
-        if (/x-wf-/i.test(header.name)) {
-            headersFound = true;
-        }
-    });
-    if (!headersFound) {
-        return;
-    }
-
-    if(!options.skipChannelOpen) {
-
-        // Include 'x-request-id' in context
-
-        self.open(context);
-    }
-
-    parsing = true;
-    
-    // protocol related
-    var protocolBuffers = (options.enableContinuousParsing)?this.sinks.protocolBuffers:{};
-
-    // message related
-    var buffers = (options.enableContinuousParsing)?this.sinks.buffers:{};
-    var protocols = (options.enableContinuousParsing)?this.sinks.protocols:{};
-    var receivers = (options.enableContinuousParsing)?this.sinks.receivers:{};
-    var senders = (options.enableContinuousParsing)?this.sinks.senders:{};
-    var messages = (options.enableContinuousParsing)?this.sinks.messages:{};
-
-    try {
-        // parse the raw headers into messages
-        for( var i in rawHeaders ) {
-            parseHeader(rawHeaders[i].name.toLowerCase(), rawHeaders[i].value);
-        }
-    
-        // empty any remaining buffers in case protocol header was last
-        if(protocolBuffers) {
-            UTIL.forEach(protocolBuffers, function(item) {
-                if(protocols[item[0]]) {
-                    if(typeof buffers[item[0]] == "undefined") {
-                        buffers[item[0]] = {};
-                    }
-                    if(typeof receivers[item[0]] == "undefined") {
-                        receivers[item[0]] = {};
-                    }
-                    if(typeof senders[item[0]] == "undefined") {
-                        senders[item[0]] = {};
-                    }
-                    if(typeof messages[item[0]] == "undefined") {
-                        messages[item[0]] = {};
-                    }
-                    item[1].forEach(function(info) {
-                        protocols[item[0]].parse(buffers[item[0]], receivers[item[0]], senders[item[0]], messages[item[0]], info[0], info[1]);
-                    });
-                    delete protocolBuffers[item[0]];
-                }
-            });
-        }
-    } catch(e) {
-//        dump("Error parsing raw data: " + e);
-        // clean up no matter what - a try/catch wrapper above this needs to recover from this properly
-        parsing = false;
-        buffers = {};
-        protocols = {};
-        receivers = {};
-        senders = {};
-        messages = {};
-        console.error("Error parsing raw data", e);
-        if (self.onError) {
-            self.onError(e);
-        } else {
-            throw e;
-        }
-    }
-
-    // deliver the messages to the appropriate receivers
-    var deliveries = [];
-    var messageCount = 0;
-    for( var protocolId in protocols ) {
-
-        for( var receiverKey in messages[protocolId] ) {
-
-            // sort messages by index
-            messages[protocolId][receiverKey].sort(function(a, b) {
-                if(parseInt(a[0])>parseInt(b[0])) return 1;
-                if(parseInt(a[0])<parseInt(b[0])) return -1;
-                return 0;
-            });
-
-            // determine receiver
-            var receiverId = receivers[protocolId][receiverKey];
-            // fetch receivers that support ID
-            var targetReceivers = [];
-            for( var i=0 ; i<this.receivers.length ; i++ ) {
-                if(this.receivers[i].hasId(receiverId)) {
-                    if(this.receivers[i]["onMessageGroupStart"]) {
-                        this.receivers[i].onMessageGroupStart(context);
-                    }
-                    targetReceivers.push(this.receivers[i]);
-                }
-            }
-            
-            messageCount += messages[protocolId][receiverKey].length;
-            
-            if(targetReceivers.length>0) {
-                for( var j=0 ; j<messages[protocolId][receiverKey].length ; j++ ) {
-                    // re-write sender and receiver keys to IDs
-                    messages[protocolId][receiverKey][j][1].setSender(senders[protocolId][receiverKey+":"+messages[protocolId][receiverKey][j][1].getSender()]);
-                    messages[protocolId][receiverKey][j][1].setReceiver(receiverId);
-                    for( var k=0 ; k<targetReceivers.length ; k++ ) {
-                        deliveries.push([targetReceivers[k], messages[protocolId][receiverKey][j][1]]);
-                    }
-                }
-                for( var k=0 ; k<targetReceivers.length ; k++ ) {
-                    if(targetReceivers[k]["onMessageGroupEnd"]) {
-                        targetReceivers[k].onMessageGroupEnd(context);
-                    }
-                }
-                if (options.enableContinuousParsing)
-                    delete messages[protocolId][receiverKey];
-            } else
-            if(this.noReceiverCallback) {
-                this.noReceiverCallback(receiverId);
-            }
-        }
-    }
-
-    if (options.enableContinuousParsing)
-    {
-        // TODO: Partial cleanup here or above for things we do not need any more
-    }
-    else
-    {
-        // cleanup - does this help with gc?
-        buffers = {};
-        protocols = {};
-        receivers = {};
-        senders = {};
-        messages = {};
-    }
-
-    parsing = false;
-
-    var onMessageReceivedOptions;
-
-    deliveries.forEach(function(delivery)
-    {
-        try {
-            onMessageReceivedOptions = delivery[0].onMessageReceived(context, delivery[1]);
-        } catch(e) {
-            console.error("Error delivering message: " + e, e.stack);
-            if (self.onError) {
-                self.onError(e);
-            } else {
-                throw e;
-            }
-        }
-        if(onMessageReceivedOptions) {
-            if(onMessageReceivedOptions.skipChannelClose) {
-                options.skipChannelClose = true;
-            }
-        }
-    });
-
-    if(!options.skipChannelClose) {
-        this.close(context);
-    }
-
-    return messageCount;
-
- 
-    function parseHeader(name, value)
-    {
-        if (name.substr(0, self.HEADER_PREFIX.length) == self.HEADER_PREFIX) {
-            if (name.substring(0,self.HEADER_PREFIX.length + 9) == self.HEADER_PREFIX + 'protocol-') {
-                var id = parseInt(name.substr(self.HEADER_PREFIX.length + 9));
-                protocols[id] = PROTOCOL.factory(value);
-            } else {
-                var index = name.indexOf('-',self.HEADER_PREFIX.length);
-                var id = parseInt(name.substr(self.HEADER_PREFIX.length,index-self.HEADER_PREFIX.length));
-
-                if(protocols[id]) {
-
-                    if(typeof buffers[id] == "undefined") {
-                        buffers[id] = {};
-                    }
-                    if(typeof receivers[id] == "undefined") {
-                        receivers[id] = {};
-                    }
-                    if(typeof senders[id] == "undefined") {
-                        senders[id] = {};
-                    }
-                    if(typeof messages[id] == "undefined") {
-                        messages[id] = {};
-                    }
-
-                    if(protocolBuffers[id]) {
-                        protocolBuffers[id].forEach(function(info) {
-                            protocols[id].parse(buffers[id], receivers[id], senders[id], messages[id], info[0], info[1]);
-                        });
-                        delete protocolBuffers[id];
-                    }
-                    protocols[id].parse(buffers[id], receivers[id], senders[id], messages[id], name.substr(index+1), value);
-                } else {
-                    if(!protocolBuffers[id]) {
-                        protocolBuffers[id] = [];
-                    }
-                    protocolBuffers[id].push([name.substr(index+1), value]);
-                }
-            }
-        }
-    }
-    
-    function text_header_to_object(text) {
-        // trim escape sequences \[...m
-//        text = text.replace(/\x1B\x5B[^\x6D]*\x6D/g, "");
-
-        if (Array.isArray(text)) {
-            text = text.join("\n");
-        }
-
-        if(text.charCodeAt(0)==27 && text.charCodeAt(3)==109) {
-            text = text.substring(4);
-        }
-        
-        var headers = [];
-        var lines = text.replace().split("\n");
-
-        var expression = new RegExp("^.{0,2}("+self.HEADER_PREFIX+"[^:]*): (.*)$", "i");
-        var m, offset, len, fuzzy = false;
-
-        for( var i=0 ; i<lines.length ; i++ ) {
-            if (lines[i])
-            {
-                if(m = expression.exec(lines[i])) {
-                    if (m[1].toLowerCase() === "x-request-id")
-                        context.id = m[2];
-
-                    headers.push({
-                        "name": m[1],
-                        // prefixing value with '~' indicates approximate message length matching
-                        // the message length has changed due to the newlines being replaced with &!10;
-                        "value": m[2]
-                    });
-                }
-            }
-        }
-
-        // This fudges lines together that should not have been split.
-        // This happens if the payload inadvertantly included newline characters that
-        // were not encoded with &!10;
-/*
-        for( var i=0 ; i<lines.length ; i++ ) {
-            if (lines[i])
-            {
-                offset = lines[i].indexOf(self.HEADER_PREFIX);
-                if (offset >=0 && offset <=3)
-                {
-                    len = lines[i].length;
-                    if (i+1 == lines.length) offset = 0;
-                    else offset = lines[i+1].indexOf(self.HEADER_PREFIX);
-                    if (
-                        (offset >=0 && offset <=3) ||
-                        lines[i].charAt(len-1) === "|" ||
-                        (lines[i].charAt(len-2) === "|" && lines[i].charAt(len-1) === "\\")
-                    )
-                    {
-                        if(m = expression.exec(lines[i])) {
-                            headers.push({
-                                "name": m[1],
-                                // prefixing value with '~' indicates approximate message length matching
-                                // the message length has changed due to the newlines being replaced with &!10;
-                                "value": ((true || fuzzy)?"~":"") + m[2]
-                            });
-                            fuzzy = false;
-                        }
-                    }
-                    else
-                    {
-                        lines[i] = lines[i] + "&!10;" + lines[i+1];
-                        lines.splice(i+1, 1);
-                        i--;
-                        fuzzy = true;
-                    }
-                } else
-                if(m = expression.exec(lines[i])) {
-                    headers.push({
-                        "name": m[1],
-                        "value": m[2]
-                    });
-                    fuzzy = false;
-                }
-            }
-        }
-*/
-        return headers;
-    }
-}
-
-Channel.prototype.setTransport = function(transport) {
-    this.transport = transport;
-}
-
-
-},{"./protocol":8,"./transport":11,"fp-modules-for-nodejs/lib/util":22}],5:[function(require,module,exports){
-
-var CHANNEL = require("../channel"),
-    UTIL = require("fp-modules-for-nodejs/lib/util"),
-    HTTP_CLIENT = require("fp-modules-for-nodejs/lib/http-client"),
-    JSON = require("fp-modules-for-nodejs/lib/json");
-
-// TODO: Make this configurable
-var HOST = "localhost";
-var PORT = 8099;
-
-const HEADER_PREFIX = 'x-wf-';
-
-var HttpClientChannel = exports.HttpClientChannel = function () {
-    if (!(this instanceof exports.HttpClientChannel))
-        return new exports.HttpClientChannel();
-
-    this.__construct();
-
-    this.HEADER_PREFIX = HEADER_PREFIX;
-}
-
-HttpClientChannel.prototype = CHANNEL.Channel();
-
-HttpClientChannel.prototype.flush = function(applicator, bypassTransport)
-{
-    var self = this;
-    if (typeof applicator === "undefined")
-    {
-        var parts = {};
-
-        applicator = {
-            setMessagePart: function(key, value)
-            {
-                parts[key] = value;
-            },
-            getMessagePart: function(key)
-            {
-                if (typeof parts[key] === "undefined")
-                    return null;
-                return parts[key];
-            },
-            flush: function(clannel)
-            {
-                if (UTIL.len(parts)==0)
-                    return false;
-
-                var data = [];
-                UTIL.forEach(parts, function(part)
-                {
-                    data.push(part[0] + ": " + part[1]);
-                });
-                data = data.join("\n");
-
-                HTTP_CLIENT.request({
-                    host: HOST,
-                    port: PORT,
-                    path: "/wildfire-server",
-                    method: "POST",
-                    headers: {
-                        "content-type": "application/x-www-form-urlencoded",
-                        "content-length": data.length,
-                        "connection": "close"
-                    },
-                    data: data
-                }, function(response)
-                {
-                    if (response.status == 200)
-                    {
-                        try {
-                            var data = JSON.decode(response.data);
-                            if (data.success === true)
-                            {
-                                // success!!
-                            }
-                            else
-                                console.error("ERROR Got error from wildfire server: " + data.error);                    
-                        } catch(e) {
-                            console.error("ERROR parsing JSON response from wildfire server (error: " + e + "): " + response.data);                    
-                        }
-                    }
-                    else
-                        console.error("ERROR from wildfire server (status: " + response.status + "): " + response.data);                    
-                }, function(e)
-                {
-                    if (!/ECONNREFUSED/.test(e))
-                        console.error("ERROR sending message to wildfire server: " + e);                    
-//                    else
-//                        module.print("\0red([Wildfire: Not Connected]\0)\n");                    
-                });
-                return true;
-            }
-        };
-    }
-    return self._flush(applicator);
-}
-
-},{"../channel":4,"fp-modules-for-nodejs/lib/http-client":15,"fp-modules-for-nodejs/lib/json":16,"fp-modules-for-nodejs/lib/util":22}],6:[function(require,module,exports){
-
-var Dispatcher = exports.Dispatcher = function () {
-    if (!(this instanceof exports.Dispatcher))
-        return new exports.Dispatcher();
-    this.channel = null;
-}
-
-Dispatcher.prototype.setChannel = function(channel) {
-    return this._setChannel(channel);
-}
-
-Dispatcher.prototype._setChannel = function(channel) {
-    this.channel = channel;
-}
-
-Dispatcher.prototype.setProtocol = function(protocol) {
-    this.protocol = protocol;
-}
-
-Dispatcher.prototype.setSender = function(sender) {
-    this.sender = sender;
-}
-
-Dispatcher.prototype.setReceiver = function(receiver) {
-    this.receiver = receiver;
-}
-
-Dispatcher.prototype.dispatch = function(message, bypassReceivers) {
-    return this._dispatch(message, bypassReceivers);
-}
-    
-Dispatcher.prototype._dispatch = function(message, bypassReceivers) {
-    if(!message.getProtocol()) message.setProtocol(this.protocol);
-    if(!message.getSender()) message.setSender(this.sender);
-    if(!message.getReceiver()) message.setReceiver(this.receiver);
-    this.channel.enqueueOutgoing(message, bypassReceivers);
-}
-
-},{}],7:[function(require,module,exports){
-
-var Message = exports.Message = function (dispatcher) {
-    if (!(this instanceof exports.Message))
-        return new exports.Message(dispatcher);
-    
-    this.meta = null;
-    this.data = null;
-
-    var self = this;
-    self.dispatch = function() {
-        if(!dispatcher) {
-            throw new Error("dispatcher not set");
-        }
-        return dispatcher.dispatch(self);
-    }
-}
-
-Message.prototype.setProtocol = function(protocol) {
-    this.protocol = protocol;
-}
-
-Message.prototype.getProtocol = function() {
-    return this.protocol;
-}
-
-Message.prototype.setSender = function(sender) {
-    this.sender = sender;
-}
-
-Message.prototype.getSender = function() {
-    return this.sender;
-}
-
-Message.prototype.setReceiver = function(receiver) {
-    this.receiver = receiver;
-}
-
-Message.prototype.getReceiver = function() {
-    return this.receiver;
-}
-
-Message.prototype.setMeta = function(meta) {
-    this.meta = meta;
-}
-
-Message.prototype.getMeta = function() {
-    return this.meta;
-}
-
-Message.prototype.setData = function(data) {
-    this.data = data;
-}
-
-Message.prototype.getData = function() {
-    return this.data;
-}
-
-},{}],8:[function(require,module,exports){
-
-var MESSAGE = require("./message");
-var JSON = require("fp-modules-for-nodejs/lib/json");
-var UTIL = require("fp-modules-for-nodejs/lib/util");
-
-// Tolerance within which messages must match the declared length
-// This is used to compensate for length differences when messages are put back together
-// because of newlines that were not encoded by sender
-const FUZZY_MESSAGE_LENGTH_TOLERANCE = 200;
-
-var instances = {};
-var protocols = {};
-
-exports.factory = function(uri) {
-    if(instances[uri]) {
-        return instances[uri];
-    }
-    if(protocols[uri]) {
-        return (instances[uri] = protocols[uri](uri));
-    }
-    return null;
-}
-
-
-protocols["http://registry.pinf.org/cadorn.org/wildfire/@meta/protocol/component/0.1.0"] =
-protocols["__TEST__"] = function(uri) {
-
-    return {
-        parse: function(buffers, receivers, senders, messages, key, value) {
-
-            var parts = key.split('-');
-            // parts[0] - receiver
-            // parts[1] - sender
-            // parts[2] - message id/index
-
-            if(parts[0]=='index') {
-                // ignore the index header
-                return;
-            } else
-            if(parts[1]=='receiver') {
-                receivers[parts[0]] = value;
-                return;
-            } else
-            if(parts[2]=='sender') {
-                senders[parts[0] + ':' + parts[1]] = value;
-                return;
-            }
-
-            // 62|...|\
-            // @previous Did not allow for '|' in meta or data
-            // @  var m = value.match(/^(\d*)?\|(.*)\|(\\)?$/);
-            // @  if(!m) throw new Error("Error parsing message: " + value);
-            var m = [], i, j;
-            // TIP: fuzzy matching is not currently used
-            m.push((value.charAt(0)=="~")?true:false);
-            i = value.indexOf("|");
-            // TODO: Check for \ before | and skip to next if present
-    if (value.charAt(i-1) === "\\")
-        throw new Error("Found \\ before |! in module " + module.id);
-            m.push(value.substring((m[0])?1:0, i));
-            if (value.charAt(value.length-1) === "|") {    // end in |
-                m.push(value.substring(i+1, value.length-1));
-                m.push("");
-            } else if (value.charAt(value.length-1) === "\\") {    // end in |\ (i.e. a continuation)
-                m.push(value.substring(i+1, value.length-2));
-                m.push("\\");
-            } else throw new Error("Error parsing for trailing '|' in message part: " + value);
-
-//            m[2] = m[2].replace(/\\{2}/g, "\\");
-
-            // length present and message matches length - complete message
-            if(m[1] &&
-               (
-                 (m[0] && Math.abs(m[1]-m[2].length)<FUZZY_MESSAGE_LENGTH_TOLERANCE ) ||
-                 (!m[0] && m[1]==m[2].length)
-               ) && !m[3]) {
-                enqueueMessage(parts[2], parts[0], parts[1], m[2]);
-            } else
-            // message continuation present - message part
-            if( m[3] ) {
-                enqueueBuffer(parts[2], parts[0], parts[1], m[2], (m[1])?'first':'part', m[1], m[0]);
-            } else
-            // no length and no message continuation - last message part
-            if( !m[1] && !m[3] ) {
-                enqueueBuffer(parts[2], parts[0], parts[1], m[2], 'last', void 0, m[0]);
-            } else {
-                throw new Error('Error parsing message: ' + value);
-            }
-
-            // this supports message parts arriving in any order as fast as possible
-            function enqueueBuffer(index, receiver, sender, value, position, length, fuzzy) {
-                if(!buffers[receiver]) {
-                    buffers[receiver] = {"firsts": 0, "lasts": 0, "messages": []};
-                }
-                if(position=="first") buffers[receiver].firsts += 1;
-                else if(position=="last") buffers[receiver].lasts += 1;
-                buffers[receiver].messages.push([index, value, position, length, fuzzy]);
-
-                // if we have a mathching number of first and last parts we assume we have
-                // a complete message so we try and join it
-                if(buffers[receiver].firsts>0 && buffers[receiver].firsts==buffers[receiver].lasts) {
-                    // first we sort all messages
-                    buffers[receiver].messages.sort(
-                        function (a, b) {
-                            return a[0] - b[0];
-                        }
-                    );
-                    // find the first "first" part and start collecting parts
-                    // until "last" is found
-                    var startIndex = null;
-                    var buffer = null;
-                    fuzzy = false;
-                    for( i=0 ; i<buffers[receiver].messages.length ; i++ ) {
-                        if(buffers[receiver].messages[i][4])
-                            fuzzy = true;
-                        if(buffers[receiver].messages[i][2]=="first") {
-                            startIndex = i;
-                            buffer = buffers[receiver].messages[i][1];
-                        } else
-                        if(startIndex!==null) {
-                            buffer += buffers[receiver].messages[i][1];
-                            if(buffers[receiver].messages[i][2]=="last") {
-                                // if our buffer matches the message length
-                                // we have a complete message
-                                if(
-                                     (fuzzy && Math.abs(buffers[receiver].messages[startIndex][3]-buffer.length)<FUZZY_MESSAGE_LENGTH_TOLERANCE ) ||
-                                     (!fuzzy && buffer.length==buffers[receiver].messages[startIndex][3])
-                                ) {
-                                    // message is complete
-                                    enqueueMessage(buffers[receiver].messages[startIndex][0], receiver, sender, buffer);
-                                    buffers[receiver].messages.splice(startIndex, i-startIndex+1);
-                                    buffers[receiver].firsts -= 1;
-                                    buffers[receiver].lasts -= 1;
-                                    startIndex = null;
-                                    buffer = null;
-                                    fuzzy = false;
-                                } else {
-                                    // message is not complete
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            function enqueueMessage(index, receiver, sender, value) {
-
-                if(!messages[receiver]) {
-                    messages[receiver] = [];
-                }
-
-                // Split "...\|...|...|.......
-                // by ------------^
-                var m = [ value ], i = 0;
-                while(true) {
-                    i = value.indexOf("|", i);
-                    if (i===-1) throw new Error("Error parsing for '|' in message part: " + value);
-                    if (value.charAt(i-1) != "\\") break;
-                }
-                m.push(value.substring(0, i));
-                m.push(value.substring(i+1, value.length));
-
-                var message = MESSAGE.Message();
-                message.setReceiver(receiver);
-                message.setSender(sender);
-                // @previous
-                // @  message.setMeta((m[1])?m[1].replace(/&#124;/g, "|").replace(/&#10;/g, "\n"):null);
-                // @  message.setData(m[2].replace(/&#124;/g, "|").replace(/&#10;/g, "\n"));
-                message.setMeta((m[1])?m[1].replace(/\\\|/g, "|").replace(/&!10;/g, "\n"):null);
-                message.setData(m[2].replace(/&!10;/g, "\\n"));
-                message.setProtocol('http://registry.pinf.org/cadorn.org/wildfire/@meta/protocol/component/0.1.0');
-
-                messages[receiver].push([index, message]);
-            }
-        },
-
-        encodeMessage: function(options, message) {
-
-            var protocol_id = message.getProtocol();
-            if(!protocol_id) {
-                throw new Error("Protocol not set for message");
-            }
-            var receiver_id = message.getReceiver();
-            if(!receiver_id) {
-                throw new Error("Receiver not set for message");
-            }
-            var sender_id = message.getSender();
-            if(!sender_id) {
-                throw new Error("Sender not set for message");
-            }
-
-            var headers = [];
-
-            var meta = message.getMeta();
-            if(!meta)
-                meta = "";
-
-            var data = message.getData() || "";
-            if (typeof data != "string")
-                throw new Error("Data in wildfire message is not a string!");
-
-            data = meta.replace(/\|/g, "\\|").replace(/\n|\u000a|\\u000a/g, "&!10;") + '|' + data.replace(/\n|\u000a|\\u000a/g, "&!10;");
-//            var data = meta.replace(/\|/g, "&#124;").replace(/\n|\u000a/g, "&#10;") + '|' + message.getData().replace(/\|/g, "&#124;").replace(/\n|\u000a/g, "&#10;");
-
-            var parts = chunk_split(data, options.messagePartMaxLength);
-
-            var part,
-                msg;
-
-            for( var i=0 ; i<parts.length ; i++) {
-                if (part = parts[i]) {
-                    msg = "";
-
-                    // escape backslashes
-                    // NOTE: This should probably be done during JSON encoding to ensure we do not double-escape
-                    //       with different encoders, but not sure how different encoders behave yet.
-//                    part = part.replace(/\\/g, "\\\\");
-
-                    if (parts.length>1) {
-                        msg = ((i==0)?data.length:'') +
-                              '|' + part + '|' +
-                              ((i<parts.length-1)?"\\":"");
-                    } else {
-                        msg = part.length + '|' + part + '|';
-                    }
-
-                    headers.push([
-                        protocol_id,
-                        receiver_id,
-                        sender_id,
-                        msg
-                    ]);
-                }
-            }
-            return headers;
-        },
-
-        encodeKey: function(util, receiverId, senderId) {
-
-            if(!util["protocols"]) util["protocols"] = {};
-            if(!util["messageIndexes"]) util["messageIndexes"] = {};
-            if(!util["receivers"]) util["receivers"] = {};
-            if(!util["senders"]) util["senders"] = {};
-
-            var protocol = getProtocolIndex(uri);
-            var messageIndex = getMessageIndex(protocol);
-            var receiver = getReceiverIndex(protocol, receiverId);
-            var sender = getSenderIndex(protocol, receiver, senderId);
-
-            return util.HEADER_PREFIX + protocol + "-" + receiver + "-" + sender + "-" + messageIndex;
-
-            function getProtocolIndex(protocolId) {
-                if(util["protocols"][protocolId]) return util["protocols"][protocolId];
-                for( var i=1 ; ; i++ ) {
-                    var value = util.applicator.getMessagePart(util.HEADER_PREFIX + "protocol-" + i);
-                    if(!value) {
-                        util["protocols"][protocolId] = i;
-                        util.applicator.setMessagePart(util.HEADER_PREFIX + "protocol-" + i, protocolId);
-                        return i;
-                    } else
-                    if(value==protocolId) {
-                        util["protocols"][protocolId] = i;
-                        return i;
-                    }
-                }
-            }
-
-            function getMessageIndex(protocolIndex) {
-                var value = util["messageIndexes"][protocolIndex] || util.applicator.getMessagePart(util.HEADER_PREFIX + protocolIndex + "-index");
-                if(!value) {
-                    value = 0;
-                }
-                value++;
-                util["messageIndexes"][protocolIndex] = value;
-                util.applicator.setMessagePart(util.HEADER_PREFIX + protocolIndex + "-index", value);
-                return value;
-            }
-
-            function getReceiverIndex(protocolIndex, receiverId) {
-                if(util["receivers"][protocolIndex + ":" + receiverId]) return util["receivers"][protocolIndex + ":" + receiverId];
-                for( var i=1 ; ; i++ ) {
-                    var value = util.applicator.getMessagePart(util.HEADER_PREFIX + protocolIndex + "-" + i + "-receiver");
-                    if(!value) {
-                        util["receivers"][protocolIndex + ":" + receiverId] = i;
-                        util.applicator.setMessagePart(util.HEADER_PREFIX + protocolIndex + "-" + i + "-receiver", receiverId);
-                        return i;
-                    } else
-                    if(value==receiverId) {
-                        util["receivers"][protocolIndex + ":" + receiverId] = i;
-                        return i;
-                    }
-                }
-            }
-
-            function getSenderIndex(protocolIndex, receiverIndex, senderId) {
-                if(util["senders"][protocolIndex + ":" + receiverIndex + ":" + senderId]) return util["senders"][protocolIndex + ":" + receiverIndex + ":" + senderId];
-                for( var i=1 ; ; i++ ) {
-                    var value = util.applicator.getMessagePart(util.HEADER_PREFIX + protocolIndex + "-" + receiverIndex + "-" + i + "-sender");
-                    if(!value) {
-                        util["senders"][protocolIndex + ":" + receiverIndex + ":" + senderId] = i;
-                        util.applicator.setMessagePart(util.HEADER_PREFIX + protocolIndex + "-" + receiverIndex + "-" + i + "-sender", senderId);
-                        return i;
-                    } else
-                    if(value==senderId) {
-                        util["senders"][protocolIndex + ":" + receiverIndex + ":" + senderId] = i;
-                        return i;
-                    }
-                }
-            }
-        }
-    };
-};
-
-
-// @see http://registry.pinf.org/cadorn.org/wildfire/@meta/protocol/json-stream/0.2.0
-protocols["http://meta.wildfirehq.org/Protocol/JsonStream/0.2"] = function(uri) {
-
-    var groupStack = [];
-    var groupIndex = 0;
-
-    return {
-        parse: function(buffers, receivers, senders, messages, key, value) {
-
-            var parts = key.split('-');
-            // parts[0] - receiver
-            // parts[1] - sender
-            // parts[2] - message id/index
-
-            if(parts[0]=='index') {
-                // ignore the index header
-                return;
-            } else
-            if(parts[0]=='structure') {
-/*
-                if(value=="http://meta.firephp.org/Wildfire/Structure/FirePHP/FirebugConsole/0.1") {
-                    value = "http://registry.pinf.org/cadorn.org/insight/@meta/receiver/console/page/0";
-                } else
-                if(value=="http://meta.firephp.org/Wildfire/Structure/FirePHP/Dump/0.1") {
-                    value = "http://registry.pinf.org/cadorn.org/insight/@meta/receiver/console/page/0";
-//                    value = "http://pinf.org/cadorn.org/fireconsole/meta/Receiver/NetServer/0.1"
-                }
-*/
-                receivers[parts[1]] = value;
-
-                // NOTE: The old protocol specifies senders independent from receivers so we need to add senders for every receiver if senders are already known
-                if(UTIL.len(senders)>0) {
-                    var newSenders = {};
-                    for( var senderKey in senders ) {
-                        var senderParts = senderKey.split(":");
-                        newSenders[parts[1] + ":" + senderParts[1]] = senders[senderKey];
-                    }
-                    UTIL.complete(senders, newSenders);
-                }
-                return;
-            } else
-            if(parts[0]=='plugin') {
-
-                // NOTE: The old protocol specifies senders independent from receivers so we need to add senders for every receiver
-                //       If no receiver is known yet we assume a receiver key of "1"
-                if(UTIL.len(receivers)==0) {
-                    senders["1" + ":" + parts[1]] = value;
-                } else {
-                    for( var receiverKey in receivers ) {
-                        senders[receiverKey + ":" + parts[1]] = value;
-                    }
-                }
-                return;
-            }
-
-            // 62|...|\
-            var m = value.match(/^(\d*)?\|(.*)\|(\\)?$/);
-            if(!m) {
-                throw new Error("Error parsing message: " + value);
-            }
-
-            // length present and message matches length - complete message
-            if (m[1] && m[1] == m[2].length && !m[3]) {
-                enqueueMessage(parts[2], parts[0], parts[1], m[2]);
-            } else
-            // message continuation present - message part
-            if( m[3] ) {
-                enqueueBuffer(parts[2], parts[0], parts[1], m[2], (m[1])?'first':'part', m[1]);
-            } else
-            // no length and no message continuation - last message part
-            if( !m[1] && !m[3] ) {
-                enqueueBuffer(parts[2], parts[0], parts[1], m[2], 'last');
-            } else {
-                console.error("m", m);
-                console.error("m[1]", m[1]);
-                console.error("m[2].length", m[2].length);
-                throw new Error('Error parsing message parts: ' + value);
-            }
-
-            // this supports message parts arriving in any order as fast as possible
-            function enqueueBuffer(index, receiver, sender, value, position, length) {
-                if(!buffers[receiver]) {
-                    buffers[receiver] = {"firsts": 0, "lasts": 0, "messages": []};
-                }
-                if(position=="first") buffers[receiver].firsts += 1;
-                else if(position=="last") buffers[receiver].lasts += 1;
-                buffers[receiver].messages.push([index, value, position, length]);
-
-                // if we have a mathching number of first and last parts we assume we have
-                // a complete message so we try and join it
-                if(buffers[receiver].firsts>0 && buffers[receiver].firsts==buffers[receiver].lasts) {
-                    // first we sort all messages
-                    buffers[receiver].messages.sort(
-                        function (a, b) {
-                            return a[0] - b[0];
-                        }
-                    );
-                    // find the first "first" part and start collecting parts
-                    // until "last" is found
-                    var startIndex = null;
-                    var buffer = null;
-                    for( i=0 ; i<buffers[receiver].messages.length ; i++ ) {
-                        if(buffers[receiver].messages[i][2]=="first") {
-                            startIndex = i;
-                            buffer = buffers[receiver].messages[i][1];
-                        } else
-                        if(startIndex!==null) {
-                            buffer += buffers[receiver].messages[i][1];
-                            if(buffers[receiver].messages[i][2]=="last") {
-                                // if our buffer matches the message length
-                                // we have a complete message
-                                if(buffer.length==buffers[receiver].messages[startIndex][3]) {
-                                    // message is complete
-                                    enqueueMessage(buffers[receiver].messages[startIndex][0], receiver, sender, buffer);
-                                    buffers[receiver].messages.splice(startIndex, i-startIndex);
-                                    buffers[receiver].firsts -= 1;
-                                    buffers[receiver].lasts -= 1;
-                                    if(buffers[receiver].messages.length==0) delete buffers[receiver];
-                                    startIndex = null;
-                                    buffer = null;
-                                } else {
-                                    // message is not complete
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            function enqueueMessage(index, receiver, sender, value) {
-
-                if(!messages[receiver]) {
-                    messages[receiver] = [];
-                }
-
-
-                var meta = {
-                        "msg.preprocessor": "FirePHPCoreCompatibility",
-                        "target": "console",
-                        "lang.id": "registry.pinf.org/cadorn.org/github/renderers/packages/php/master"
-                    },
-                    data,
-                    parts;
-
-                try {
-                    parts = JSON.decode(value);
-                } catch(e) {
-                    console.error("Error parsing JsonStream message", e, value);
-                    throw e;
-                }
-
-                // console
-                if(UTIL.isArrayLike(parts) && parts.length==2 &&
-                    (typeof parts[0] == "object") && UTIL.has(parts[0], "Type")) {
-
-                    data = parts[1];
-
-                    for( var name in parts[0] ) {
-                        if(name=="Type") {
-
-                            if(groupStack.length>0) {
-                                meta["group"] = groupStack[groupStack.length-1];
-                            }
-
-                            switch(parts[0][name]) {
-                                case "LOG":
-                                    meta["priority"] = "log";
-                                    break;
-                                case "INFO":
-                                    meta["priority"] = "info";
-                                    break;
-                                case "WARN":
-                                    meta["priority"] = "warn";
-                                    break;
-                                case "ERROR":
-                                    meta["priority"] = "error";
-                                    break;
-                                case "EXCEPTION":
-                                    var originalData = data;
-                                    data = {
-                                        "__className": originalData.Class,
-                                        "__isException": true,
-                                        "protected:message": originalData.Message,
-                                        "protected:file": originalData.File,
-                                        "protected:line": originalData.Line,
-                                        "private:trace": originalData.Trace
-                                    }
-                                    if (data["private:trace"] && data["private:trace"].length > 0) {
-                                        if (data["private:trace"][0].file != originalData.File || data["private:trace"][0].line != originalData.Line) {
-                                            data["private:trace"].unshift({
-                                               "class": originalData.Class || "",
-                                                "type": originalData.Type || "",
-                                                "function": originalData.Function || "",
-                                                "file": originalData.File || "",
-                                                "line": originalData.Line || "",
-                                                "args": originalData.Args || ""
-                                            });
-                                        }
-                                    }
-                                    meta["priority"] = "error";
-                                    break;
-                                case "TRACE":
-                                    meta["renderer"] = "http://registry.pinf.org/cadorn.org/renderers/packages/insight/0:structures/trace";
-                                    var trace = [
-                                        {
-                                            "class": data.Class || "",
-                                            "type": data.Type || "",
-                                            "function": data.Function || "",
-                                            "file": data.File || "",
-                                            "line": data.Line || "",
-                                            "args": data.Args || ""
-                                        }
-                                    ];
-                                    if(data.Trace) {
-                                        trace = trace.concat(data.Trace);
-                                    }
-                                    data = {
-                                        "title": data.Message,
-                                        "trace": trace
-                                    };
-                                    break;
-                                case "TABLE":
-                                    meta["renderer"] = "http://registry.pinf.org/cadorn.org/renderers/packages/insight/0:structures/table";
-                                    data = {"data": data};
-                                    if(data.data.length==2 && typeof data.data[0] == "string") {
-                                        data.header = data.data[1].splice(0,1)[0];
-                                        data.title = data.data[0];
-                                        data.data = data.data[1];
-                                    } else {
-                                        data.header = data.data.splice(0,1)[0];
-                                    }
-                                    break;
-                                case "GROUP_START":
-                                    groupIndex++;
-                                    meta["group.start"] = true;
-                                    meta["group"] = "group-" + groupIndex;
-                                    groupStack.push("group-" + groupIndex);
-                                    break;
-                                case "GROUP_END":
-                                    meta["group.end"] = true;
-                                    if(groupStack.length>0) {
-                                        groupStack.pop();
-                                    }
-                                    break;
-                                default:
-                                    throw new Error("Log type '" + parts[0][name] + "' not implemented");
-                                    break;
-                            }
-                        } else
-                        if(name=="Label") {
-                            meta["label"] = parts[0][name];
-                        } else
-                        if(name=="File") {
-                            meta["file"] = parts[0][name];
-                        } else
-                        if(name=="Line") {
-                            meta["line"] = parts[0][name];
-                        } else
-                        if(name=="Collapsed") {
-                            meta[".collapsed"] = (parts[0][name]=='true')?true:false;
-//                        } else
-//                        if(name=="Color") {
-//                            meta["fc.group.color"] = parts[0][name];
-                        }
-                    }
-                } else
-                // dump
-                {
-                    data = parts;
-                    meta["label"] = "Dump";
-                }
-
-                if(meta["renderer"] == "http://registry.pinf.org/cadorn.org/renderers/packages/insight/0:structures/table") {
-                    if(meta["label"]) {
-                        data.title = meta["label"];
-                        delete meta["label"];
-                    }
-                } else
-                if(meta["group.start"]) {
-                    meta["group.title"] = meta["label"];
-                    delete meta["label"];
-                    if(typeof meta[".collapsed"] == "undefined" || !meta[".collapsed"]) {
-                        meta["group.expand"] = meta["group"];
-                    }
-                    delete meta[".collapsed"];
-                }
-
-                var message = MESSAGE.Message();
-                message.setReceiver(receiver);
-                message.setSender(sender);
-
-                try {
-                    message.setMeta(JSON.encode(meta));
-                } catch(e) {
-                    console.error("Error encoding object (JsonStream compatibility)", e, meta);
-                    throw e;
-                }
-
-                try {
-                    message.setData(JSON.encode(data));
-                } catch(e) {
-                    console.error("Error encoding object (JsonStream compatibility)", e, data);
-                    throw e;
-                }
-
-                messages[receiver].push([index, message]);
-            }
-        },
-
-        encodeMessage: function(options, message) {
-            throw new Error("Not implemented!");
-        },
-
-        encodeKey: function(util, receiverId, senderId) {
-            throw new Error("Not implemented!");
-        }
-    };
-};
-
-
-
-protocols["http://registry.pinf.org/cadorn.org/wildfire/@meta/protocol/announce/0.1.0"] = function(uri) {
-
-    return {
-        parse: function(buffers, receivers, senders, messages, key, value) {
-
-            var parts = key.split('-');
-            // parts[0] - message id/index
-
-            if(parts[0]=='index') {
-                // ignore the index header
-                return;
-            }
-
-            // 62|...|\
-            var m = value.match(/^(\d*)?\|(.*)\|(\\)?$/);
-            if(!m) {
-                throw new Error("Error parsing message: " + value);
-            }
-
-            // length present and message matches length - complete message
-            if(m[1] && m[1]==m[2].length && !m[3]) {
-                enqueueMessage(key, m[2]);
-            } else
-            // message continuation present - message part
-            if( m[3] ) {
-                enqueueBuffer(key, m[2], (m[1])?'first':'part', m[1]);
-            } else
-            // no length and no message continuation - last message part
-            if( !m[1] && !m[3] ) {
-                enqueueBuffer(key, m[2], 'last');
-            } else {
-                throw new Error('Error parsing message: ' + value);
-            }
-
-            // this supports message parts arriving in any order as fast as possible
-            function enqueueBuffer(index, value, position, length) {
-
-                receiver = "*";
-                if(!buffers[receiver]) {
-                    buffers[receiver] = {"firsts": 0, "lasts": 0, "messages": []};
-                }
-                if(position=="first") buffers[receiver].firsts += 1;
-                else if(position=="last") buffers[receiver].lasts += 1;
-                buffers[receiver].messages.push([index, value, position, length]);
-
-                // if we have a mathching number of first and last parts we assume we have
-                // a complete message so we try and join it
-                if(buffers[receiver].firsts>0 && buffers[receiver].firsts==buffers[receiver].lasts) {
-                    // first we sort all messages
-                    buffers[receiver].messages.sort(
-                        function (a, b) {
-                            return a[0] - b[0];
-                        }
-                    );
-                    // find the first "first" part and start collecting parts
-                    // until "last" is found
-                    var startIndex = null;
-                    var buffer = null;
-                    for( i=0 ; i<buffers[receiver].messages.length ; i++ ) {
-                        if(buffers[receiver].messages[i][2]=="first") {
-                            startIndex = i;
-                            buffer = buffers[receiver].messages[i][1];
-                        } else
-                        if(startIndex!==null) {
-                            buffer += buffers[receiver].messages[i][1];
-                            if(buffers[receiver].messages[i][2]=="last") {
-                                // if our buffer matches the message length
-                                // we have a complete message
-                                if(buffer.length==buffers[receiver].messages[startIndex][3]) {
-                                    // message is complete
-                                    enqueueMessage(buffers[receiver].messages[startIndex][0], buffer);
-                                    buffers[receiver].messages.splice(startIndex, i-startIndex);
-                                    buffers[receiver].firsts -= 1;
-                                    buffers[receiver].lasts -= 1;
-                                    if(buffers[receiver].messages.length==0) delete buffers[receiver];
-                                    startIndex = null;
-                                    buffer = null;
-                                } else {
-                                    // message is not complete
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            function enqueueMessage(index, value) {
-
-                receiver = "*";
-
-                if(!messages[receiver]) {
-                    messages[receiver] = [];
-                }
-
-                var m = /^(.*?[^\\])?\|(.*)$/.exec(value);
-
-                var message = MESSAGE.Message();
-                message.setReceiver(receiver);
-                message.setMeta(m[1] || null);
-                message.setData(m[2]);
-
-                messages[receiver].push([index, message]);
-            }
-        },
-
-        encodeMessage: function(options, message) {
-
-            var protocol_id = message.getProtocol();
-            if(!protocol_id) {
-                throw new Error("Protocol not set for message");
-            }
-
-            var headers = [];
-
-            var meta = message.getMeta() || "";
-
-            var data = meta.replace(/\|/g, "\\|") + '|' + message.getData().replace(/\|/g, "\\|");
-
-            var parts = chunk_split(data, options.messagePartMaxLength);
-
-            var part,
-                msg;
-            for( var i=0 ; i<parts.length ; i++) {
-                if (part = parts[i]) {
-
-                    msg = "";
-
-                    // escape backslashes
-                    // NOTE: This should probably be done during JSON encoding to ensure we do not double-escape
-                    //       with different encoders, but not sure how different encoders behave yet.
-                    part = part.replace(/\\/g, "\\\\");
-
-                    if (parts.length>2) {
-                        msg = ((i==0)?data.length:'') +
-                              '|' + part + '|' +
-                              ((i<parts.length-2)?"\\":"");
-                    } else {
-                        msg = part.length + '|' + part + '|';
-                    }
-
-                    headers.push([
-                        protocol_id,
-                        "",
-                        "",
-                        msg
-                    ]);
-                }
-            }
-            return headers;
-        },
-
-        encodeKey: function(util) {
-
-            if(!util["protocols"]) util["protocols"] = {};
-            if(!util["messageIndexes"]) util["messageIndexes"] = {};
-
-            var protocol = getProtocolIndex(uri);
-            var messageIndex = getMessageIndex(protocol);
-
-            return util.HEADER_PREFIX + protocol + "-" + messageIndex;
-
-            function getProtocolIndex(protocolId) {
-                if(util["protocols"][protocolId]) return util["protocols"][protocolId];
-                for( var i=1 ; ; i++ ) {
-                    var value = util.applicator.getMessagePart(util.HEADER_PREFIX + "protocol-" + i);
-                    if(!value) {
-                        util["protocols"][protocolId] = i;
-                        util.applicator.setMessagePart(util.HEADER_PREFIX + "protocol-" + i, protocolId);
-                        return i;
-                    } else
-                    if(value==protocolId) {
-                        util["protocols"][protocolId] = i;
-                        return i;
-                    }
-                }
-            }
-
-            function getMessageIndex(protocolIndex) {
-                var value = util["messageIndexes"][protocolIndex] || util.applicator.getMessagePart(util.HEADER_PREFIX + protocolIndex + "-index");
-                if(!value) {
-                    value = 0;
-                }
-                value++;
-                util["messageIndexes"][protocolIndex] = value;
-                util.applicator.setMessagePart(util.HEADER_PREFIX + protocolIndex + "-index", value);
-                return value;
-            }
-        }
-    };
-};
-
-
-
-
-function chunk_split(value, length) {
-    var parts = [];
-    var part;
-    while( (part = value.substr(0, length)) && part.length > 0 ) {
-        parts.push(part);
-        value = value.substr(length);
-    }
-    return parts;
-}
-
-},{"./message":7,"fp-modules-for-nodejs/lib/json":16,"fp-modules-for-nodejs/lib/util":22}],9:[function(require,module,exports){
-
-var Receiver = exports.Receiver = function () {
-    if (!(this instanceof exports.Receiver))
-        return new exports.Receiver();
-
-    this.listeners = [];
-    this.ids = [];
-}
-    
-Receiver.prototype.setId = function(id) {
-    if(this.ids.length > 0) {
-        throw new Error("ID already set for receiver!");
-    }
-    this.ids.push(id);
-}
-
-Receiver.prototype.addId = function(id) {
-    this.ids.push(id);
-}
-
-/**
- * @deprecated
- */
-Receiver.prototype.getId = function() {
-    if(this.ids.length > 1) {
-        throw new Error("DEPRECATED: Multiple IDs for receiver. Cannot use getId(). Use getIds() instead!");
-    }
-    return this.ids[0];
-}
-
-Receiver.prototype.getIds = function() {
-    return this.ids;
-}
-
-Receiver.prototype.hasId = function(id) {
-    for( var i=0 ; i<this.ids.length ; i++ ) {
-        if(this.ids[i]==id) {
-            return true;
-        }
-    }
-    return false;
-}
-
-Receiver.prototype.onChannelOpen = function(context) {
-    this._dispatch("onChannelOpen", [context]);
-}
-
-Receiver.prototype.onChannelClose = function(context) {
-    this._dispatch("onChannelClose", [context]);
-}
-
-Receiver.prototype.onMessageGroupStart = function(context) {
-    this._dispatch("onMessageGroupStart", [context]);
-}
-
-Receiver.prototype.onMessageGroupEnd = function(context) {
-    this._dispatch("onMessageGroupEnd", [context]);
-}
-
-Receiver.prototype.onMessageReceived = function(message, context) {
-    return this._dispatch("onMessageReceived", [message, context]);
-}
-
-Receiver.prototype.addListener = function(listener) {
-    this.listeners.push(listener);
-}
-
-Receiver.prototype._dispatch = function(event, args) {
-    if(this.listeners.length==0) {
-        return;
-    }
-    var returnOptions,
-        opt;
-    for( var i=0 ; i<this.listeners.length ; i++ ) {
-        if(this.listeners[i][event]) {
-            opt = this.listeners[i][event].apply(this.listeners[i], args);
-            if(opt) {
-                if(!returnOptions) {
-                    returnOptions = opt;
-                } else {
-                    for( var key in opt ) {
-                        returnOptions[key] = opt[key];
-                    }
-                }
-            }
-        }
-    }
-    return returnOptions;
-}
-
-},{}],10:[function(require,module,exports){
-
-var WILDFIRE = require("../wildfire"),
-    JSON = require("fp-modules-for-nodejs/lib/json");
-
-var CallbackStream = exports.CallbackStream = function CallbackStream()
-{
-    if (!(this instanceof exports.CallbackStream))
-        return new exports.CallbackStream();
-    this.messagesIndex = 1;
-    this.messages = {};
-
-    var self = this;
-
-    this.dispatcher = WILDFIRE.Dispatcher();
-    // TODO: Use own protocol here
-    this.dispatcher.setProtocol('http://registry.pinf.org/cadorn.org/wildfire/@meta/protocol/component/0.1.0');
-
-
-    this.receiver = WILDFIRE.Receiver();
-    this.receiveHandler = null;
-
-    this.receiver.addListener({
-        onMessageReceived: function(context, message)
-        {
-            var meta = JSON.decode(message.getMeta());
-
-            if(meta[".action"] == "request")
-            {
-                self.receiveHandler({
-                    meta: meta,
-                    data: JSON.decode(message.getData())
-                }, function(message)
-                {
-                    if (!message || typeof message !== "object")
-                        throw new Error("Did not get message object for receiveHandler response");
-                    if (typeof message.data === "undefined")
-                        throw new Error("Message object from receiveHandler response does not include 'data' property.");
-                    
-                    var msg = WILDFIRE.Message();
-                    if (typeof message.meta == "undefined")
-                        message.meta = {};
-
-                    message.meta[".callbackid"] = meta[".callbackid"];
-                    message.meta[".action"] = "respond";
-
-                    try {
-                        msg.setMeta(JSON.encode(message.meta));
-                    } catch(e) {
-                        console.warn("Error JSON encoding meta", e);
-                        throw new Error("Error JSON encoding meta: " + e);
-                    }
-                    try {
-                        msg.setData(JSON.encode(message.data));
-                    } catch(e) {
-                        console.warn("Error JSON encoding data", e);
-                        throw new Error("Error JSON encoding data: " + e);
-                    }
-
-                    try {
-                        self.dispatcher.dispatch(msg, true);
-                    } catch(e) {
-                        console.warn("Error dispatching message in " + module.id, e);
-                        throw new Error("Error '"+e+"' dispatching message in " + module.id);
-                    }
-                });
-            }
-            else
-            if(meta[".action"] == "respond")
-            {
-                if(self.messages["i:" + meta[".callbackid"]])
-                {
-                    self.messages["i:" + meta[".callbackid"]][1](
-                        {
-                            meta: meta,
-                            data: JSON.decode(message.getData())
-                        }
-                    );
-                    delete self.messages["i:" + meta[".callbackid"]];
-                }
-            }
-            else
-                throw new Error("NYI");
-        }
-    });
-}
-
-CallbackStream.prototype.setChannel = function(channel)
-{
-    this.dispatcher.setChannel(channel);
-    channel.addReceiver(this.receiver);
-}
-
-CallbackStream.prototype.setHere = function(id)
-{
-    // TODO: Remove suffix once we use our own protocol for callbacks
-    this.receiver.setId(id + "-callback");
-    // TODO: Remove suffix once we use our own protocol for callbacks
-    this.dispatcher.setSender(id + "-callback");
-}
-
-CallbackStream.prototype.setThere = function(id)
-{
-    // TODO: Remove suffix once we use our own protocol for callbacks
-    this.dispatcher.setReceiver(id + "-callback");
-}
-
-CallbackStream.prototype.send = function(message, callback)
-{
-    var msg = WILDFIRE.Message();
-    if (typeof message.meta == "undefined")
-        message.meta = {};
-
-    message.meta[".callbackid"] = this.messagesIndex;
-    message.meta[".action"] = "request";
-
-    msg.setMeta(JSON.encode(message.meta));
-    msg.setData(JSON.encode(message.data));
-
-    this.messages["i:" + this.messagesIndex] = [msg, callback];
-    this.messagesIndex++;
-
-    this.dispatcher.dispatch(msg, true);
-}
-
-CallbackStream.prototype.receive = function(handler)
-{
-    this.receiveHandler = handler;
-}
-
-},{"../wildfire":12,"fp-modules-for-nodejs/lib/json":16}],11:[function(require,module,exports){
-
-
-const RECEIVER_ID = "http://registry.pinf.org/cadorn.org/wildfire/@meta/receiver/transport/0";
-
-var MD5 = require("fp-modules-for-nodejs/lib/md5");
-var STRUCT = require("fp-modules-for-nodejs/lib/struct");
-var JSON = require("fp-modules-for-nodejs/lib/json");
-//var HTTP = require("http");
-var MESSAGE = require("./message");
-var RECEIVER = require("./receiver");
-
-
-var Transport = exports.Transport = function(options) {
-    if (!(this instanceof exports.Transport))
-        return new exports.Transport(options);
-    this.options = options;
-}
-
-Transport.prototype.newApplicator = function(applicator) {
-    return Applicator(this, applicator);
-}
-
-Transport.prototype.serviceDataRequest = function(key) {
-    return require("./wildfire").getBinding().formatResponse({
-        "contentType": "text/plain"
-    }, this.getData(key));
-}
-
-Transport.prototype.getUrl = function(key) {
-    return this.options.getUrl(key);
-}
-
-Transport.prototype.setData = function(key, value) {
-    return this.options.setData(key, value);
-}
-
-Transport.prototype.getData = function(key) {
-    return this.options.getData(key);
-}
-
-
-var Applicator = function(transport, applicator) {
-    if (!(this instanceof Applicator))
-        return new Applicator(transport, applicator);
-    this.transport = transport;
-    this.applicator = applicator;
-    this.buffer = {};
-}
-
-Applicator.prototype.setMessagePart = function(key, value) {
-    this.buffer[key] = value;
-}
-
-Applicator.prototype.getMessagePart = function(key) {
-    if(!this.buffer[key]) return null;
-    return this.buffer[key];
-}
-
-Applicator.prototype.flush = function(channel) {
-
-    var data = [];
-    var seed = [];
-
-    // combine all message parts into one text block
-    for( var key in this.buffer ) {
-        data.push(key + ": " + this.buffer[key]);
-        if(data.length % 3 == 0 && seed.length < 5) seed.push(this.buffer[key]);
-    }
-    
-    // generate a key for the text block
-    var key = STRUCT.bin2hex(MD5.hash(Math.random() + ":" + module.path + ":" + seed.join("")));
-
-    // store the text block for future access
-    this.transport.setData(key, data.join("\n"));
-    
-    // create a pointer message to be sent instead of the original messages
-    var message = MESSAGE.Message();
-    message.setProtocol('http://registry.pinf.org/cadorn.org/wildfire/@meta/protocol/component/0');
-    message.setSender('http://pinf.org/cadorn.org/wildfire/packages/lib-js/lib/transport.js');
-    message.setReceiver(RECEIVER_ID);
-    message.setData(JSON.encode({"url": this.transport.getUrl(key)}));
-    
-    // send the pointer message through the channel bypassing all transports and local receivers
-    channel.enqueueOutgoing(message, true);
-    return channel.flush(this.applicator, true);
-}
-
-exports.newReceiver = function(channel) {
-    var receiver = RECEIVER.Receiver();
-    receiver.setId(RECEIVER_ID);
-    receiver.addListener({
-        onMessageReceived: function(context, message) {
-            try {
-                context.transporter = RECEIVER_ID;
-
-throw new Error("OOPS!!!");
-/*
-                // make a sync secondary request
-                var data = HTTP.read(JSON.decode(message.getData()).url);
-                if(data) {
-                    channel.parseReceived(data, context, {
-                        "skipChannelOpen": true,
-                        "skipChannelClose": true
-                    });
-                }
-*/
-            } catch(e) {
-                console.warn(e);
-            }
-        }
-    });
-    return receiver;
-}
-
-
-},{"./message":7,"./receiver":9,"./wildfire":12,"fp-modules-for-nodejs/lib/json":16,"fp-modules-for-nodejs/lib/md5":17,"fp-modules-for-nodejs/lib/struct":20}],12:[function(require,module,exports){
-
-exports.Receiver = function() {
-    return require("./receiver").Receiver();
-}
-
-exports.Dispatcher = function() {
-    return require("./dispatcher").Dispatcher();
-}
-
-exports.Message = function() {
-    return require("./message").Message();
-}
-
-exports.HttpHeaderChannel = function(options) {
-    return require("./channel-httpheader").HttpHeaderChannel(options);
-}
-
-exports.HttpClientChannel = function() {
-    return require("./channel/http-client").HttpClientChannel();
-}
-
-exports.ShellCommandChannel = function() {
-    return require("./channel-shellcommand").ShellCommandChannel();
-}
-
-exports.PostMessageChannel = function() {
-    return require("./channel-postmessage").PostMessageChannel();
-}
-
-exports.CallbackStream = function() {
-    return require("./stream/callback").CallbackStream();
-}
-
-},{"./channel-httpheader":1,"./channel-postmessage":2,"./channel-shellcommand":3,"./channel/http-client":5,"./dispatcher":6,"./message":7,"./receiver":9,"./stream/callback":10}],13:[function(require,module,exports){
 (function (process){
 /*!
  * EventEmitter2
@@ -2912,7 +781,7 @@ exports.CallbackStream = function() {
 }();
 
 }).call(this,require('_process'))
-},{"_process":33}],14:[function(require,module,exports){
+},{"_process":33}],2:[function(require,module,exports){
 
 /* Binary */
 // -- tlrobinson Tom Robinson
@@ -3676,7 +1545,7 @@ ByteArray.prototype.toSource = function() {
 };
 
 
-},{"./platform/node/binary":19,"./util":22}],15:[function(require,module,exports){
+},{"./platform/node/binary":7,"./util":10}],3:[function(require,module,exports){
 
 //var ENGINE = require("./platform/{platform}/http-client");
 var ENGINE = require("./platform/browser/http-client");
@@ -3725,12 +1594,12 @@ exports.request = function(options, successCallback, errorCallback)
     return ENGINE.request(options, successCallback, errorCallback);
 }
 
-},{"./platform/browser/http-client":18,"./uri":21}],16:[function(require,module,exports){
+},{"./platform/browser/http-client":6,"./uri":9}],4:[function(require,module,exports){
 
 exports.encode = JSON.stringify;
 exports.decode = JSON.parse;
 
-},{}],17:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 
 /*!
     A JavaScript implementation of the RSA Data Security, Inc. MD5 Message
@@ -3903,7 +1772,7 @@ var core_hmac_md5 = function (key, data, _characterSize) {
 };
 
 
-},{"./struct":20,"./util":22}],18:[function(require,module,exports){
+},{"./struct":8,"./util":10}],6:[function(require,module,exports){
 
 exports.request = function(options, successCallback, errorCallback)
 {
@@ -3951,7 +1820,7 @@ exports.request = function(options, successCallback, errorCallback)
     }
 }
 
-},{}],19:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 (function (Buffer){
 
 //var Buffer = require("../../buffer").Buffer;
@@ -4004,7 +1873,7 @@ exports.B_TRANSCODE = function(bytes, offset, length, sourceCharset, targetChars
 };
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":31}],20:[function(require,module,exports){
+},{"buffer":31}],8:[function(require,module,exports){
 
 // -- kriskowal Kris Kowal Copyright (C) 2009-2010 MIT License
 
@@ -4270,7 +2139,7 @@ exports.bin2hex = function (bin) {
     return str;
 }
 
-},{"./binary":14,"./util":22}],21:[function(require,module,exports){
+},{"./binary":2,"./util":10}],9:[function(require,module,exports){
 
 // -- kriskowal Kris Kowal Copyright (C) 2009-2010 MIT License
 // gmosx, George Moschovitis
@@ -4693,7 +2562,7 @@ exports.pathToUri = function (path) {
 };
 */
 
-},{}],22:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 
 // -- kriskowal Kris Kowal Copyright (C) 2009-2010 MIT License
 // -- isaacs Isaac Schlueter
@@ -5876,7 +3745,2138 @@ exports.title = function (value, delimiter) {
 };
 
 
-},{}],23:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
+
+
+var CHANNEL = require("./channel");
+
+const HEADER_PREFIX = 'x-wf-';
+
+var requestIndex = 0;
+
+
+var HttpHeaderChannel = exports.HttpHeaderChannel = function(options) {
+    if (!(this instanceof exports.HttpHeaderChannel))
+        return new exports.HttpHeaderChannel(options);
+
+    this.__construct(options);
+
+    this.HEADER_PREFIX = HEADER_PREFIX;
+}
+
+HttpHeaderChannel.prototype = CHANNEL.Channel();
+
+HttpHeaderChannel.prototype.getFirebugNetMonitorListener = function() {
+    if(!this.firebugNetMonitorListener) {
+        var self = this;
+        this.firebugNetMonitorListener = {
+            onResponseBody: function(context, file)
+            {
+                if(file) {
+                    try {
+                        
+                        var requestId = false;
+                        for( var i=file.requestHeaders.length-1 ; i>=0 ; i-- ) {
+                            if(file.requestHeaders[i].name=="x-request-id") {
+                                requestId = file.requestHeaders[i].value;
+                                break;
+                            }
+                        }
+
+                        self.parseReceived(file.responseHeaders, {
+                            "FirebugNetMonitorListener": {
+                                "context": context,
+                                "file": file
+                            },
+                            "id": requestId || "id:" + file.href + ":" + requestIndex++,
+                            "url": file.href,
+                            // TODO: add "hostname" (file.request.URI.host?)
+                            // TODO: add "port" (file.request.URI.port?)
+                            "method": file.method,
+                            "requestHeaders": file.requestHeaders
+                        });
+                    } catch(e) {
+                        console.error(e);
+                    }
+                }
+            }
+        }
+    }
+    return this.firebugNetMonitorListener;
+}
+
+HttpHeaderChannel.prototype.getMozillaRequestObserverListener = function(globals) {
+    if(!this.mozillaRequestObserverListener) {
+        var self = this;
+        this.mozillaRequestObserverListener = {
+            observe: function(subject, topic, data)
+            {
+                if (topic == "http-on-examine-response") {
+
+                    var httpChannel = subject.QueryInterface(globals.Ci.nsIHttpChannel);
+
+                    try {
+                        var requestHeaders = [];
+                        var requestId;
+                        httpChannel.visitRequestHeaders({
+                            visitHeader: function(name, value)
+                            {
+                                requestHeaders.push({name: name, value: value});
+                                if(name.toLowerCase()=="x-request-id") {
+                                    requestId = value;
+                                }
+                            }
+                        });
+                        var responseHeaders = [],
+                            contentType = false;
+                        httpChannel.visitResponseHeaders({
+                            visitHeader: function(name, value)
+                            {
+                                responseHeaders.push({name: name, value: value});
+                                if (name.toLowerCase() == "content-type")
+                                    contentType = value;
+                            }
+                        });
+                        self.parseReceived(responseHeaders, {
+                            "MozillaRequestObserverListener": {
+                                "httpChannel": httpChannel
+                            },
+                            "id": requestId || "id:" + httpChannel.URI.spec + ":" + requestIndex++,
+                            "url": httpChannel.URI.spec,
+                            "hostname": httpChannel.URI.host,
+                            "port": httpChannel.URI.port,
+                            "method": httpChannel.requestMethod,
+                            "status": httpChannel.responseStatus,
+                            "contentType": contentType,
+                            "requestHeaders": requestHeaders
+                        });
+                    } catch(e) {
+                        console.error(e);
+                    }
+                }
+            }                
+        }
+    }
+    return this.mozillaRequestObserverListener;
+}
+
+},{"./channel":14}],12:[function(require,module,exports){
+
+var CHANNEL = require("./channel"),
+    UTIL = require("fp-modules-for-nodejs/lib/util");
+
+const HEADER_PREFIX = 'x-wf-';
+
+var PostMessageChannel = exports.PostMessageChannel = function () {
+    if (!(this instanceof exports.PostMessageChannel))
+        return new exports.PostMessageChannel();
+    
+    this.__construct();
+
+    this.HEADER_PREFIX = HEADER_PREFIX;
+    
+    this.postMessageSender = null;
+}
+
+PostMessageChannel.prototype = CHANNEL.Channel();
+
+PostMessageChannel.prototype.enqueueOutgoing = function(message, bypassReceivers)
+{
+    var ret = this._enqueueOutgoing(message, bypassReceivers);
+
+    var parts = {};
+    this.flush({
+        setMessagePart: function(key, value) {
+            parts[key] = value;
+        },
+        getMessagePart: function(key) {
+            if (typeof parts[key] == "undefined")
+                return null;
+            return parts[key];
+        }
+    });
+
+    var self = this;
+
+    var payload = [];
+    UTIL.forEach(parts, function(part)
+    {
+        payload.push(part[0] + ": " + part[1]);
+    });
+    self.postMessageSender(payload.join("\n"));
+    
+    return ret;
+}
+
+PostMessageChannel.prototype.setPostMessageSender = function(postMessage)
+{
+    this.postMessageSender = postMessage;
+}
+
+PostMessageChannel.prototype.parseReceivedPostMessage = function(msg)
+{
+    if (this.status != "open")
+        this.open();
+    this.parseReceived(msg, null, {
+        skipChannelOpen: true,
+        skipChannelClose: true,
+        enableContinuousParsing: true
+    });
+}
+
+},{"./channel":14,"fp-modules-for-nodejs/lib/util":10}],13:[function(require,module,exports){
+
+var CHANNEL = require("./channel");
+
+const HEADER_PREFIX = '#x-wf-';
+
+var ShellCommandChannel = exports.ShellCommandChannel = function () {
+    if (!(this instanceof exports.ShellCommandChannel))
+        return new exports.ShellCommandChannel();
+    
+    this.__construct();
+    
+    this.HEADER_PREFIX = HEADER_PREFIX;
+}
+
+ShellCommandChannel.prototype = CHANNEL.Channel();
+
+},{"./channel":14}],14:[function(require,module,exports){
+
+var UTIL = require("fp-modules-for-nodejs/lib/util");
+var PROTOCOL = require("./protocol");
+var TRANSPORT = require("./transport");
+
+var Channel = exports.Channel = function () {
+    if (!(this instanceof exports.Channel))
+        return new exports.Channel();
+}
+
+Channel.prototype.__construct = function(options) {
+    options = options || {};
+    this.status = "closed";
+    this.receivers = [];
+    this.listeners = [];
+    this.options = {
+        "messagePartMaxLength": 5000
+    }
+    this.outgoingQueue = [];
+
+    this.onError = options.onError || null;
+
+    if(typeof options.enableTransport != "undefined" && options.enableTransport===false) {
+        // do not add transport
+    } else {
+        this.addReceiver(TRANSPORT.newReceiver(this));
+    }
+}
+
+Channel.prototype.enqueueOutgoing = function(message, bypassReceivers) {
+    return this._enqueueOutgoing(message, bypassReceivers);
+}
+
+Channel.prototype._enqueueOutgoing = function(message, bypassReceivers) {
+    if(!bypassReceivers) {
+        // If a receiver with a matching ID is present on the channel we don't
+        // enqueue the message if receiver.onMessageReceived returns FALSE.
+        var enqueue = true;
+        for( var i=0 ; i<this.receivers.length ; i++ ) {
+            if(this.receivers[i].hasId(message.getReceiver())) {
+                if(!this.receivers[i].onMessageReceived(null, message)) enqueue = false;
+            }
+        }
+        if(!enqueue) return true;
+    }
+    this.outgoingQueue.push(this.encode(message));
+    return true;
+}
+
+Channel.prototype.getOutgoing = function() {
+    return this.outgoingQueue;
+}
+
+Channel.prototype.clearOutgoing = function() {
+    this.outgoingQueue = [];
+}
+
+Channel.prototype.setMessagePartMaxLength = function(length) {
+    this.options.messagePartMaxLength = length;
+}
+
+Channel.prototype.flush = function(applicator, bypassTransport) {
+    return this._flush(applicator, bypassTransport);
+}
+
+Channel.prototype._flush = function(applicator, bypassTransport) {
+    // set request ID if not set
+    if(!applicator.getMessagePart("x-request-id")) {
+        applicator.setMessagePart("x-request-id", ""+(new Date().getTime()) + "" + Math.floor(Math.random()*1000+1) );
+    }
+
+    var messages = this.getOutgoing();
+    if(messages.length==0) {
+        return 0;
+    }
+
+    var util = {
+        "applicator": applicator,
+        "HEADER_PREFIX": this.HEADER_PREFIX
+    };
+
+    if(this.transport && !bypassTransport) {
+        util.applicator = this.transport.newApplicator(applicator);
+    }
+
+    for( var i=0 ; i<messages.length ; i++ ) {
+        var headers = messages[i];
+        for( var j=0 ; j<headers.length ; j++ ) {
+            util.applicator.setMessagePart(
+                PROTOCOL.factory(headers[j][0]).encodeKey(util, headers[j][1], headers[j][2]),
+                headers[j][3]
+            );
+        }
+    }
+    
+    var count = messages.length;
+
+    this.clearOutgoing();
+
+    if(util.applicator.flush) {
+        util.applicator.flush(this);
+    }
+
+    return count;
+}
+
+
+Channel.prototype.setMessagePart = function(key, value) {
+    // overwrite in subclass
+}
+
+Channel.prototype.getMessagePart = function(key) {
+    // overwrite in subclass
+    return null;
+}
+
+Channel.prototype.encode = function(message) {
+    var protocol_id = message.getProtocol();
+    if(!protocol_id) {
+        var err = new Error("Protocol not set for message");
+        if (this.onError) {
+            this.onError(err);
+        } else {
+            throw err;
+        }
+    }
+    return PROTOCOL.factory(protocol_id).encodeMessage(this.options, message);
+}
+
+Channel.prototype.setNoReceiverCallback = function(callback) {
+    this.noReceiverCallback = callback;
+}
+
+Channel.prototype.addReceiver = function(receiver) {
+    // avoid duplicates
+    for( var i=0 ; i<this.receivers.length ; i++ ) {
+        if(this.receivers[i]==receiver) {
+            return;
+        }
+    }
+    this.receivers.push(receiver);
+}
+
+Channel.prototype.addListener = function(listener) {
+    // avoid duplicates
+    for( var i=0 ; i<this.listeners.length ; i++ ) {
+        if(this.listeners[i]==listener) {
+            return;
+        }
+    }
+    this.listeners.push(listener);
+}
+
+function dispatch(channel, method, args)
+{
+    args = args || [];
+    for( var i=0 ; i<channel.listeners.length ; i++ ) {
+        if(typeof channel.listeners[i][method] === "function") {
+            channel.listeners[i][method].apply(null, args);
+        }
+    }    
+}
+
+Channel.prototype.open = function(context) {
+    this.status = "open";
+    
+    dispatch(this, "beforeChannelOpen", [context]);
+    
+    for( var i=0 ; i<this.receivers.length ; i++ ) {
+        if(this.receivers[i]["onChannelOpen"]) {
+            this.receivers[i].onChannelOpen(context);
+        }
+    }
+    this.sinks = {
+        protocolBuffers: {},
+        buffers: {},
+        protocols: {},
+        receivers: {},
+        senders: {},
+        messages: {}
+    }
+    dispatch(this, "afterChannelOpen", [context]);
+}
+
+Channel.prototype.close = function(context) {
+    this.status = "close";
+    dispatch(this, "beforeChannelClose", [context]);
+    for( var i=0 ; i<this.receivers.length ; i++ ) {
+        if(this.receivers[i]["onChannelClose"]) {
+            this.receivers[i].onChannelClose(context);
+        }
+    }
+    dispatch(this, "afterChannelClose", [context]);
+}
+
+var parsing = false;
+
+Channel.prototype.parseReceived = function(rawHeaders, context, options) {
+    var self = this;
+
+    if (parsing)
+    {
+        var err = new Error("Already parsing!");
+        if (self.onError) {
+            self.onError(err);
+        } else {
+            throw err;
+        }        
+    }
+
+    options = options || {};
+    options.skipChannelOpen = options.skipChannelOpen || false;
+    options.skipChannelClose = options.skipChannelClose || false;
+    options.enableContinuousParsing = options.enableContinuousParsing || false;
+
+    if (
+        typeof rawHeaders != "object" ||
+        (
+            Array.isArray(rawHeaders) &&
+            typeof rawHeaders[0] === "string"
+        )
+    ) {
+        rawHeaders = text_header_to_object(rawHeaders);
+    }
+
+    var headersFound = false;
+    rawHeaders.forEach(function (header) {
+        if (/x-wf-/i.test(header.name)) {
+            headersFound = true;
+        }
+    });
+    if (!headersFound) {
+        return;
+    }
+
+    if(!options.skipChannelOpen) {
+
+        // Include 'x-request-id' in context
+
+        self.open(context);
+    }
+
+    parsing = true;
+    
+    // protocol related
+    var protocolBuffers = (options.enableContinuousParsing)?this.sinks.protocolBuffers:{};
+
+    // message related
+    var buffers = (options.enableContinuousParsing)?this.sinks.buffers:{};
+    var protocols = (options.enableContinuousParsing)?this.sinks.protocols:{};
+    var receivers = (options.enableContinuousParsing)?this.sinks.receivers:{};
+    var senders = (options.enableContinuousParsing)?this.sinks.senders:{};
+    var messages = (options.enableContinuousParsing)?this.sinks.messages:{};
+
+    try {
+        // parse the raw headers into messages
+        for( var i in rawHeaders ) {
+            parseHeader(rawHeaders[i].name.toLowerCase(), rawHeaders[i].value);
+        }
+    
+        // empty any remaining buffers in case protocol header was last
+        if(protocolBuffers) {
+            UTIL.forEach(protocolBuffers, function(item) {
+                if(protocols[item[0]]) {
+                    if(typeof buffers[item[0]] == "undefined") {
+                        buffers[item[0]] = {};
+                    }
+                    if(typeof receivers[item[0]] == "undefined") {
+                        receivers[item[0]] = {};
+                    }
+                    if(typeof senders[item[0]] == "undefined") {
+                        senders[item[0]] = {};
+                    }
+                    if(typeof messages[item[0]] == "undefined") {
+                        messages[item[0]] = {};
+                    }
+                    item[1].forEach(function(info) {
+                        protocols[item[0]].parse(buffers[item[0]], receivers[item[0]], senders[item[0]], messages[item[0]], info[0], info[1]);
+                    });
+                    delete protocolBuffers[item[0]];
+                }
+            });
+        }
+    } catch(e) {
+//        dump("Error parsing raw data: " + e);
+        // clean up no matter what - a try/catch wrapper above this needs to recover from this properly
+        parsing = false;
+        buffers = {};
+        protocols = {};
+        receivers = {};
+        senders = {};
+        messages = {};
+        console.error("Error parsing raw data", e);
+        if (self.onError) {
+            self.onError(e);
+        } else {
+            throw e;
+        }
+    }
+
+    // deliver the messages to the appropriate receivers
+    var deliveries = [];
+    var messageCount = 0;
+    for( var protocolId in protocols ) {
+
+        for( var receiverKey in messages[protocolId] ) {
+
+            // sort messages by index
+            messages[protocolId][receiverKey].sort(function(a, b) {
+                if(parseInt(a[0])>parseInt(b[0])) return 1;
+                if(parseInt(a[0])<parseInt(b[0])) return -1;
+                return 0;
+            });
+
+            // determine receiver
+            var receiverId = receivers[protocolId][receiverKey];
+            // fetch receivers that support ID
+            var targetReceivers = [];
+            for( var i=0 ; i<this.receivers.length ; i++ ) {
+                if(this.receivers[i].hasId(receiverId)) {
+                    if(this.receivers[i]["onMessageGroupStart"]) {
+                        this.receivers[i].onMessageGroupStart(context);
+                    }
+                    targetReceivers.push(this.receivers[i]);
+                }
+            }
+            
+            messageCount += messages[protocolId][receiverKey].length;
+            
+            if(targetReceivers.length>0) {
+                for( var j=0 ; j<messages[protocolId][receiverKey].length ; j++ ) {
+                    // re-write sender and receiver keys to IDs
+                    messages[protocolId][receiverKey][j][1].setSender(senders[protocolId][receiverKey+":"+messages[protocolId][receiverKey][j][1].getSender()]);
+                    messages[protocolId][receiverKey][j][1].setReceiver(receiverId);
+                    for( var k=0 ; k<targetReceivers.length ; k++ ) {
+                        deliveries.push([targetReceivers[k], messages[protocolId][receiverKey][j][1]]);
+                    }
+                }
+                for( var k=0 ; k<targetReceivers.length ; k++ ) {
+                    if(targetReceivers[k]["onMessageGroupEnd"]) {
+                        targetReceivers[k].onMessageGroupEnd(context);
+                    }
+                }
+                if (options.enableContinuousParsing)
+                    delete messages[protocolId][receiverKey];
+            } else
+            if(this.noReceiverCallback) {
+                this.noReceiverCallback(receiverId);
+            }
+        }
+    }
+
+    if (options.enableContinuousParsing)
+    {
+        // TODO: Partial cleanup here or above for things we do not need any more
+    }
+    else
+    {
+        // cleanup - does this help with gc?
+        buffers = {};
+        protocols = {};
+        receivers = {};
+        senders = {};
+        messages = {};
+    }
+
+    parsing = false;
+
+    var onMessageReceivedOptions;
+
+    deliveries.forEach(function(delivery)
+    {
+        try {
+            onMessageReceivedOptions = delivery[0].onMessageReceived(context, delivery[1]);
+        } catch(e) {
+            console.error("Error delivering message: " + e, e.stack);
+            if (self.onError) {
+                self.onError(e);
+            } else {
+                throw e;
+            }
+        }
+        if(onMessageReceivedOptions) {
+            if(onMessageReceivedOptions.skipChannelClose) {
+                options.skipChannelClose = true;
+            }
+        }
+    });
+
+    if(!options.skipChannelClose) {
+        this.close(context);
+    }
+
+    return messageCount;
+
+ 
+    function parseHeader(name, value)
+    {
+        if (name.substr(0, self.HEADER_PREFIX.length) == self.HEADER_PREFIX) {
+            if (name.substring(0,self.HEADER_PREFIX.length + 9) == self.HEADER_PREFIX + 'protocol-') {
+                var id = parseInt(name.substr(self.HEADER_PREFIX.length + 9));
+                protocols[id] = PROTOCOL.factory(value);
+            } else {
+                var index = name.indexOf('-',self.HEADER_PREFIX.length);
+                var id = parseInt(name.substr(self.HEADER_PREFIX.length,index-self.HEADER_PREFIX.length));
+
+                if(protocols[id]) {
+
+                    if(typeof buffers[id] == "undefined") {
+                        buffers[id] = {};
+                    }
+                    if(typeof receivers[id] == "undefined") {
+                        receivers[id] = {};
+                    }
+                    if(typeof senders[id] == "undefined") {
+                        senders[id] = {};
+                    }
+                    if(typeof messages[id] == "undefined") {
+                        messages[id] = {};
+                    }
+
+                    if(protocolBuffers[id]) {
+                        protocolBuffers[id].forEach(function(info) {
+                            protocols[id].parse(buffers[id], receivers[id], senders[id], messages[id], info[0], info[1]);
+                        });
+                        delete protocolBuffers[id];
+                    }
+                    protocols[id].parse(buffers[id], receivers[id], senders[id], messages[id], name.substr(index+1), value);
+                } else {
+                    if(!protocolBuffers[id]) {
+                        protocolBuffers[id] = [];
+                    }
+                    protocolBuffers[id].push([name.substr(index+1), value]);
+                }
+            }
+        }
+    }
+    
+    function text_header_to_object(text) {
+        // trim escape sequences \[...m
+//        text = text.replace(/\x1B\x5B[^\x6D]*\x6D/g, "");
+
+        if (Array.isArray(text)) {
+            text = text.join("\n");
+        }
+
+        if(text.charCodeAt(0)==27 && text.charCodeAt(3)==109) {
+            text = text.substring(4);
+        }
+        
+        var headers = [];
+        var lines = text.replace().split("\n");
+
+        var expression = new RegExp("^.{0,2}("+self.HEADER_PREFIX+"[^:]*): (.*)$", "i");
+        var m, offset, len, fuzzy = false;
+
+        for( var i=0 ; i<lines.length ; i++ ) {
+            if (lines[i])
+            {
+                if(m = expression.exec(lines[i])) {
+                    if (m[1].toLowerCase() === "x-request-id")
+                        context.id = m[2];
+
+                    headers.push({
+                        "name": m[1],
+                        // prefixing value with '~' indicates approximate message length matching
+                        // the message length has changed due to the newlines being replaced with &!10;
+                        "value": m[2]
+                    });
+                }
+            }
+        }
+
+        // This fudges lines together that should not have been split.
+        // This happens if the payload inadvertantly included newline characters that
+        // were not encoded with &!10;
+/*
+        for( var i=0 ; i<lines.length ; i++ ) {
+            if (lines[i])
+            {
+                offset = lines[i].indexOf(self.HEADER_PREFIX);
+                if (offset >=0 && offset <=3)
+                {
+                    len = lines[i].length;
+                    if (i+1 == lines.length) offset = 0;
+                    else offset = lines[i+1].indexOf(self.HEADER_PREFIX);
+                    if (
+                        (offset >=0 && offset <=3) ||
+                        lines[i].charAt(len-1) === "|" ||
+                        (lines[i].charAt(len-2) === "|" && lines[i].charAt(len-1) === "\\")
+                    )
+                    {
+                        if(m = expression.exec(lines[i])) {
+                            headers.push({
+                                "name": m[1],
+                                // prefixing value with '~' indicates approximate message length matching
+                                // the message length has changed due to the newlines being replaced with &!10;
+                                "value": ((true || fuzzy)?"~":"") + m[2]
+                            });
+                            fuzzy = false;
+                        }
+                    }
+                    else
+                    {
+                        lines[i] = lines[i] + "&!10;" + lines[i+1];
+                        lines.splice(i+1, 1);
+                        i--;
+                        fuzzy = true;
+                    }
+                } else
+                if(m = expression.exec(lines[i])) {
+                    headers.push({
+                        "name": m[1],
+                        "value": m[2]
+                    });
+                    fuzzy = false;
+                }
+            }
+        }
+*/
+        return headers;
+    }
+}
+
+Channel.prototype.setTransport = function(transport) {
+    this.transport = transport;
+}
+
+
+},{"./protocol":18,"./transport":21,"fp-modules-for-nodejs/lib/util":10}],15:[function(require,module,exports){
+
+var CHANNEL = require("../channel"),
+    UTIL = require("fp-modules-for-nodejs/lib/util"),
+    HTTP_CLIENT = require("fp-modules-for-nodejs/lib/http-client"),
+    JSON = require("fp-modules-for-nodejs/lib/json");
+
+// TODO: Make this configurable
+var HOST = "localhost";
+var PORT = 8099;
+
+const HEADER_PREFIX = 'x-wf-';
+
+var HttpClientChannel = exports.HttpClientChannel = function () {
+    if (!(this instanceof exports.HttpClientChannel))
+        return new exports.HttpClientChannel();
+
+    this.__construct();
+
+    this.HEADER_PREFIX = HEADER_PREFIX;
+}
+
+HttpClientChannel.prototype = CHANNEL.Channel();
+
+HttpClientChannel.prototype.flush = function(applicator, bypassTransport)
+{
+    var self = this;
+    if (typeof applicator === "undefined")
+    {
+        var parts = {};
+
+        applicator = {
+            setMessagePart: function(key, value)
+            {
+                parts[key] = value;
+            },
+            getMessagePart: function(key)
+            {
+                if (typeof parts[key] === "undefined")
+                    return null;
+                return parts[key];
+            },
+            flush: function(clannel)
+            {
+                if (UTIL.len(parts)==0)
+                    return false;
+
+                var data = [];
+                UTIL.forEach(parts, function(part)
+                {
+                    data.push(part[0] + ": " + part[1]);
+                });
+                data = data.join("\n");
+
+                HTTP_CLIENT.request({
+                    host: HOST,
+                    port: PORT,
+                    path: "/wildfire-server",
+                    method: "POST",
+                    headers: {
+                        "content-type": "application/x-www-form-urlencoded",
+                        "content-length": data.length,
+                        "connection": "close"
+                    },
+                    data: data
+                }, function(response)
+                {
+                    if (response.status == 200)
+                    {
+                        try {
+                            var data = JSON.decode(response.data);
+                            if (data.success === true)
+                            {
+                                // success!!
+                            }
+                            else
+                                console.error("ERROR Got error from wildfire server: " + data.error);                    
+                        } catch(e) {
+                            console.error("ERROR parsing JSON response from wildfire server (error: " + e + "): " + response.data);                    
+                        }
+                    }
+                    else
+                        console.error("ERROR from wildfire server (status: " + response.status + "): " + response.data);                    
+                }, function(e)
+                {
+                    if (!/ECONNREFUSED/.test(e))
+                        console.error("ERROR sending message to wildfire server: " + e);                    
+//                    else
+//                        module.print("\0red([Wildfire: Not Connected]\0)\n");                    
+                });
+                return true;
+            }
+        };
+    }
+    return self._flush(applicator);
+}
+
+},{"../channel":14,"fp-modules-for-nodejs/lib/http-client":3,"fp-modules-for-nodejs/lib/json":4,"fp-modules-for-nodejs/lib/util":10}],16:[function(require,module,exports){
+
+var Dispatcher = exports.Dispatcher = function () {
+    if (!(this instanceof exports.Dispatcher))
+        return new exports.Dispatcher();
+    this.channel = null;
+}
+
+Dispatcher.prototype.setChannel = function(channel) {
+    return this._setChannel(channel);
+}
+
+Dispatcher.prototype._setChannel = function(channel) {
+    this.channel = channel;
+}
+
+Dispatcher.prototype.setProtocol = function(protocol) {
+    this.protocol = protocol;
+}
+
+Dispatcher.prototype.setSender = function(sender) {
+    this.sender = sender;
+}
+
+Dispatcher.prototype.setReceiver = function(receiver) {
+    this.receiver = receiver;
+}
+
+Dispatcher.prototype.dispatch = function(message, bypassReceivers) {
+    return this._dispatch(message, bypassReceivers);
+}
+    
+Dispatcher.prototype._dispatch = function(message, bypassReceivers) {
+    if(!message.getProtocol()) message.setProtocol(this.protocol);
+    if(!message.getSender()) message.setSender(this.sender);
+    if(!message.getReceiver()) message.setReceiver(this.receiver);
+    this.channel.enqueueOutgoing(message, bypassReceivers);
+}
+
+},{}],17:[function(require,module,exports){
+
+var Message = exports.Message = function (dispatcher) {
+    if (!(this instanceof exports.Message))
+        return new exports.Message(dispatcher);
+    
+    this.meta = null;
+    this.data = null;
+
+    var self = this;
+    self.dispatch = function() {
+        if(!dispatcher) {
+            throw new Error("dispatcher not set");
+        }
+        return dispatcher.dispatch(self);
+    }
+}
+
+Message.prototype.setProtocol = function(protocol) {
+    this.protocol = protocol;
+}
+
+Message.prototype.getProtocol = function() {
+    return this.protocol;
+}
+
+Message.prototype.setSender = function(sender) {
+    this.sender = sender;
+}
+
+Message.prototype.getSender = function() {
+    return this.sender;
+}
+
+Message.prototype.setReceiver = function(receiver) {
+    this.receiver = receiver;
+}
+
+Message.prototype.getReceiver = function() {
+    return this.receiver;
+}
+
+Message.prototype.setMeta = function(meta) {
+    this.meta = meta;
+}
+
+Message.prototype.getMeta = function() {
+    return this.meta;
+}
+
+Message.prototype.setData = function(data) {
+    this.data = data;
+}
+
+Message.prototype.getData = function() {
+    return this.data;
+}
+
+},{}],18:[function(require,module,exports){
+
+var MESSAGE = require("./message");
+var JSON = require("fp-modules-for-nodejs/lib/json");
+var UTIL = require("fp-modules-for-nodejs/lib/util");
+
+// Tolerance within which messages must match the declared length
+// This is used to compensate for length differences when messages are put back together
+// because of newlines that were not encoded by sender
+const FUZZY_MESSAGE_LENGTH_TOLERANCE = 200;
+
+var instances = {};
+var protocols = {};
+
+exports.factory = function(uri) {
+    if(instances[uri]) {
+        return instances[uri];
+    }
+    if(protocols[uri]) {
+        return (instances[uri] = protocols[uri](uri));
+    }
+    return null;
+}
+
+
+protocols["http://registry.pinf.org/cadorn.org/wildfire/@meta/protocol/component/0.1.0"] =
+protocols["__TEST__"] = function(uri) {
+
+    return {
+        parse: function(buffers, receivers, senders, messages, key, value) {
+
+            var parts = key.split('-');
+            // parts[0] - receiver
+            // parts[1] - sender
+            // parts[2] - message id/index
+
+            if(parts[0]=='index') {
+                // ignore the index header
+                return;
+            } else
+            if(parts[1]=='receiver') {
+                receivers[parts[0]] = value;
+                return;
+            } else
+            if(parts[2]=='sender') {
+                senders[parts[0] + ':' + parts[1]] = value;
+                return;
+            }
+
+            // 62|...|\
+            // @previous Did not allow for '|' in meta or data
+            // @  var m = value.match(/^(\d*)?\|(.*)\|(\\)?$/);
+            // @  if(!m) throw new Error("Error parsing message: " + value);
+            var m = [], i, j;
+            // TIP: fuzzy matching is not currently used
+            m.push((value.charAt(0)=="~")?true:false);
+            i = value.indexOf("|");
+            // TODO: Check for \ before | and skip to next if present
+    if (value.charAt(i-1) === "\\")
+        throw new Error("Found \\ before |! in module " + module.id);
+            m.push(value.substring((m[0])?1:0, i));
+            if (value.charAt(value.length-1) === "|") {    // end in |
+                m.push(value.substring(i+1, value.length-1));
+                m.push("");
+            } else if (value.charAt(value.length-1) === "\\") {    // end in |\ (i.e. a continuation)
+                m.push(value.substring(i+1, value.length-2));
+                m.push("\\");
+            } else throw new Error("Error parsing for trailing '|' in message part: " + value);
+
+//            m[2] = m[2].replace(/\\{2}/g, "\\");
+
+            // length present and message matches length - complete message
+            if(m[1] &&
+               (
+                 (m[0] && Math.abs(m[1]-m[2].length)<FUZZY_MESSAGE_LENGTH_TOLERANCE ) ||
+                 (!m[0] && m[1]==m[2].length)
+               ) && !m[3]) {
+                enqueueMessage(parts[2], parts[0], parts[1], m[2]);
+            } else
+            // message continuation present - message part
+            if( m[3] ) {
+                enqueueBuffer(parts[2], parts[0], parts[1], m[2], (m[1])?'first':'part', m[1], m[0]);
+            } else
+            // no length and no message continuation - last message part
+            if( !m[1] && !m[3] ) {
+                enqueueBuffer(parts[2], parts[0], parts[1], m[2], 'last', void 0, m[0]);
+            } else {
+                throw new Error('Error parsing message: ' + value);
+            }
+
+            // this supports message parts arriving in any order as fast as possible
+            function enqueueBuffer(index, receiver, sender, value, position, length, fuzzy) {
+                if(!buffers[receiver]) {
+                    buffers[receiver] = {"firsts": 0, "lasts": 0, "messages": []};
+                }
+                if(position=="first") buffers[receiver].firsts += 1;
+                else if(position=="last") buffers[receiver].lasts += 1;
+                buffers[receiver].messages.push([index, value, position, length, fuzzy]);
+
+                // if we have a mathching number of first and last parts we assume we have
+                // a complete message so we try and join it
+                if(buffers[receiver].firsts>0 && buffers[receiver].firsts==buffers[receiver].lasts) {
+                    // first we sort all messages
+                    buffers[receiver].messages.sort(
+                        function (a, b) {
+                            return a[0] - b[0];
+                        }
+                    );
+                    // find the first "first" part and start collecting parts
+                    // until "last" is found
+                    var startIndex = null;
+                    var buffer = null;
+                    fuzzy = false;
+                    for( i=0 ; i<buffers[receiver].messages.length ; i++ ) {
+                        if(buffers[receiver].messages[i][4])
+                            fuzzy = true;
+                        if(buffers[receiver].messages[i][2]=="first") {
+                            startIndex = i;
+                            buffer = buffers[receiver].messages[i][1];
+                        } else
+                        if(startIndex!==null) {
+                            buffer += buffers[receiver].messages[i][1];
+                            if(buffers[receiver].messages[i][2]=="last") {
+                                // if our buffer matches the message length
+                                // we have a complete message
+                                if(
+                                     (fuzzy && Math.abs(buffers[receiver].messages[startIndex][3]-buffer.length)<FUZZY_MESSAGE_LENGTH_TOLERANCE ) ||
+                                     (!fuzzy && buffer.length==buffers[receiver].messages[startIndex][3])
+                                ) {
+                                    // message is complete
+                                    enqueueMessage(buffers[receiver].messages[startIndex][0], receiver, sender, buffer);
+                                    buffers[receiver].messages.splice(startIndex, i-startIndex+1);
+                                    buffers[receiver].firsts -= 1;
+                                    buffers[receiver].lasts -= 1;
+                                    startIndex = null;
+                                    buffer = null;
+                                    fuzzy = false;
+                                } else {
+                                    // message is not complete
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            function enqueueMessage(index, receiver, sender, value) {
+
+                if(!messages[receiver]) {
+                    messages[receiver] = [];
+                }
+
+                // Split "...\|...|...|.......
+                // by ------------^
+                var m = [ value ], i = 0;
+                while(true) {
+                    i = value.indexOf("|", i);
+                    if (i===-1) throw new Error("Error parsing for '|' in message part: " + value);
+                    if (value.charAt(i-1) != "\\") break;
+                }
+                m.push(value.substring(0, i));
+                m.push(value.substring(i+1, value.length));
+
+                var message = MESSAGE.Message();
+                message.setReceiver(receiver);
+                message.setSender(sender);
+                // @previous
+                // @  message.setMeta((m[1])?m[1].replace(/&#124;/g, "|").replace(/&#10;/g, "\n"):null);
+                // @  message.setData(m[2].replace(/&#124;/g, "|").replace(/&#10;/g, "\n"));
+                message.setMeta((m[1])?m[1].replace(/\\\|/g, "|").replace(/&!10;/g, "\n"):null);
+                message.setData(m[2].replace(/&!10;/g, "\\n"));
+                message.setProtocol('http://registry.pinf.org/cadorn.org/wildfire/@meta/protocol/component/0.1.0');
+
+                messages[receiver].push([index, message]);
+            }
+        },
+
+        encodeMessage: function(options, message) {
+
+            var protocol_id = message.getProtocol();
+            if(!protocol_id) {
+                throw new Error("Protocol not set for message");
+            }
+            var receiver_id = message.getReceiver();
+            if(!receiver_id) {
+                throw new Error("Receiver not set for message");
+            }
+            var sender_id = message.getSender();
+            if(!sender_id) {
+                throw new Error("Sender not set for message");
+            }
+
+            var headers = [];
+
+            var meta = message.getMeta();
+            if(!meta)
+                meta = "";
+
+            var data = message.getData() || "";
+            if (typeof data != "string")
+                throw new Error("Data in wildfire message is not a string!");
+
+            data = meta.replace(/\|/g, "\\|").replace(/\n|\u000a|\\u000a/g, "&!10;") + '|' + data.replace(/\n|\u000a|\\u000a/g, "&!10;");
+//            var data = meta.replace(/\|/g, "&#124;").replace(/\n|\u000a/g, "&#10;") + '|' + message.getData().replace(/\|/g, "&#124;").replace(/\n|\u000a/g, "&#10;");
+
+            var parts = chunk_split(data, options.messagePartMaxLength);
+
+            var part,
+                msg;
+
+            for( var i=0 ; i<parts.length ; i++) {
+                if (part = parts[i]) {
+                    msg = "";
+
+                    // escape backslashes
+                    // NOTE: This should probably be done during JSON encoding to ensure we do not double-escape
+                    //       with different encoders, but not sure how different encoders behave yet.
+//                    part = part.replace(/\\/g, "\\\\");
+
+                    if (parts.length>1) {
+                        msg = ((i==0)?data.length:'') +
+                              '|' + part + '|' +
+                              ((i<parts.length-1)?"\\":"");
+                    } else {
+                        msg = part.length + '|' + part + '|';
+                    }
+
+                    headers.push([
+                        protocol_id,
+                        receiver_id,
+                        sender_id,
+                        msg
+                    ]);
+                }
+            }
+            return headers;
+        },
+
+        encodeKey: function(util, receiverId, senderId) {
+
+            if(!util["protocols"]) util["protocols"] = {};
+            if(!util["messageIndexes"]) util["messageIndexes"] = {};
+            if(!util["receivers"]) util["receivers"] = {};
+            if(!util["senders"]) util["senders"] = {};
+
+            var protocol = getProtocolIndex(uri);
+            var messageIndex = getMessageIndex(protocol);
+            var receiver = getReceiverIndex(protocol, receiverId);
+            var sender = getSenderIndex(protocol, receiver, senderId);
+
+            return util.HEADER_PREFIX + protocol + "-" + receiver + "-" + sender + "-" + messageIndex;
+
+            function getProtocolIndex(protocolId) {
+                if(util["protocols"][protocolId]) return util["protocols"][protocolId];
+                for( var i=1 ; ; i++ ) {
+                    var value = util.applicator.getMessagePart(util.HEADER_PREFIX + "protocol-" + i);
+                    if(!value) {
+                        util["protocols"][protocolId] = i;
+                        util.applicator.setMessagePart(util.HEADER_PREFIX + "protocol-" + i, protocolId);
+                        return i;
+                    } else
+                    if(value==protocolId) {
+                        util["protocols"][protocolId] = i;
+                        return i;
+                    }
+                }
+            }
+
+            function getMessageIndex(protocolIndex) {
+                var value = util["messageIndexes"][protocolIndex] || util.applicator.getMessagePart(util.HEADER_PREFIX + protocolIndex + "-index");
+                if(!value) {
+                    value = 0;
+                }
+                value++;
+                util["messageIndexes"][protocolIndex] = value;
+                util.applicator.setMessagePart(util.HEADER_PREFIX + protocolIndex + "-index", value);
+                return value;
+            }
+
+            function getReceiverIndex(protocolIndex, receiverId) {
+                if(util["receivers"][protocolIndex + ":" + receiverId]) return util["receivers"][protocolIndex + ":" + receiverId];
+                for( var i=1 ; ; i++ ) {
+                    var value = util.applicator.getMessagePart(util.HEADER_PREFIX + protocolIndex + "-" + i + "-receiver");
+                    if(!value) {
+                        util["receivers"][protocolIndex + ":" + receiverId] = i;
+                        util.applicator.setMessagePart(util.HEADER_PREFIX + protocolIndex + "-" + i + "-receiver", receiverId);
+                        return i;
+                    } else
+                    if(value==receiverId) {
+                        util["receivers"][protocolIndex + ":" + receiverId] = i;
+                        return i;
+                    }
+                }
+            }
+
+            function getSenderIndex(protocolIndex, receiverIndex, senderId) {
+                if(util["senders"][protocolIndex + ":" + receiverIndex + ":" + senderId]) return util["senders"][protocolIndex + ":" + receiverIndex + ":" + senderId];
+                for( var i=1 ; ; i++ ) {
+                    var value = util.applicator.getMessagePart(util.HEADER_PREFIX + protocolIndex + "-" + receiverIndex + "-" + i + "-sender");
+                    if(!value) {
+                        util["senders"][protocolIndex + ":" + receiverIndex + ":" + senderId] = i;
+                        util.applicator.setMessagePart(util.HEADER_PREFIX + protocolIndex + "-" + receiverIndex + "-" + i + "-sender", senderId);
+                        return i;
+                    } else
+                    if(value==senderId) {
+                        util["senders"][protocolIndex + ":" + receiverIndex + ":" + senderId] = i;
+                        return i;
+                    }
+                }
+            }
+        }
+    };
+};
+
+
+// @see http://registry.pinf.org/cadorn.org/wildfire/@meta/protocol/json-stream/0.2.0
+protocols["http://meta.wildfirehq.org/Protocol/JsonStream/0.2"] = function(uri) {
+
+    var groupStack = [];
+    var groupIndex = 0;
+
+    return {
+        parse: function(buffers, receivers, senders, messages, key, value) {
+
+            var parts = key.split('-');
+            // parts[0] - receiver
+            // parts[1] - sender
+            // parts[2] - message id/index
+
+            if(parts[0]=='index') {
+                // ignore the index header
+                return;
+            } else
+            if(parts[0]=='structure') {
+/*
+                if(value=="http://meta.firephp.org/Wildfire/Structure/FirePHP/FirebugConsole/0.1") {
+                    value = "http://registry.pinf.org/cadorn.org/insight/@meta/receiver/console/page/0";
+                } else
+                if(value=="http://meta.firephp.org/Wildfire/Structure/FirePHP/Dump/0.1") {
+                    value = "http://registry.pinf.org/cadorn.org/insight/@meta/receiver/console/page/0";
+//                    value = "http://pinf.org/cadorn.org/fireconsole/meta/Receiver/NetServer/0.1"
+                }
+*/
+                receivers[parts[1]] = value;
+
+                // NOTE: The old protocol specifies senders independent from receivers so we need to add senders for every receiver if senders are already known
+                if(UTIL.len(senders)>0) {
+                    var newSenders = {};
+                    for( var senderKey in senders ) {
+                        var senderParts = senderKey.split(":");
+                        newSenders[parts[1] + ":" + senderParts[1]] = senders[senderKey];
+                    }
+                    UTIL.complete(senders, newSenders);
+                }
+                return;
+            } else
+            if(parts[0]=='plugin') {
+
+                // NOTE: The old protocol specifies senders independent from receivers so we need to add senders for every receiver
+                //       If no receiver is known yet we assume a receiver key of "1"
+                if(UTIL.len(receivers)==0) {
+                    senders["1" + ":" + parts[1]] = value;
+                } else {
+                    for( var receiverKey in receivers ) {
+                        senders[receiverKey + ":" + parts[1]] = value;
+                    }
+                }
+                return;
+            }
+
+            // 62|...|\
+            var m = value.match(/^(\d*)?\|(.*)\|(\\)?$/);
+            if(!m) {
+                throw new Error("Error parsing message: " + value);
+            }
+
+            // length present and message matches length - complete message
+            if (m[1] && m[1] == m[2].length && !m[3]) {
+                enqueueMessage(parts[2], parts[0], parts[1], m[2]);
+            } else
+            // message continuation present - message part
+            if( m[3] ) {
+                enqueueBuffer(parts[2], parts[0], parts[1], m[2], (m[1])?'first':'part', m[1]);
+            } else
+            // no length and no message continuation - last message part
+            if( !m[1] && !m[3] ) {
+                enqueueBuffer(parts[2], parts[0], parts[1], m[2], 'last');
+            } else {
+                console.error("m", m);
+                console.error("m[1]", m[1]);
+                console.error("m[2].length", m[2].length);
+                throw new Error('Error parsing message parts: ' + value);
+            }
+
+            // this supports message parts arriving in any order as fast as possible
+            function enqueueBuffer(index, receiver, sender, value, position, length) {
+                if(!buffers[receiver]) {
+                    buffers[receiver] = {"firsts": 0, "lasts": 0, "messages": []};
+                }
+                if(position=="first") buffers[receiver].firsts += 1;
+                else if(position=="last") buffers[receiver].lasts += 1;
+                buffers[receiver].messages.push([index, value, position, length]);
+
+                // if we have a mathching number of first and last parts we assume we have
+                // a complete message so we try and join it
+                if(buffers[receiver].firsts>0 && buffers[receiver].firsts==buffers[receiver].lasts) {
+                    // first we sort all messages
+                    buffers[receiver].messages.sort(
+                        function (a, b) {
+                            return a[0] - b[0];
+                        }
+                    );
+                    // find the first "first" part and start collecting parts
+                    // until "last" is found
+                    var startIndex = null;
+                    var buffer = null;
+                    for( i=0 ; i<buffers[receiver].messages.length ; i++ ) {
+                        if(buffers[receiver].messages[i][2]=="first") {
+                            startIndex = i;
+                            buffer = buffers[receiver].messages[i][1];
+                        } else
+                        if(startIndex!==null) {
+                            buffer += buffers[receiver].messages[i][1];
+                            if(buffers[receiver].messages[i][2]=="last") {
+                                // if our buffer matches the message length
+                                // we have a complete message
+                                if(buffer.length==buffers[receiver].messages[startIndex][3]) {
+                                    // message is complete
+                                    enqueueMessage(buffers[receiver].messages[startIndex][0], receiver, sender, buffer);
+                                    buffers[receiver].messages.splice(startIndex, i-startIndex);
+                                    buffers[receiver].firsts -= 1;
+                                    buffers[receiver].lasts -= 1;
+                                    if(buffers[receiver].messages.length==0) delete buffers[receiver];
+                                    startIndex = null;
+                                    buffer = null;
+                                } else {
+                                    // message is not complete
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            function enqueueMessage(index, receiver, sender, value) {
+
+                if(!messages[receiver]) {
+                    messages[receiver] = [];
+                }
+
+
+                var meta = {
+                        "msg.preprocessor": "FirePHPCoreCompatibility",
+                        "target": "console",
+                        "lang.id": "registry.pinf.org/cadorn.org/github/renderers/packages/php/master"
+                    },
+                    data,
+                    parts;
+
+                try {
+                    parts = JSON.decode(value);
+                } catch(e) {
+                    console.error("Error parsing JsonStream message", e, value);
+                    throw e;
+                }
+
+                // console
+                if(UTIL.isArrayLike(parts) && parts.length==2 &&
+                    (typeof parts[0] == "object") && UTIL.has(parts[0], "Type")) {
+
+                    data = parts[1];
+
+                    for( var name in parts[0] ) {
+                        if(name=="Type") {
+
+                            if(groupStack.length>0) {
+                                meta["group"] = groupStack[groupStack.length-1];
+                            }
+
+                            switch(parts[0][name]) {
+                                case "LOG":
+                                    meta["priority"] = "log";
+                                    break;
+                                case "INFO":
+                                    meta["priority"] = "info";
+                                    break;
+                                case "WARN":
+                                    meta["priority"] = "warn";
+                                    break;
+                                case "ERROR":
+                                    meta["priority"] = "error";
+                                    break;
+                                case "EXCEPTION":
+                                    var originalData = data;
+                                    data = {
+                                        "__className": originalData.Class,
+                                        "__isException": true,
+                                        "protected:message": originalData.Message,
+                                        "protected:file": originalData.File,
+                                        "protected:line": originalData.Line,
+                                        "private:trace": originalData.Trace
+                                    }
+                                    if (data["private:trace"] && data["private:trace"].length > 0) {
+                                        if (data["private:trace"][0].file != originalData.File || data["private:trace"][0].line != originalData.Line) {
+                                            data["private:trace"].unshift({
+                                               "class": originalData.Class || "",
+                                                "type": originalData.Type || "",
+                                                "function": originalData.Function || "",
+                                                "file": originalData.File || "",
+                                                "line": originalData.Line || "",
+                                                "args": originalData.Args || ""
+                                            });
+                                        }
+                                    }
+                                    meta["priority"] = "error";
+                                    break;
+                                case "TRACE":
+                                    meta["renderer"] = "http://registry.pinf.org/cadorn.org/renderers/packages/insight/0:structures/trace";
+                                    var trace = [
+                                        {
+                                            "class": data.Class || "",
+                                            "type": data.Type || "",
+                                            "function": data.Function || "",
+                                            "file": data.File || "",
+                                            "line": data.Line || "",
+                                            "args": data.Args || ""
+                                        }
+                                    ];
+                                    if(data.Trace) {
+                                        trace = trace.concat(data.Trace);
+                                    }
+                                    data = {
+                                        "title": data.Message,
+                                        "trace": trace
+                                    };
+                                    break;
+                                case "TABLE":
+                                    meta["renderer"] = "http://registry.pinf.org/cadorn.org/renderers/packages/insight/0:structures/table";
+                                    data = {"data": data};
+                                    if(data.data.length==2 && typeof data.data[0] == "string") {
+                                        data.header = data.data[1].splice(0,1)[0];
+                                        data.title = data.data[0];
+                                        data.data = data.data[1];
+                                    } else {
+                                        data.header = data.data.splice(0,1)[0];
+                                    }
+                                    break;
+                                case "GROUP_START":
+                                    groupIndex++;
+                                    meta["group.start"] = true;
+                                    meta["group"] = "group-" + groupIndex;
+                                    groupStack.push("group-" + groupIndex);
+                                    break;
+                                case "GROUP_END":
+                                    meta["group.end"] = true;
+                                    if(groupStack.length>0) {
+                                        groupStack.pop();
+                                    }
+                                    break;
+                                default:
+                                    throw new Error("Log type '" + parts[0][name] + "' not implemented");
+                                    break;
+                            }
+                        } else
+                        if(name=="Label") {
+                            meta["label"] = parts[0][name];
+                        } else
+                        if(name=="File") {
+                            meta["file"] = parts[0][name];
+                        } else
+                        if(name=="Line") {
+                            meta["line"] = parts[0][name];
+                        } else
+                        if(name=="Collapsed") {
+                            meta[".collapsed"] = (parts[0][name]=='true')?true:false;
+//                        } else
+//                        if(name=="Color") {
+//                            meta["fc.group.color"] = parts[0][name];
+                        }
+                    }
+                } else
+                // dump
+                {
+                    data = parts;
+                    meta["label"] = "Dump";
+                }
+
+                if(meta["renderer"] == "http://registry.pinf.org/cadorn.org/renderers/packages/insight/0:structures/table") {
+                    if(meta["label"]) {
+                        data.title = meta["label"];
+                        delete meta["label"];
+                    }
+                } else
+                if(meta["group.start"]) {
+                    meta["group.title"] = meta["label"];
+                    delete meta["label"];
+                    if(typeof meta[".collapsed"] == "undefined" || !meta[".collapsed"]) {
+                        meta["group.expand"] = meta["group"];
+                    }
+                    delete meta[".collapsed"];
+                }
+
+                var message = MESSAGE.Message();
+                message.setReceiver(receiver);
+                message.setSender(sender);
+
+                try {
+                    message.setMeta(JSON.encode(meta));
+                } catch(e) {
+                    console.error("Error encoding object (JsonStream compatibility)", e, meta);
+                    throw e;
+                }
+
+                try {
+                    message.setData(JSON.encode(data));
+                } catch(e) {
+                    console.error("Error encoding object (JsonStream compatibility)", e, data);
+                    throw e;
+                }
+
+                messages[receiver].push([index, message]);
+            }
+        },
+
+        encodeMessage: function(options, message) {
+            throw new Error("Not implemented!");
+        },
+
+        encodeKey: function(util, receiverId, senderId) {
+            throw new Error("Not implemented!");
+        }
+    };
+};
+
+
+
+protocols["http://registry.pinf.org/cadorn.org/wildfire/@meta/protocol/announce/0.1.0"] = function(uri) {
+
+    return {
+        parse: function(buffers, receivers, senders, messages, key, value) {
+
+            var parts = key.split('-');
+            // parts[0] - message id/index
+
+            if(parts[0]=='index') {
+                // ignore the index header
+                return;
+            }
+
+            // 62|...|\
+            var m = value.match(/^(\d*)?\|(.*)\|(\\)?$/);
+            if(!m) {
+                throw new Error("Error parsing message: " + value);
+            }
+
+            // length present and message matches length - complete message
+            if(m[1] && m[1]==m[2].length && !m[3]) {
+                enqueueMessage(key, m[2]);
+            } else
+            // message continuation present - message part
+            if( m[3] ) {
+                enqueueBuffer(key, m[2], (m[1])?'first':'part', m[1]);
+            } else
+            // no length and no message continuation - last message part
+            if( !m[1] && !m[3] ) {
+                enqueueBuffer(key, m[2], 'last');
+            } else {
+                throw new Error('Error parsing message: ' + value);
+            }
+
+            // this supports message parts arriving in any order as fast as possible
+            function enqueueBuffer(index, value, position, length) {
+
+                receiver = "*";
+                if(!buffers[receiver]) {
+                    buffers[receiver] = {"firsts": 0, "lasts": 0, "messages": []};
+                }
+                if(position=="first") buffers[receiver].firsts += 1;
+                else if(position=="last") buffers[receiver].lasts += 1;
+                buffers[receiver].messages.push([index, value, position, length]);
+
+                // if we have a mathching number of first and last parts we assume we have
+                // a complete message so we try and join it
+                if(buffers[receiver].firsts>0 && buffers[receiver].firsts==buffers[receiver].lasts) {
+                    // first we sort all messages
+                    buffers[receiver].messages.sort(
+                        function (a, b) {
+                            return a[0] - b[0];
+                        }
+                    );
+                    // find the first "first" part and start collecting parts
+                    // until "last" is found
+                    var startIndex = null;
+                    var buffer = null;
+                    for( i=0 ; i<buffers[receiver].messages.length ; i++ ) {
+                        if(buffers[receiver].messages[i][2]=="first") {
+                            startIndex = i;
+                            buffer = buffers[receiver].messages[i][1];
+                        } else
+                        if(startIndex!==null) {
+                            buffer += buffers[receiver].messages[i][1];
+                            if(buffers[receiver].messages[i][2]=="last") {
+                                // if our buffer matches the message length
+                                // we have a complete message
+                                if(buffer.length==buffers[receiver].messages[startIndex][3]) {
+                                    // message is complete
+                                    enqueueMessage(buffers[receiver].messages[startIndex][0], buffer);
+                                    buffers[receiver].messages.splice(startIndex, i-startIndex);
+                                    buffers[receiver].firsts -= 1;
+                                    buffers[receiver].lasts -= 1;
+                                    if(buffers[receiver].messages.length==0) delete buffers[receiver];
+                                    startIndex = null;
+                                    buffer = null;
+                                } else {
+                                    // message is not complete
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            function enqueueMessage(index, value) {
+
+                receiver = "*";
+
+                if(!messages[receiver]) {
+                    messages[receiver] = [];
+                }
+
+                var m = /^(.*?[^\\])?\|(.*)$/.exec(value);
+
+                var message = MESSAGE.Message();
+                message.setReceiver(receiver);
+                message.setMeta(m[1] || null);
+                message.setData(m[2]);
+
+                messages[receiver].push([index, message]);
+            }
+        },
+
+        encodeMessage: function(options, message) {
+
+            var protocol_id = message.getProtocol();
+            if(!protocol_id) {
+                throw new Error("Protocol not set for message");
+            }
+
+            var headers = [];
+
+            var meta = message.getMeta() || "";
+
+            var data = meta.replace(/\|/g, "\\|") + '|' + message.getData().replace(/\|/g, "\\|");
+
+            var parts = chunk_split(data, options.messagePartMaxLength);
+
+            var part,
+                msg;
+            for( var i=0 ; i<parts.length ; i++) {
+                if (part = parts[i]) {
+
+                    msg = "";
+
+                    // escape backslashes
+                    // NOTE: This should probably be done during JSON encoding to ensure we do not double-escape
+                    //       with different encoders, but not sure how different encoders behave yet.
+                    part = part.replace(/\\/g, "\\\\");
+
+                    if (parts.length>2) {
+                        msg = ((i==0)?data.length:'') +
+                              '|' + part + '|' +
+                              ((i<parts.length-2)?"\\":"");
+                    } else {
+                        msg = part.length + '|' + part + '|';
+                    }
+
+                    headers.push([
+                        protocol_id,
+                        "",
+                        "",
+                        msg
+                    ]);
+                }
+            }
+            return headers;
+        },
+
+        encodeKey: function(util) {
+
+            if(!util["protocols"]) util["protocols"] = {};
+            if(!util["messageIndexes"]) util["messageIndexes"] = {};
+
+            var protocol = getProtocolIndex(uri);
+            var messageIndex = getMessageIndex(protocol);
+
+            return util.HEADER_PREFIX + protocol + "-" + messageIndex;
+
+            function getProtocolIndex(protocolId) {
+                if(util["protocols"][protocolId]) return util["protocols"][protocolId];
+                for( var i=1 ; ; i++ ) {
+                    var value = util.applicator.getMessagePart(util.HEADER_PREFIX + "protocol-" + i);
+                    if(!value) {
+                        util["protocols"][protocolId] = i;
+                        util.applicator.setMessagePart(util.HEADER_PREFIX + "protocol-" + i, protocolId);
+                        return i;
+                    } else
+                    if(value==protocolId) {
+                        util["protocols"][protocolId] = i;
+                        return i;
+                    }
+                }
+            }
+
+            function getMessageIndex(protocolIndex) {
+                var value = util["messageIndexes"][protocolIndex] || util.applicator.getMessagePart(util.HEADER_PREFIX + protocolIndex + "-index");
+                if(!value) {
+                    value = 0;
+                }
+                value++;
+                util["messageIndexes"][protocolIndex] = value;
+                util.applicator.setMessagePart(util.HEADER_PREFIX + protocolIndex + "-index", value);
+                return value;
+            }
+        }
+    };
+};
+
+
+
+
+function chunk_split(value, length) {
+    var parts = [];
+    var part;
+    while( (part = value.substr(0, length)) && part.length > 0 ) {
+        parts.push(part);
+        value = value.substr(length);
+    }
+    return parts;
+}
+
+},{"./message":17,"fp-modules-for-nodejs/lib/json":4,"fp-modules-for-nodejs/lib/util":10}],19:[function(require,module,exports){
+
+var Receiver = exports.Receiver = function () {
+    if (!(this instanceof exports.Receiver))
+        return new exports.Receiver();
+
+    this.listeners = [];
+    this.ids = [];
+}
+    
+Receiver.prototype.setId = function(id) {
+    if(this.ids.length > 0) {
+        throw new Error("ID already set for receiver!");
+    }
+    this.ids.push(id);
+}
+
+Receiver.prototype.addId = function(id) {
+    this.ids.push(id);
+}
+
+/**
+ * @deprecated
+ */
+Receiver.prototype.getId = function() {
+    if(this.ids.length > 1) {
+        throw new Error("DEPRECATED: Multiple IDs for receiver. Cannot use getId(). Use getIds() instead!");
+    }
+    return this.ids[0];
+}
+
+Receiver.prototype.getIds = function() {
+    return this.ids;
+}
+
+Receiver.prototype.hasId = function(id) {
+    for( var i=0 ; i<this.ids.length ; i++ ) {
+        if(this.ids[i]==id) {
+            return true;
+        }
+    }
+    return false;
+}
+
+Receiver.prototype.onChannelOpen = function(context) {
+    this._dispatch("onChannelOpen", [context]);
+}
+
+Receiver.prototype.onChannelClose = function(context) {
+    this._dispatch("onChannelClose", [context]);
+}
+
+Receiver.prototype.onMessageGroupStart = function(context) {
+    this._dispatch("onMessageGroupStart", [context]);
+}
+
+Receiver.prototype.onMessageGroupEnd = function(context) {
+    this._dispatch("onMessageGroupEnd", [context]);
+}
+
+Receiver.prototype.onMessageReceived = function(message, context) {
+    return this._dispatch("onMessageReceived", [message, context]);
+}
+
+Receiver.prototype.addListener = function(listener) {
+    this.listeners.push(listener);
+}
+
+Receiver.prototype._dispatch = function(event, args) {
+    if(this.listeners.length==0) {
+        return;
+    }
+    var returnOptions,
+        opt;
+    for( var i=0 ; i<this.listeners.length ; i++ ) {
+        if(this.listeners[i][event]) {
+            opt = this.listeners[i][event].apply(this.listeners[i], args);
+            if(opt) {
+                if(!returnOptions) {
+                    returnOptions = opt;
+                } else {
+                    for( var key in opt ) {
+                        returnOptions[key] = opt[key];
+                    }
+                }
+            }
+        }
+    }
+    return returnOptions;
+}
+
+},{}],20:[function(require,module,exports){
+
+var WILDFIRE = require("../wildfire"),
+    JSON = require("fp-modules-for-nodejs/lib/json");
+
+var CallbackStream = exports.CallbackStream = function CallbackStream()
+{
+    if (!(this instanceof exports.CallbackStream))
+        return new exports.CallbackStream();
+    this.messagesIndex = 1;
+    this.messages = {};
+
+    var self = this;
+
+    this.dispatcher = WILDFIRE.Dispatcher();
+    // TODO: Use own protocol here
+    this.dispatcher.setProtocol('http://registry.pinf.org/cadorn.org/wildfire/@meta/protocol/component/0.1.0');
+
+
+    this.receiver = WILDFIRE.Receiver();
+    this.receiveHandler = null;
+
+    this.receiver.addListener({
+        onMessageReceived: function(context, message)
+        {
+            var meta = JSON.decode(message.getMeta());
+
+            if(meta[".action"] == "request")
+            {
+                self.receiveHandler({
+                    meta: meta,
+                    data: JSON.decode(message.getData())
+                }, function(message)
+                {
+                    if (!message || typeof message !== "object")
+                        throw new Error("Did not get message object for receiveHandler response");
+                    if (typeof message.data === "undefined")
+                        throw new Error("Message object from receiveHandler response does not include 'data' property.");
+                    
+                    var msg = WILDFIRE.Message();
+                    if (typeof message.meta == "undefined")
+                        message.meta = {};
+
+                    message.meta[".callbackid"] = meta[".callbackid"];
+                    message.meta[".action"] = "respond";
+
+                    try {
+                        msg.setMeta(JSON.encode(message.meta));
+                    } catch(e) {
+                        console.warn("Error JSON encoding meta", e);
+                        throw new Error("Error JSON encoding meta: " + e);
+                    }
+                    try {
+                        msg.setData(JSON.encode(message.data));
+                    } catch(e) {
+                        console.warn("Error JSON encoding data", e);
+                        throw new Error("Error JSON encoding data: " + e);
+                    }
+
+                    try {
+                        self.dispatcher.dispatch(msg, true);
+                    } catch(e) {
+                        console.warn("Error dispatching message in " + module.id, e);
+                        throw new Error("Error '"+e+"' dispatching message in " + module.id);
+                    }
+                });
+            }
+            else
+            if(meta[".action"] == "respond")
+            {
+                if(self.messages["i:" + meta[".callbackid"]])
+                {
+                    self.messages["i:" + meta[".callbackid"]][1](
+                        {
+                            meta: meta,
+                            data: JSON.decode(message.getData())
+                        }
+                    );
+                    delete self.messages["i:" + meta[".callbackid"]];
+                }
+            }
+            else
+                throw new Error("NYI");
+        }
+    });
+}
+
+CallbackStream.prototype.setChannel = function(channel)
+{
+    this.dispatcher.setChannel(channel);
+    channel.addReceiver(this.receiver);
+}
+
+CallbackStream.prototype.setHere = function(id)
+{
+    // TODO: Remove suffix once we use our own protocol for callbacks
+    this.receiver.setId(id + "-callback");
+    // TODO: Remove suffix once we use our own protocol for callbacks
+    this.dispatcher.setSender(id + "-callback");
+}
+
+CallbackStream.prototype.setThere = function(id)
+{
+    // TODO: Remove suffix once we use our own protocol for callbacks
+    this.dispatcher.setReceiver(id + "-callback");
+}
+
+CallbackStream.prototype.send = function(message, callback)
+{
+    var msg = WILDFIRE.Message();
+    if (typeof message.meta == "undefined")
+        message.meta = {};
+
+    message.meta[".callbackid"] = this.messagesIndex;
+    message.meta[".action"] = "request";
+
+    msg.setMeta(JSON.encode(message.meta));
+    msg.setData(JSON.encode(message.data));
+
+    this.messages["i:" + this.messagesIndex] = [msg, callback];
+    this.messagesIndex++;
+
+    this.dispatcher.dispatch(msg, true);
+}
+
+CallbackStream.prototype.receive = function(handler)
+{
+    this.receiveHandler = handler;
+}
+
+},{"../wildfire":22,"fp-modules-for-nodejs/lib/json":4}],21:[function(require,module,exports){
+
+
+const RECEIVER_ID = "http://registry.pinf.org/cadorn.org/wildfire/@meta/receiver/transport/0";
+
+var MD5 = require("fp-modules-for-nodejs/lib/md5");
+var STRUCT = require("fp-modules-for-nodejs/lib/struct");
+var JSON = require("fp-modules-for-nodejs/lib/json");
+//var HTTP = require("http");
+var MESSAGE = require("./message");
+var RECEIVER = require("./receiver");
+
+
+var Transport = exports.Transport = function(options) {
+    if (!(this instanceof exports.Transport))
+        return new exports.Transport(options);
+    this.options = options;
+}
+
+Transport.prototype.newApplicator = function(applicator) {
+    return Applicator(this, applicator);
+}
+
+Transport.prototype.serviceDataRequest = function(key) {
+    return require("./wildfire").getBinding().formatResponse({
+        "contentType": "text/plain"
+    }, this.getData(key));
+}
+
+Transport.prototype.getUrl = function(key) {
+    return this.options.getUrl(key);
+}
+
+Transport.prototype.setData = function(key, value) {
+    return this.options.setData(key, value);
+}
+
+Transport.prototype.getData = function(key) {
+    return this.options.getData(key);
+}
+
+
+var Applicator = function(transport, applicator) {
+    if (!(this instanceof Applicator))
+        return new Applicator(transport, applicator);
+    this.transport = transport;
+    this.applicator = applicator;
+    this.buffer = {};
+}
+
+Applicator.prototype.setMessagePart = function(key, value) {
+    this.buffer[key] = value;
+}
+
+Applicator.prototype.getMessagePart = function(key) {
+    if(!this.buffer[key]) return null;
+    return this.buffer[key];
+}
+
+Applicator.prototype.flush = function(channel) {
+
+    var data = [];
+    var seed = [];
+
+    // combine all message parts into one text block
+    for( var key in this.buffer ) {
+        data.push(key + ": " + this.buffer[key]);
+        if(data.length % 3 == 0 && seed.length < 5) seed.push(this.buffer[key]);
+    }
+    
+    // generate a key for the text block
+    var key = STRUCT.bin2hex(MD5.hash(Math.random() + ":" + module.path + ":" + seed.join("")));
+
+    // store the text block for future access
+    this.transport.setData(key, data.join("\n"));
+    
+    // create a pointer message to be sent instead of the original messages
+    var message = MESSAGE.Message();
+    message.setProtocol('http://registry.pinf.org/cadorn.org/wildfire/@meta/protocol/component/0');
+    message.setSender('http://pinf.org/cadorn.org/wildfire/packages/lib-js/lib/transport.js');
+    message.setReceiver(RECEIVER_ID);
+    message.setData(JSON.encode({"url": this.transport.getUrl(key)}));
+    
+    // send the pointer message through the channel bypassing all transports and local receivers
+    channel.enqueueOutgoing(message, true);
+    return channel.flush(this.applicator, true);
+}
+
+exports.newReceiver = function(channel) {
+    var receiver = RECEIVER.Receiver();
+    receiver.setId(RECEIVER_ID);
+    receiver.addListener({
+        onMessageReceived: function(context, message) {
+            try {
+                context.transporter = RECEIVER_ID;
+
+throw new Error("OOPS!!!");
+/*
+                // make a sync secondary request
+                var data = HTTP.read(JSON.decode(message.getData()).url);
+                if(data) {
+                    channel.parseReceived(data, context, {
+                        "skipChannelOpen": true,
+                        "skipChannelClose": true
+                    });
+                }
+*/
+            } catch(e) {
+                console.warn(e);
+            }
+        }
+    });
+    return receiver;
+}
+
+
+},{"./message":17,"./receiver":19,"./wildfire":22,"fp-modules-for-nodejs/lib/json":4,"fp-modules-for-nodejs/lib/md5":5,"fp-modules-for-nodejs/lib/struct":8}],22:[function(require,module,exports){
+
+exports.Receiver = function() {
+    return require("./receiver").Receiver();
+}
+
+exports.Dispatcher = function() {
+    return require("./dispatcher").Dispatcher();
+}
+
+exports.Message = function() {
+    return require("./message").Message();
+}
+
+exports.HttpHeaderChannel = function(options) {
+    return require("./channel-httpheader").HttpHeaderChannel(options);
+}
+
+exports.HttpClientChannel = function() {
+    return require("./channel/http-client").HttpClientChannel();
+}
+
+exports.ShellCommandChannel = function() {
+    return require("./channel-shellcommand").ShellCommandChannel();
+}
+
+exports.PostMessageChannel = function() {
+    return require("./channel-postmessage").PostMessageChannel();
+}
+
+exports.CallbackStream = function() {
+    return require("./stream/callback").CallbackStream();
+}
+
+},{"./channel-httpheader":11,"./channel-postmessage":12,"./channel-shellcommand":13,"./channel/http-client":15,"./dispatcher":16,"./message":17,"./receiver":19,"./stream/callback":20}],23:[function(require,module,exports){
 "use strict";
 
 exports.for = function (API) {
@@ -5957,7 +5957,6 @@ exports.for = function (API) {
         }
     };
 };
-
 },{}],24:[function(require,module,exports){
 "use strict";
 
@@ -6013,7 +6012,6 @@ exports.for = function (API) {
 
     return {};
 };
-
 },{}],25:[function(require,module,exports){
 "use strict";
 
@@ -6238,7 +6236,6 @@ BROWSER.tabs.onRemoved.addListener(tabs_onRemoved);
 WILDFIRE.on("destroy", function () {
     BROWSER.tabs.onRemoved.removeListener(tabs_onRemoved);
 });
-
 },{"./wildfire":29}],26:[function(require,module,exports){
 "use strict";
 
@@ -6347,7 +6344,6 @@ exports.for = function (API) {
 
     return {};
 };
-
 },{}],27:[function(require,module,exports){
 "use strict";
 
@@ -6397,7 +6393,6 @@ exports.for = function (API) {
 
     return {};
 };
-
 },{}],28:[function(require,module,exports){
 "use strict";
 
@@ -6477,7 +6472,6 @@ exports.getDomainSettingsForRequest = function (request) {
         return settings;
     });
 };
-
 },{}],29:[function(require,module,exports){
 "use strict";
 
@@ -6733,8 +6727,7 @@ API.on("http.response", function (response) {
         });
     }
 });
-
-},{"./adapters/http-request-observer":23,"./adapters/http-response-observer":24,"./receivers/firephp":26,"./receivers/insight":27,"./settings":28,"eventemitter2":13,"wildfire-for-js":12}],30:[function(require,module,exports){
+},{"./adapters/http-request-observer":23,"./adapters/http-response-observer":24,"./receivers/firephp":26,"./receivers/insight":27,"./settings":28,"eventemitter2":1,"wildfire-for-js":22}],30:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -6854,7 +6847,7 @@ function fromByteArray (uint8) {
 /*!
  * The buffer module from node.js, for the browser.
  *
- * @author   Feross Aboukhadijeh <feross@feross.org> <http://feross.org>
+ * @author   Feross Aboukhadijeh <https://feross.org>
  * @license  MIT
  */
 /* eslint-disable no-proto */

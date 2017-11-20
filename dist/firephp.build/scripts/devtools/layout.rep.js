@@ -33,7 +33,6 @@ module.exports = {
         }
     }
 };
-
 },{}],2:[function(require,module,exports){
 "use strict";
 
@@ -2317,7 +2316,6 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
     return a.$ === r && (a.$ = Wb), b && a.jQuery === r && (a.jQuery = Vb), r;
   }, b || (a.jQuery = a.$ = r), r;
 });
-
 },{}],3:[function(require,module,exports){
 "use strict";
 
@@ -2480,7 +2478,6 @@ exports.main = function (JSONREP, node) {
         });
     });
 };
-
 },{"./adapters/page-browser-api":1,"./lib/jquery3.min":2}]},{},[3])(3)
 });
 	});
