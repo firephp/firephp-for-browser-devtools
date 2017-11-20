@@ -7,18 +7,20 @@ depend {
 
 function do_run {
 
+    version="$(BO_run_recent_node --eval 'process.stdout.write(require("./package.json").version);')"
+
     CALL_webext run {
         "manifest": {
             "dist": "$__DIRNAME__/dist/firephp.build",
             "name": "FirePHP",
-            "version": "1.0.0",
+            "version": "${version}",
             "description": "Log from PHP to a devtools panel.",
             "applications": {
                 "gecko": {
                     "id": "FirePHPExtension-Build@firephp.org",
                     "strict_min_version": "42.0"
                 }
-            },            
+            },
             "icons": {
                 "48": "$__DIRNAME__/src/skin/Logo.png"
             },
@@ -139,7 +141,7 @@ function do_run {
 
 function do_sign {
 
-    pushd ".rt/github.com~pinf-to~to.pinf.org.mozilla.web-ext/extension.built" > /dev/null
+    pushd "dist/firephp.build" > /dev/null
 
         CALL_webext sign {
             "dist": "$__DIRNAME__/dist/firephp.xpi",
