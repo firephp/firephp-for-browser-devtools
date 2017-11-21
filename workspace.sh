@@ -198,5 +198,5 @@ elif [ "$ARGS_1" == "sign" ]; then
     fi
 
     do_sign
-    do_extract
+    #do_extract
 fi
