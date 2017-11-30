@@ -1,5 +1,10 @@
 #!/usr/bin/env bash.origin.script
 
+# TODO: Remove these once we lock versions for downloaded assets or include them.
+BO_ALLOW_DOWNLOADS=1
+BO_ALLOW_INSTALLS=1
+
+
 depend {
     "webext": "@com.github/pinf-to/to.pinf.org.mozilla.web-ext#s1"
 }

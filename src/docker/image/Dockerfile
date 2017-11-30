@@ -8,5 +8,7 @@ RUN apk update && \
 COPY build.sh build.sh
 
 ENV SHELL=/bin/bash
+ENV NODE_PATH=/usr/lib/node_modules
+ENV PATH="/node_modules/.bin:$PATH"
 
 CMD ["/bin/bash", "build.sh"]

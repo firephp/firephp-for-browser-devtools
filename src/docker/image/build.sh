@@ -5,9 +5,6 @@ echo -e "\n########## START BUILD ON DOCKER IMAGE ##########\n"
 echo "VERBOSE: $VERBOSE"
 echo "BO_VERBOSE: $BO_VERBOSE"
 
-export BO_VERSION_RECENT_NODE="9"
-export BO_VERSION_NVM_NODE="9"
-
 echo "Show info ..."
 
 echo "node version: $(node --version)"
@@ -23,13 +20,7 @@ pushd "firephp"
 
     echo "Installing ..."
 
-#    echo "npm version: $(npm --version)"
-#    npm i -g npm@5.5.0
-#    echo "npm version: $(npm --version)"
-
-#rm -Rf ~/.bash.origin.cache
-
-    npm install
+    npm install --unsafe-perm
 
     echo "Building ..."
 
