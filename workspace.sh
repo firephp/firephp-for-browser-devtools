@@ -1,5 +1,7 @@
 #!/usr/bin/env bash.origin.script
 
+BO_PLUGIN_SEARCH_DIRPATHS="${BO_GLOBAL_SYSTEM_CACHE_DIR}"
+
 # TODO: Remove these once we lock versions for downloaded assets or include them.
 BO_ALLOW_DOWNLOADS=1
 BO_ALLOW_INSTALLS=1
