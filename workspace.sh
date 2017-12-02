@@ -1,10 +1,8 @@
 #!/usr/bin/env bash.origin.script
 
-BO_PLUGIN_SEARCH_DIRPATHS="${BO_GLOBAL_SYSTEM_CACHE_DIR}"
-
 # TODO: Remove these once we lock versions for downloaded assets or include them.
-BO_ALLOW_DOWNLOADS=1
-BO_ALLOW_INSTALLS=1
+export BO_ALLOW_DOWNLOADS=1
+export BO_ALLOW_INSTALLS=1
 
 
 depend {
@@ -171,7 +169,6 @@ function do_extract {
     rm -Rf "dist/firephp.zip" || true
 
     BO_cecho "Extracted extension can be found in: dist/firephp.extracted/" YELLOW BOLD
-
 }
 
 
