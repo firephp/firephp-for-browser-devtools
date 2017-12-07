@@ -1,8 +1,8 @@
 {
     "manifest_version": 2,
-    "description": "NOTE: This is a PREVIEW build for branch: amo\\n\\nLog from PHP to a devtools panel.",
+    "description": "(NOTE: This is a PREVIEW build for branch: amo) Log from PHP to a devtools panel.",
     "name": "FirePHP (branch: amo)",
-    "version": "1.0.0pre_1511169806",
+    "version": "1.0.0pre_1512627585",
     "applications": {
         "gecko": {
             "id": "FirePHPExtension-Build_branch_amo@firephp.org",

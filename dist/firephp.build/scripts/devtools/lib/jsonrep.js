@@ -1067,8 +1067,8 @@ function makeExports(exports) {
 	// Set `PINF` gloabl.
 	var PINF = global.PINF = Loader(global);
 
-	// Export `require` for CommonJS if `module` and `exports` globals exists.
-	if (typeof module === "object" && typeof exports === "object") {
+	// Export for CommonJS if `module.exports` global exists.
+	if (typeof module === "object" && typeof module.exports === "object") {
 		PINF.document = global.document;
 		module.exports = global = PINF;
 	}
@@ -1103,14 +1103,14 @@ function makeExports(exports) {
 	}
 
 }(
-	typeof exports !== "undefined" ?
-		// Used on the server
-		exports :
-		typeof window !== "undefined" ?
-			// Used in the browser
-			window :
+	typeof window !== "undefined" ?
+		// Used in the browser
+		window :
+		typeof exports !== "undefined" ?
+			// Used on the server
+			exports :
 			// No root scope variable found
-			undefined
+			{}
 ));
 
 },{}]},{},[2]);
