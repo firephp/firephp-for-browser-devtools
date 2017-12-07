@@ -52,7 +52,7 @@ Requirements:
     npm install
     npm run build
 
-To verify that your build is consistent with the one comitted, run `git diff`. Only the `version` property in `dist/firephp.build/manifest.json` should have changed.
+To verify that your build is consistent with the one committed, run `git diff`. Only the `version` property in `dist/firephp.build/manifest.json` should have changed.
 
 Provenance
 ==========
