@@ -3,7 +3,7 @@
 FirePHP for Firefox Developer Tools
 ===================================
 
-**Join the community on: [gitter.im/firephp/firephp.org](https://gitter.im/firephp/firephp.org)**
+  * **Project discussion: [gitter.im/firephp/firephp.org](https://gitter.im/firephp/firephp.org)**
 
 This project holds the [FirePHP Tool](http://firephp.org) in the form of a [Mozilla Web Extension](https://developer.mozilla.org/en-US/Add-ons/WebExtensions) which is compatible with the latest *Multiprocess Firefox Browser*.
 
