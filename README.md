@@ -39,6 +39,21 @@ Preview
 
 <img src="https://rawgit.com/firephp/firephp-for-firefox-devtools/master/src/skin/CodeScreenshot.png" alt="Code" width="300"> &nbsp; <img src="https://rawgit.com/firephp/firephp-for-firefox-devtools/master/src/skin/PanelScreenshot.png" alt="Panel" width="300">
 
+Development
+-----------
+
+Requirements:
+
+  * [nvm](https://github.com/creationix/nvm) - Node Version Manager
+
+### Build from source
+
+    nvm use 9
+    npm install
+    npm run build
+
+To verify that your build is consistent with the one comitted, run `git diff`. Only the `version` property in `dist/firephp.build/manifest.json` should have changed.
+
 Provenance
 ==========
 
