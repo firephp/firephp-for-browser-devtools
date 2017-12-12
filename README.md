@@ -41,7 +41,7 @@ Requirements:
   * [bash 4](https://www.gnu.org/software/bash/) - GNU Bash
   * [nvm](https://github.com/creationix/nvm) - Node Version Manager
 
-#### Build from source
+Build from source:
 
     rm -Rf dist/        # Optional to verify build
     nvm use 9
@@ -49,28 +49,13 @@ Requirements:
     npm run build       # Append '--ignore-dirty' if you removed 'dist/'
     git diff            # Optional to verify build
         # Only the `version` property in `dist/firephp.build/manifest.json` should have changed.
+
+*Load Temporary Addon* at `dist/firephp.build/` into Firefox.
 
 Preview
 -------
 
 <img src="https://rawgit.com/firephp/firephp-for-firefox-devtools/master/src/skin/CodeScreenshot.png" alt="Code" width="300"> &nbsp; <img src="https://rawgit.com/firephp/firephp-for-firefox-devtools/master/src/skin/PanelScreenshot.png" alt="Panel" width="300">
-
-Development
------------
-
-Requirements:
-
-  * [bash 4](https://www.gnu.org/software/bash/) - GNU Bash
-  * [nvm](https://github.com/creationix/nvm) - Node Version Manager
-
-### Build from source
-
-    rm -Rf dist/        # Optional to verify build
-    nvm use 9
-    npm install
-    npm run build       # Append '--ignore-dirty' if you removed 'dist/'
-    git diff            # Optional to verify build
-        # Only the `version` property in `dist/firephp.build/manifest.json` should have changed.
 
 Provenance
 ==========
