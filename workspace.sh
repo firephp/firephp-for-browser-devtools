@@ -1,8 +1,8 @@
 #!/usr/bin/env bash.origin.script
 
 # TODO: Remove these once we lock versions for downloaded assets or include them.
-export BO_ALLOW_DOWNLOADS=1
-export BO_ALLOW_INSTALLS=1
+#export BO_ALLOW_DOWNLOADS=1
+#export BO_ALLOW_INSTALLS=1
 
 export BO_SYSTEM_CACHE_DIR="$(node --eval 'process.stdout.write(require("bash.origin.workspace").node_modules);')"
 
