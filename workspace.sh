@@ -1,24 +1,33 @@
 #!/usr/bin/env bash.origin.script
 
+# TODO: Remove these once we lock versions for downloaded assets or include them.
+#export BO_ALLOW_DOWNLOADS=1
+#export BO_ALLOW_INSTALLS=1
+
+export BO_SYSTEM_CACHE_DIR="$(node --eval 'process.stdout.write(require("bash.origin.workspace").node_modules);')"
+
+
 depend {
     "webext": "@com.github/pinf-to/to.pinf.org.mozilla.web-ext#s1"
 }
 
 
+function do_run {
 
-function do_build {
+    version="$(BO_run_recent_node --eval 'process.stdout.write(require("./package.json").version);')"
 
     CALL_webext run {
         "manifest": {
+            "dist": "$__DIRNAME__/dist/firephp.build",
             "name": "FirePHP",
-            "version": "1.0.0",
+            "version": "${version}",
             "description": "Log from PHP to a devtools panel.",
             "applications": {
                 "gecko": {
                     "id": "FirePHPExtension-Build@firephp.org",
                     "strict_min_version": "42.0"
                 }
-            },            
+            },
             "icons": {
                 "48": "$__DIRNAME__/src/skin/Logo.png"
             },
@@ -84,7 +93,7 @@ function do_build {
                                         "settings": "$__DIRNAME__/src/settings.rep.js",
                                         "manage": "$__DIRNAME__/src/manage.rep.js",
                                         "inspector": "$__DIRNAME__/src/inspector.rep.js",
-                                        "fireconsole": "$__DIRNAME__/node_modules/fireconsole.rep.js/src/fireconsole.rep.js",
+                                        "fireconsole": "$__DIRNAME__/node_modules/fireconsole.rep.js/dist/fireconsole.rep.js",
                                         "console": "$__DIRNAME__/src/console.rep.js",
                                         "enabler": "$__DIRNAME__/src/enabler.rep.js"
                                     }
@@ -131,15 +140,15 @@ function do_build {
             }
         },
         "files": {
-            "/dist/resources/insight.renderers.default/*": "$__DIRNAME__/node_modules/fireconsole.rep.js/node_modules/insight.renderers.default/resources"
+            "/dist/resources/insight.renderers.default/*": "$__DIRNAME__/node_modules/fireconsole.rep.js/dist/resources/insight.renderers.default"
         }
-    }
+    } "$@"
 
 }
 
 function do_sign {
 
-    pushd ".rt/github.com~pinf-to~to.pinf.org.mozilla.web-ext/extension.built" > /dev/null
+    pushd "dist/firephp.build" > /dev/null
 
         CALL_webext sign {
             "dist": "$__DIRNAME__/dist/firephp.xpi",
@@ -150,13 +159,34 @@ function do_sign {
     popd > /dev/null
 }
 
+function do_extract {
+
+    if [ ! -e "dist/firephp.xpi" ]; then
+        BO_exit_error "No xpi file to unbundle found! Run 'sign' first."
+    fi
+    rm -Rf "dist/firephp.xpi.extracted" || true
+    rm -Rf "dist/firephp.zip" || true
+    cp "dist/firephp.xpi" "dist/firephp.zip"
+    unzip "dist/firephp.zip" -d "dist/firephp.xpi.extracted/"
+    rm -Rf "dist/firephp.zip" || true
+
+    BO_cecho "Extracted extension can be found in: dist/firephp.extracted/" YELLOW BOLD
+}
+
 
 BO_parse_args "ARGS" "$@"
 
 
 if [ "$ARGS_1" == "build" ]; then
 
-    do_build
+    do_run "--build-only"
+
+    BO_cecho "Built extension can be found in: dist/firephp.build/" YELLOW BOLD
+
+elif [ "$ARGS_1" == "run" ]; then
+
+    export BO_TEST_FLAG_DEV=1
+    do_run
 
 elif [ "$ARGS_1" == "sign" ]; then
 
@@ -165,7 +195,7 @@ elif [ "$ARGS_1" == "sign" ]; then
     fi
 
     if [ "$ARGS_OPT_skip_build" != "true" ]; then
-        do_build
+        do_run "--build-only"
     fi
 
     if [ "$ARGS_OPT_dev" == "true" ]; then
@@ -174,4 +204,5 @@ elif [ "$ARGS_1" == "sign" ]; then
     fi
 
     do_sign
+    #do_extract
 fi

@@ -4,22 +4,19 @@ exports.main = function (JSONREP, node) {
     var api = {
         currentContext: null
     };
-
-    if (typeof browser !== "undefined") {
         
-        browser.runtime.onMessage.addListener(function (message) {
+    browser.runtime.onMessage.addListener(function (message) {
 
-            if (message.to === "message-listener") {
-                if (message.event === "currentContext") {
-                    api.currentContext = message.context;
-                }
+        if (message.to === "message-listener") {
+            if (message.event === "currentContext") {
+                api.currentContext = message.context;
             }
+        }
 
-            if (api.onMessage) {
-                api.onMessage(message);
-            }
-        });
-    }
+        if (api.onMessage) {
+            api.onMessage(message);
+        }
+    });
 
 
     return JSONREP.makeRep({
@@ -61,71 +58,68 @@ exports.main = function (JSONREP, node) {
 
                 tag.hostname = ( opts.config.api.currentContext && opts.config.api.currentContext.hostname) || "";
 
-                if (typeof browser !== "undefined") {
-
-                    function getSettingForHostname (hostname, name) {
-                        var key = "domain[" + hostname + "]." + name;
-                        return browser.storage.local.get(key).then(function (value) {
-                            return (value[key] || false);
-                        });
-                    }
-                    function setSettingForHostname (hostname, name, value) {
-                        var obj = {};
-                        obj["domain[" + hostname + "]." + name] = value;
-                        return browser.storage.local.set(obj).then(function () {    
-                            browser.runtime.sendMessage({
-                                to: "broadcast",
-                                event: "currentContext"
-                            });
-                            return null;
-                        });
-                    }
-
-                    opts.config.api.onMessage = function (message) {
-
-                        if (
-                            message.context &&
-                            message.context.tabId != browser.devtools.inspectedWindow.tabId
-                        ) {
-                            return;
-                        }
-
-                        if (message.to === "message-listener") {
-                            if (
-                                message.event === "currentContext" &&
-                                message.context
-                            ) {
-                                tag.hostname = message.context.hostname;
-                                tag.update();
-                            }
-                        }
-                    }
-
-                    tag.on("mount", tag.update);
-                    tag.on("updated", function () {
-
-                        $('INPUT[type="checkbox"]', tag.root).each(function () {
-                            var el = $(this);
-                            var name = el.attr("name");
-                            getSettingForHostname(tag.hostname, name).then(function (enabled) {
-                                el.get(0).checked = enabled;
-                                return null;
-                            }).catch(function (err) {
-                                console.error(err);
-                            });
-                        });
+                function getSettingForHostname (hostname, name) {
+                    var key = "domain[" + hostname + "]." + name;
+                    return browser.storage.local.get(key).then(function (value) {
+                        return (value[key] || false);
                     });
-                    
-                    tag.syncCheckbox = function (event) {
+                }
+                function setSettingForHostname (hostname, name, value) {
+                    var obj = {};
+                    obj["domain[" + hostname + "]." + name] = value;
+                    return browser.storage.local.set(obj).then(function () {    
+                        browser.runtime.sendMessage({
+                            to: "broadcast",
+                            event: "currentContext"
+                        });
+                        return null;
+                    });
+                }
 
-                        var name = event.target.getAttribute("name");
-                        return setSettingForHostname(tag.hostname, name, event.target.checked).then(function () {
+                opts.config.api.onMessage = function (message) {
+
+                    if (
+                        message.context &&
+                        message.context.tabId != browser.devtools.inspectedWindow.tabId
+                    ) {
+                        return;
+                    }
+
+                    if (message.to === "message-listener") {
+                        if (
+                            message.event === "currentContext" &&
+                            message.context
+                        ) {
+                            tag.hostname = message.context.hostname;
                             tag.update();
+                        }
+                    }
+                }
+
+                tag.on("mount", tag.update);
+                tag.on("updated", function () {
+
+                    $('INPUT[type="checkbox"]', tag.root).each(function () {
+                        var el = $(this);
+                        var name = el.attr("name");
+                        getSettingForHostname(tag.hostname, name).then(function (enabled) {
+                            el.get(0).checked = enabled;
                             return null;
                         }).catch(function (err) {
-                            throw err;
+                            console.error(err);
                         });
-                    }
+                    });
+                });
+                
+                tag.syncCheckbox = function (event) {
+
+                    var name = event.target.getAttribute("name");
+                    return setSettingForHostname(tag.hostname, name, event.target.checked).then(function () {
+                        tag.update();
+                        return null;
+                    }).catch(function (err) {
+                        throw err;
+                    });
                 }
 
             </script>

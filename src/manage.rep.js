@@ -67,30 +67,28 @@ exports.main = function (JSONREP, node) {
                         }, 0);
                     });
                     
-                    if (typeof browser !== "undefined") {
-                        browser.runtime.onMessage.addListener(function (message) {
+                    browser.runtime.onMessage.addListener(function (message) {
 
-                            if (
-                                message.context &&
-                                message.context.tabId != browser.devtools.inspectedWindow.tabId
-                            ) {
-                                return;
-                            }
-    
-                            if (message.to === "message-listener") {
-                                if (message.event === "currentContext") {
+                        if (
+                            message.context &&
+                            message.context.tabId != browser.devtools.inspectedWindow.tabId
+                        ) {
+                            return;
+                        }
 
-                                    currentContext = message.context;
-                                    if (currentContext) {
-                                        tag.hostname = currentContext.hostname;
-                                    } else {
-                                        tag.hostname = "";
-                                    }
-                                    tag.update();
+                        if (message.to === "message-listener") {
+                            if (message.event === "currentContext") {
+
+                                currentContext = message.context;
+                                if (currentContext) {
+                                    tag.hostname = currentContext.hostname;
+                                } else {
+                                    tag.hostname = "";
                                 }
+                                tag.update();
                             }
-                        });
-                    }
+                        }
+                    });
 
                 </script>
 

@@ -68,94 +68,91 @@ exports.main = function (JSONREP, node) {
 
                 tag.enabled = false;
 
-                if (typeof browser !== "undefined") {
-
-                    function getSettingForHostname (hostname, name) {
-                        var key = "domain[" + hostname + "]." + name;
-                        return browser.storage.local.get(key).then(function (value) {
-                            return (value[key] || false);
+                function getSettingForHostname (hostname, name) {
+                    var key = "domain[" + hostname + "]." + name;
+                    return browser.storage.local.get(key).then(function (value) {
+                        return (value[key] || false);
+                    });
+                }
+                function setSettingForHostname (hostname, name, value) {
+                    var obj = {};
+                    obj["domain[" + hostname + "]." + name] = value;                     
+                    return browser.storage.local.set(obj).then(function () {    
+                        browser.runtime.sendMessage({
+                            to: "broadcast",
+                            event: "currentContext"
                         });
+                        return null;
+                    });
+                }
+
+                opts.config.api.onMessage = function (message) {
+
+                    if (
+                        message.context &&
+                        message.context.tabId != browser.devtools.inspectedWindow.tabId
+                    ) {
+                        return;
                     }
-                    function setSettingForHostname (hostname, name, value) {
-                        var obj = {};
-                        obj["domain[" + hostname + "]." + name] = value;                     
-                        return browser.storage.local.set(obj).then(function () {    
-                            browser.runtime.sendMessage({
-                                to: "broadcast",
-                                event: "currentContext"
-                            });
-                            return null;
-                        });
-                    }
-
-                    opts.config.api.onMessage = function (message) {
-
-                        if (
-                            message.context &&
-                            message.context.tabId != browser.devtools.inspectedWindow.tabId
-                        ) {
-                            return;
-                        }
-                        
-                        if (message.to === "message-listener") {
-                            if (
-                                message.event === "currentContext" &&
-                                message.context
-                            ) {
-
-                                getSettingForHostname(
-                                    opts.config.api.currentContext.hostname,
-                                    "enabled"
-                                ).then(function (enabled) {
-
-                                    tag.enabled = enabled;
-                                    tag.update();
-                                    return null;
-                                }).catch(function (err) {
-                                    console.error(err);
-                                });
-                            }
-                        }
-                    }
-
-                    tag.on("mount", tag.update);
                     
-                    tag.triggerEnable = function (event) {
+                    if (message.to === "message-listener") {
+                        if (
+                            message.event === "currentContext" &&
+                            message.context
+                        ) {
 
-                        return setSettingForHostname(
-                            opts.config.api.currentContext.hostname,
-                            "enabled",
-                            true
-                        ).then(function () {
-                            tag.update();
+                            getSettingForHostname(
+                                opts.config.api.currentContext.hostname,
+                                "enabled"
+                            ).then(function (enabled) {
 
-                            browser.runtime.sendMessage({
-                                to: "background",
-                                event: "reload",
-                                context: {
-                                    tabId: browser.devtools.inspectedWindow.tabId
-                                }
+                                tag.enabled = enabled;
+                                tag.update();
+                                return null;
+                            }).catch(function (err) {
+                                console.error(err);
                             });
-
-                            return null;
-                        }).catch(function (err) {
-                            console.error(err);
-                        });
+                        }
                     }
+                }
 
-                    tag.triggerDisable = function (event) {
+                tag.on("mount", tag.update);
+                
+                tag.triggerEnable = function (event) {
 
-                        return setSettingForHostname(
-                            opts.config.api.currentContext.hostname,
-                            "enabled",
-                            false
-                        ).then(function () {
-                            tag.update();
-                            return null;
-                        }).catch(function (err) {
-                            console.error(err);
+                    return setSettingForHostname(
+                        opts.config.api.currentContext.hostname,
+                        "enabled",
+                        true
+                    ).then(function () {
+                        tag.update();
+
+                        browser.runtime.sendMessage({
+                            to: "background",
+                            event: "reload",
+                            context: {
+                                tabId: browser.devtools.inspectedWindow.tabId
+                            }
                         });
-                    }
+
+                        return null;
+                    }).catch(function (err) {
+                        console.error(err);
+                    });
+                }
+
+                tag.triggerDisable = function (event) {
+
+                    return setSettingForHostname(
+                        opts.config.api.currentContext.hostname,
+                        "enabled",
+                        false
+                    ).then(function () {
+                        tag.update();
+                        return null;
+                    }).catch(function (err) {
+                        console.error(err);
+                    });
                 }
 
             </script>

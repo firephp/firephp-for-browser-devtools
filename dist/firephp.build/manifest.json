@@ -1,0 +1,28 @@
+{
+    "manifest_version": 2,
+    "description": "(NOTE: This is a PREVIEW build for branch: amo) Log from PHP to a devtools panel.",
+    "name": "FirePHP (branch: amo)",
+    "version": "1.0.0pre_1513070770",
+    "applications": {
+        "gecko": {
+            "id": "FirePHPExtension-Build_branch_amo@firephp.org",
+            "strict_min_version": "42.0"
+        }
+    },
+    "icons": {
+        "48": "skin/__icon_48.png"
+    },
+    "permissions": [
+        "tabs",
+        "storage",
+        "webRequest",
+        "webNavigation",
+        "webRequestBlocking",
+        "<all_urls>"
+    ],
+    "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self'; img-src 'self'",
+    "devtools_page": "devtools-page.html",
+    "background": {
+        "page": "background.html"
+    }
+}

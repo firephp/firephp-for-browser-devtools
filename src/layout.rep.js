@@ -1,6 +1,8 @@
 
 const WINDOW = window;
 
+WINDOW.$ = require("./lib/jquery3.min");
+
 
 /*
 // TODO: This should not be needed once `inspector` issue is fixed.
@@ -19,6 +21,12 @@ setTimeout(function () {
 
 
 exports.main = function (JSONREP, node) {
+
+
+    if (typeof WINDOW.browser === "undefined") {
+        WINDOW.browser = require("./adapters/page-browser-api");
+    }
+
 
     var panels = {};
 
@@ -168,7 +176,7 @@ exports.main = function (JSONREP, node) {
                         });
                     }
 
-                    function isEnabledForHostname (hostname) {
+                    function isEnabledForHostname (hostname) {                            
                         return getSettingForHostname(hostname, "enableUserAgentHeader").then(function (enableUserAgentHeader) {
                             return getSettingForHostname(hostname, "enableFirePHPHeader").then(function (enableFirePHPHeader) {
                                 return (
@@ -237,37 +245,29 @@ exports.main = function (JSONREP, node) {
                             }
                         });                        
                     }, false);
+                        
+                    browser.runtime.onMessage.addListener(function (message) {
 
-                    if (typeof browser !== "undefined") {
+                        if (
+                            message.context &&
+                            message.context.tabId != browser.devtools.inspectedWindow.tabId
+                        ) {
+                            return;
+                        }
 
-                        browser.runtime.onMessage.addListener(function (message) {
-
-                            if (
-                                message.context &&
-                                message.context.tabId != browser.devtools.inspectedWindow.tabId
-                            ) {
-                                return;
+                        if (message.to === "message-listener") {
+                            if (message.event === "currentContext") {
+                                currentContext = message.context;
+                                sync();
+                            } else
+                            if (message.event === "manage") {
+                                forceManage = true;
+                                sync();
                             }
-    
-                            if (message.to === "message-listener") {
-                                if (message.event === "currentContext") {
-                                    currentContext = message.context;
-                                    sync();
-                                } else
-                                if (message.event === "manage") {
-                                    forceManage = true;
-                                    sync();
-                                }
-                            }
-                        });
+                        }
+                    });
 
-                        sync();
-
-                    } else {
-                        el.querySelector("DIV.uninitialized").style.display = "none";
-                        el.querySelector("DIV.manage").style.display = "none";
-                        el.querySelector("DIV.ui").style.display = "block";
-                    }
+                    sync();
                 }
             }
         });

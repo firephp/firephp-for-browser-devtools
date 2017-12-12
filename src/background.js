@@ -4,6 +4,8 @@ const WILDFIRE = exports.WILDFIRE = require("./wildfire");
 
 WILDFIRE.VERBOSE = true;
 
+const ENABLE_PAGE_BRIDGE = false;
+
 
 WILDFIRE.once("error", function (err) {
     console.error(err);
@@ -35,6 +37,23 @@ function broadcastForContext (context, message) {
     }
     message.to = "message-listener";
     //console.log("SEND RT MESSAGE", message, JSON.stringify(message.context));
+
+
+    if (ENABLE_PAGE_BRIDGE) {
+        var tabId = (
+            message.tabId ||
+            (
+                context &&
+                context.tabId
+            )
+        );
+        if (tabId) {
+            BROWSER.tabs.sendMessage(tabId, message).catch(function (err) {
+                if (WILDFIRE.VERBOSE) console.log("WARNING", err);
+            });
+        }
+    }
+
 
     return BROWSER.runtime.sendMessage(message).catch(function (err) {
         if (WILDFIRE.VERBOSE) console.log("WARNING", err);

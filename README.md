@@ -3,6 +3,8 @@
 FirePHP for Firefox Developer Tools
 ===================================
 
+  * **Project discussion: [gitter.im/firephp/firephp.org](https://gitter.im/firephp/firephp.org)**
+
 This project holds the [FirePHP Tool](http://firephp.org) in the form of a [Mozilla Web Extension](https://developer.mozilla.org/en-US/Add-ons/WebExtensions) which is compatible with the latest *Multiprocess Firefox Browser*.
 
 > FirePHP is a logging system that can display PHP variables in a browser as an application is navigated. All communication is out of band to the application which means the logging data will not interfere with the normal functioning of the application.
@@ -36,6 +38,23 @@ Preview
 -------
 
 <img src="https://rawgit.com/firephp/firephp-for-firefox-devtools/master/src/skin/CodeScreenshot.png" alt="Code" width="300"> &nbsp; <img src="https://rawgit.com/firephp/firephp-for-firefox-devtools/master/src/skin/PanelScreenshot.png" alt="Panel" width="300">
+
+Development
+-----------
+
+Requirements:
+
+  * [bash 4](https://www.gnu.org/software/bash/) - GNU Bash
+  * [nvm](https://github.com/creationix/nvm) - Node Version Manager
+
+### Build from source
+
+    rm -Rf dist/        # Optional to verify build
+    nvm use 9
+    npm install
+    npm run build       # Append '--ignore-dirty' if you removed 'dist/'
+    git diff            # Optional to verify build
+        # Only the `version` property in `dist/firephp.build/manifest.json` should have changed.
 
 Provenance
 ==========
