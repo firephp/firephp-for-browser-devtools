@@ -4,6 +4,8 @@
 export BO_ALLOW_DOWNLOADS=1
 export BO_ALLOW_INSTALLS=1
 
+export BO_SYSTEM_CACHE_DIR="$(node --eval 'process.stdout.write(require("bash.origin.workspace").node_modules);')"
+
 
 depend {
     "webext": "@com.github/pinf-to/to.pinf.org.mozilla.web-ext#s1"
