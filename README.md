@@ -44,6 +44,7 @@ Development
 
 Requirements:
 
+  * [bash 4](https://www.gnu.org/software/bash/)
   * [nvm](https://github.com/creationix/nvm) - Node Version Manager
 
 ### Build from source
