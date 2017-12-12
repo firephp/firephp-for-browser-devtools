@@ -20,7 +20,6 @@ pushd "firephp"
 
     echo "### DIFF ###"
 
-#    git diff
     git status
 
 popd
