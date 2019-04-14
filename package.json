@@ -1,16 +1,18 @@
 {
     "name": "github.com~firephp~firephp-for-firefox-devtools",
     "version": "1.1.0",
+    "__devDependencies": {
+        "bash.origin.lib": ""
+    },
     "devDependencies": {
-        "bash.origin.workspace": "^0.2.77",
         "eventemitter2": "^4.1.2",
         "wildfire-for-js": "^0.1.3",
         "fireconsole.rep.js": "^0.0.13"
     },
     "scripts": {
-        "start": "bash.origin.script ./workspace.sh run",
+        "start": "./workspace.sh run",
         "test": "bash.origin.test tests",
-        "build": "bash.origin.script ./workspace.sh build",
-        "build-via-docker": "bash.origin.script ./src/docker/build.sh"
+        "build": "./workspace.sh build",
+        "build-via-docker": "./src/docker/build.sh"
     }
 }

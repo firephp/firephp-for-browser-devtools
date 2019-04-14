@@ -7,3 +7,5 @@ node_modules/
 ~.rt_*
 /dist/firephp.zip
 /dist/firephp.build/.web-extension-id
+.~*
+/package-lock.json
