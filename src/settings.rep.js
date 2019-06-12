@@ -1,25 +1,27 @@
 
-exports.main = function (JSONREP, node) {    
+exports.main = function (JSONREP, node, options) {    
 
     var api = {
         currentContext: null
     };
-        
-    browser.runtime.onMessage.addListener(function (message) {
+    
+    if (typeof browser !== "undefined") {
+        browser.runtime.onMessage.addListener(function (message) {
 
-        if (message.to === "message-listener") {
-            if (message.event === "currentContext") {
-                api.currentContext = message.context;
+            if (message.to === "message-listener") {
+                if (message.event === "currentContext") {
+                    api.currentContext = message.context;
+                }
             }
-        }
 
-        if (api.onMessage) {
-            api.onMessage(message);
-        }
-    });
+            if (api.onMessage) {
+                api.onMessage(message);
+            }
+        });
+    }
 
 
-    return JSONREP.makeRep({
+    return JSONREP.makeRep2({
         "config": {
             "node": node,
             "api": api
@@ -35,18 +37,18 @@ exports.main = function (JSONREP, node) {
 
             <style>
 
-                :scope DIV > H2 {
+                :scope DIV H2 {
                     padding-left: 10px;
                     padding-right: 10px;
                 }
-                
-                :scope DIV > UL.settings {
+
+                :scope DIV UL.settings {
                     padding-left: 10px;
                     padding-right: 10px;
                     list-style-type: none;
                 }
 
-                :scope DIV > UL.settings > LI {
+                :scope DIV UL.settings > LI {
                     white-space: nowrap;
                 }
 
@@ -59,26 +61,45 @@ exports.main = function (JSONREP, node) {
                 tag.hostname = ( opts.config.api.currentContext && opts.config.api.currentContext.hostname) || "";
 
                 function getSettingForHostname (hostname, name) {
+                    if (typeof browser === "undefined") {
+                        return Promise.resolve(null);
+                    }
                     var key = "domain[" + hostname + "]." + name;
                     return browser.storage.local.get(key).then(function (value) {
                         return (value[key] || false);
                     });
                 }
+
+                const DEBOUNCE = require('lodash/debounce');
+
+                var broadcastCurrentContext = DEBOUNCE(function () {
+                    browser.runtime.sendMessage({
+                        to: "broadcast",
+                        event: "currentContext"
+                    });
+                    return null;
+                }, 250);
+
                 function setSettingForHostname (hostname, name, value) {
-                    var obj = {};
-                    obj["domain[" + hostname + "]." + name] = value;
-                    return browser.storage.local.set(obj).then(function () {    
-                        browser.runtime.sendMessage({
-                            to: "broadcast",
-                            event: "currentContext"
-                        });
-                        return null;
+                    if (typeof browser === "undefined") {
+                        return Promise.resolve(null);
+                    }
+
+                    return getSettingForHostname (hostname, name).then(function (existingValue) {
+                        if (value === existingValue) {
+                            // No change
+                            return;
+                        }
+                        var obj = {};
+                        obj["domain[" + hostname + "]." + name] = value;
+                        return browser.storage.local.set(obj).then(broadcastCurrentContext);
                     });
                 }
 
                 opts.config.api.onMessage = function (message) {
 
                     if (
+                        typeof browser !== "undefined" &&
                         message.context &&
                         message.context.tabId != browser.devtools.inspectedWindow.tabId
                     ) {
@@ -91,6 +112,19 @@ exports.main = function (JSONREP, node) {
                             message.context
                         ) {
                             tag.hostname = message.context.hostname;
+
+                            if (
+                                opts.config.node &&
+                                opts.config.node._util &&
+                                typeof opts.config.node._util.enabled !== 'undefined'
+                            ) {
+                                setSettingForHostname(tag.hostname, 'enabled', opts.config.node._util.enabled).then(function () {
+                                    return null;
+                                }).catch(function (err) {
+                                    throw err;
+                                });
+                            }
+            
                             tag.update();
                         }
                     }
@@ -125,5 +159,5 @@ exports.main = function (JSONREP, node) {
             </script>
 
         <<<)
-    });
+    }, options);
 };

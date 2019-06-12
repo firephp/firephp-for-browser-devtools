@@ -1,5 +1,5 @@
 
-exports.main = function (JSONREP, node) {
+exports.main = function (JSONREP, node, options) {
 
 
     return JSONREP.makeRep(
@@ -40,6 +40,9 @@ exports.main = function (JSONREP, node) {
                     }
 
                     function getPanel () {
+                        if (!currentContext) {
+                            return;
+                        }
                         var key = makeKeyForContext(currentContext);
                         var panelEl = el.querySelector('.viewer > DIV[context="' + key + '"]');
                         if (!panelEl) {
@@ -94,13 +97,23 @@ exports.main = function (JSONREP, node) {
 
                     window.FC.on("inspectMessage", function (info) {
 
+//console.log("INSPECT MESSAGE!!", info);
+
                         hidePanel();
 
-                        currentContext = info.message.context;
+                        if (info.message.context) {
+                            currentContext = info.message.context;
+                        }
 
 //console.log("INSPECT MESSAGE!!", info.message);
 
-                        window.FC.renderMessageInto(getPanel(), info.message);
+                        const panel = getPanel();
+
+//console.log("panel::", panel);
+
+                        if (!panel) return;
+
+                        window.FC.renderMessageInto(panel, info.message);
 
                         showPanel();
                     });
@@ -109,7 +122,9 @@ exports.main = function (JSONREP, node) {
 
                         hidePanel();
 
-                        currentContext = info.message.context;
+                        if (info.message.context) {
+                            currentContext = info.message.context;
+                        }
                         
                         currentContext = {
                             tabId: browser.devtools.inspectedWindow.tabId
@@ -162,7 +177,8 @@ exports.main = function (JSONREP, node) {
                     });                    
                 }
             }
-        }
+        },
+        options
     );
 };
         

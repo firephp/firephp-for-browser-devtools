@@ -23,8 +23,7 @@ describe("Suite", function() {
                         "manage": __dirname + "/../../src/manage.rep.js"
                     }
                 }
-            },
-            "/dist/resources/insight.renderers.default/*": __dirname + "/../../node_modules/insight.renderers.default/resources"
+            }
         }
     });
 

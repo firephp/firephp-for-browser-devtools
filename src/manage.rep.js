@@ -1,9 +1,9 @@
 
-exports.main = function (JSONREP, node) {    
+exports.main = function (JSONREP, node, options) {    
 
     return JSONREP.markupNode(node.settings || "Settings").then(function (settingsCode) {
 
-        return JSONREP.makeRep({
+        return JSONREP.makeRep2({
             "config": {
                 "settingsCode": settingsCode,
                 "node": node
@@ -32,16 +32,16 @@ exports.main = function (JSONREP, node) {
 
                 <style>
 
-                    :scope DIV.manage-panel {
+                    :scope DIV .manage-panel {
                         padding: 10px;
                     }
 
-                    :scope DIV.manage-panel > P {
+                    :scope DIV .manage-panel > P {
                         padding-left: 10px;
                         padding-right: 10px;
                     }
 
-                    :scope LI {
+                    :scope DIV LI {
                         margin-top: 5px;
                     }
                         
@@ -67,32 +67,34 @@ exports.main = function (JSONREP, node) {
                         }, 0);
                     });
                     
-                    browser.runtime.onMessage.addListener(function (message) {
+                    if (typeof browser !== 'undefined') {
+                        browser.runtime.onMessage.addListener(function (message) {
 
-                        if (
-                            message.context &&
-                            message.context.tabId != browser.devtools.inspectedWindow.tabId
-                        ) {
-                            return;
-                        }
-
-                        if (message.to === "message-listener") {
-                            if (message.event === "currentContext") {
-
-                                currentContext = message.context;
-                                if (currentContext) {
-                                    tag.hostname = currentContext.hostname;
-                                } else {
-                                    tag.hostname = "";
-                                }
-                                tag.update();
+                            if (
+                                message.context &&
+                                message.context.tabId != browser.devtools.inspectedWindow.tabId
+                            ) {
+                                return;
                             }
-                        }
-                    });
+
+                            if (message.to === "message-listener") {
+                                if (message.event === "currentContext") {
+
+                                    currentContext = message.context;
+                                    if (currentContext) {
+                                        tag.hostname = currentContext.hostname;
+                                    } else {
+                                        tag.hostname = "";
+                                    }
+                                    tag.update();
+                                }
+                            }
+                        });
+                    }
 
                 </script>
 
             <<<)
-        });
+        }, options);
     });
 };

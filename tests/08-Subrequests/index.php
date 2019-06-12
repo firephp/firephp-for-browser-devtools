@@ -27,11 +27,15 @@ if ($_GET['context'] === 'iframe') {
 } else
 if ($_GET['context'] === 'img') {
 
+    header('Content-Type: image/jpeg');
+
     $firephp->fb('Hello from img');
 
 } else
 if ($_GET['context'] === 'iframe-img') {
 
+    header('Content-Type: image/jpeg');
+    
     $firephp->fb('Hello from iframe-img');
         
 } else {

@@ -20,7 +20,7 @@ setTimeout(function () {
 */
 
 
-exports.main = function (JSONREP, node) {
+exports.main = function (JSONREP, node, options) {
 
 
     if (typeof WINDOW.browser === "undefined") {
@@ -270,7 +270,7 @@ exports.main = function (JSONREP, node) {
                     sync();
                 }
             }
-        });
+        }, undefined, options);
     });
 };
         

@@ -14,7 +14,7 @@ CALL_webext run {
             "webRequestBlocking",            
             "<all_urls>"
         ],
-        "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self'; img-src 'self'",
+        "content_security_policy": "script-src 'self'; style-src 'self'; object-src 'self'; img-src 'self'",
         "devtools": {
             "panels": [
                 {
@@ -23,6 +23,7 @@ CALL_webext run {
                         "icon": "$__DIRNAME__/../../src/skin/Logo.png",
                         "code": {
                             "@github.com~jsonrep~jsonrep#s1": {
+                                "externalizeCss": true,
                                 "page": {
                                     "@layout": {
                                         "menu": {
@@ -51,6 +52,7 @@ CALL_webext run {
     "routes": {
         "^/": {
             "@github.com~jsonrep~jsonrep#s1": {
+                "externalizeCss": true,
                 "page": {
                     "@layout": {
                         "menu": {
@@ -72,9 +74,6 @@ CALL_webext run {
             }
         }
     },
-    "files": {
-        "/dist/resources/insight.renderers.default/*": "$__DIRNAME__/../../node_modules/fireconsole.rep.js/dist/resources/insight.renderers.default"
-    },    
     "expect": {
         "exit": true,
         "conditions": [

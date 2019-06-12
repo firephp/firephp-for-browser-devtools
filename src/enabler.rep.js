@@ -1,5 +1,5 @@
 
-exports.main = function (JSONREP, node) {    
+exports.main = function (JSONREP, node, options) {    
 
     var api = {
         currentContext: null
@@ -19,7 +19,7 @@ exports.main = function (JSONREP, node) {
     });
 
 
-    return JSONREP.makeRep({
+    return JSONREP.makeRep2({
         "config": {
             "node": node,
             "api": api
@@ -33,7 +33,7 @@ exports.main = function (JSONREP, node) {
 
             <style>
 
-                :scope BUTTON {
+                :scope DIV BUTTON {
                     width: 100%;
                     height: 20px;
                     border: 2px;
@@ -44,7 +44,7 @@ exports.main = function (JSONREP, node) {
                     height: auto;
                 }
 
-                :scope BUTTON.enable {
+                :scope DIV BUTTON.enable {
                     color: #007200;
                     border-top: 2px solid #ff5151;
                     border-bottom: 2px solid #ff5151;
@@ -52,7 +52,7 @@ exports.main = function (JSONREP, node) {
                     border-right: 10px solid #ff5151;
                 }
 
-                :scope BUTTON.disable {
+                :scope DIV BUTTON.disable {
                     color: #900;
                     border-top: 2px solid #05c600;
                     border-bottom: 2px solid #05c600;
@@ -77,7 +77,7 @@ exports.main = function (JSONREP, node) {
                 function setSettingForHostname (hostname, name, value) {
                     var obj = {};
                     obj["domain[" + hostname + "]." + name] = value;                     
-                    return browser.storage.local.set(obj).then(function () {    
+                    return browser.storage.local.set(obj).then(function () {
                         browser.runtime.sendMessage({
                             to: "broadcast",
                             event: "currentContext"
@@ -158,5 +158,5 @@ exports.main = function (JSONREP, node) {
             </script>
 
         <<<)
-    });
+    }, options);
 };

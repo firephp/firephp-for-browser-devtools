@@ -1,7 +1,7 @@
 
-exports.main = function (JSONREP, node) {    
+exports.main = function (JSONREP, node, options) {    
         
-    return JSONREP.makeRep({
+    return JSONREP.makeRep2({
         "config": {
             "node": node
         },
@@ -17,14 +17,14 @@ exports.main = function (JSONREP, node) {
 
             <style>
 
-                :scope .menu {
+                :scope DIV .menu {
                     padding: 5px;
                     padding-left: 10px;
                     padding-right: 10px;
                     white-space: nowrap;
                 }
 
-                :scope .menu > BUTTON {
+                :scope DIV .menu > BUTTON {
                     cursor: pointer;
                     width: auto;
                 }
@@ -74,5 +74,5 @@ exports.main = function (JSONREP, node) {
             </script>
 
         <<<)
-    });
+    }, options);
 };

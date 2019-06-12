@@ -27,7 +27,7 @@ CALL_webext run {
             "webRequestBlocking",            
             "<all_urls>"
         ],
-        "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self'; img-src 'self'",
+        "content_security_policy": "script-src 'self'; object-src 'self'; img-src 'self'",
         "background": {
             "scripts": [
                 {
@@ -71,7 +71,11 @@ CALL_webext run {
                                                 actual: []
                                             }
 
+                                            var allProcesed = false;
                                             WILDFIRE.on("message.firephp", function (message) {
+                                                if (allProcesed) {
+                                                    return;
+                                                }
 
                                                 chai.assert.equal(message.sender, "http://meta.firephp.org/Wildfire/Plugin/FirePHP/Library-FirePHPCore/0.3");
 
@@ -90,6 +94,7 @@ CALL_webext run {
                                                         chai.assert.equal(messages.actual[i], expected);
                                                     });
 
+                                                    allProcesed = true;
                                                     done();
 
                                                 } else {
@@ -115,6 +120,7 @@ CALL_webext run {
                         "icon": "$__DIRNAME__/../../src/skin/Logo.png",
                         "code": {
                             "@github.com~jsonrep~jsonrep#s1": {
+                                "externalizeCss": true,
                                 "page": {
                                     "@console": {
                                         "@fireconsole": {
@@ -122,7 +128,7 @@ CALL_webext run {
                                     }
                                 },
                                 "reps": {
-                                    "fireconsole": "$__DIRNAME__/../../node_modules/fireconsole.rep.js/dist/fireconsole.rep.js",
+                                    "fireconsole": "fireconsole.rep.js/dist/fireconsole.rep.js",
                                     "console": "$__DIRNAME__/../../src/console.rep.js"
                                 }
                             }
@@ -138,8 +144,8 @@ CALL_webext run {
         }
     },
     "files": {
-        "/dist/resources/insight.renderers.default/*": "$__DIRNAME__/../../node_modules/fireconsole.rep.js/dist/resources/insight.renderers.default"
-    },    
+        "/dist/resources/insight.domplate.reps/*": "fireconsole.rep.js/dist/insight.domplate.reps"
+    },
     "expect": {
         "exit": true,
         "conditions": [

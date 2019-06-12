@@ -91,7 +91,7 @@ var currentContext = null;
 var broadcastCurrentContext = false;
 
 
-function webRequest_onBeforeSendHeaders (message) {
+function runtime_onMessage (message) {
 
     if (WILDFIRE.VERBOSE) console.log("[background] BROWSER.runtime -| onMessage (message):", message);
 
@@ -110,9 +110,9 @@ function webRequest_onBeforeSendHeaders (message) {
         }
     }
 }
-BROWSER.runtime.onMessage.addListener(webRequest_onBeforeSendHeaders);
+BROWSER.runtime.onMessage.addListener(runtime_onMessage);
 WILDFIRE.on("destroy", function () {
-    BROWSER.runtime.onMessage.removeListener(webRequest_onBeforeSendHeaders);
+    BROWSER.runtime.onMessage.removeListener(runtime_onMessage);
 });
 
 

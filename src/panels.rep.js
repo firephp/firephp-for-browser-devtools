@@ -1,5 +1,5 @@
 
-exports.main = function (JSONREP, node) {
+exports.main = function (JSONREP, node, options) {
 
     var panels = [];
 
@@ -32,7 +32,8 @@ exports.main = function (JSONREP, node) {
 
                     }
                 }
-            }
+            },
+            options
         );
     });
 };

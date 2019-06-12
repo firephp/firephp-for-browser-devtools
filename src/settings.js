@@ -1,18 +1,21 @@
 
-const BROWSER = browser;
+const BROWSER = (typeof browser !== "undefined" && browser) || null;
 
 var domainSettingsCache = {};
-BROWSER.storage.onChanged.addListener(function (changes, area) {
-    for (var item of Object.keys(changes)) {
-        if (!/^domain\[.+\]\..+$/.test(item)) continue;
-        domainSettingsCache[item] = changes[item].newValue;
+if (BROWSER) {
+    BROWSER.storage.onChanged.addListener(function (changes, area) {
+        for (var item of Object.keys(changes)) {
+            if (!/^domain\[.+\]\..+$/.test(item)) continue;
+            domainSettingsCache[item] = changes[item].newValue;
 
-//console.log("[background] Updated domain settings '" + item + "':", domainSettingsCache[item]);
-        
-    }
-});
+    //console.log("[background] Updated domain settings '" + item + "':", domainSettingsCache[item]);
+            
+        }
+    });
+}
 exports.getSetting = function (name) {
     function get () {
+        if (!BROWSER) return Promise.resolve(null);
         return BROWSER.storage.local.get(name).then(function (value) {
             return (domainSettingsCache[name] = value[name]);
         });
@@ -24,6 +27,7 @@ exports.getSetting = function (name) {
     return get();
 }
 exports.setSetting = function (name, value) {
+    if (!BROWSER) return Promise.resolve(null);
     return BROWSER.storage.local.set(name, value);
 }
 
