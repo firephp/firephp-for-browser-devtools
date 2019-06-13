@@ -1,0 +1,20 @@
+
+SPAN.map[__dbid="7430c9addac51d05c50c9b47edbb09af75f44314"] > SPAN {
+    color: #9C9C9C;
+    font-weight: bold;
+}
+
+SPAN.map[__dbid="7430c9addac51d05c50c9b47edbb09af75f44314"] > DIV.pair {
+    display: block;
+    padding-left: 20px;
+}
+
+SPAN.map[__dbid="7430c9addac51d05c50c9b47edbb09af75f44314"] > SPAN.pair {
+    padding-left: 2px;
+}
+
+SPAN.map[__dbid="7430c9addac51d05c50c9b47edbb09af75f44314"] > .pair > SPAN.delimiter, SPAN.map > .pair > SPAN.separator {
+    color: #9C9C9C;
+    padding-left: 2px;
+    padding-right: 2px;
+}

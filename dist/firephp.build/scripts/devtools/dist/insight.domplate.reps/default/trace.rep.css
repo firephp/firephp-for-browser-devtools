@@ -1,0 +1,82 @@
+
+SPAN.structures-trace[__dbid="ec8a56cdafa321f0900fa656ca9d71bcf3d1b54e"] {
+    background-image: url(images/edit-rule.png);
+    background-repeat: no-repeat;
+    background-position: 4px 1px;
+    padding-left: 25px;
+    font-weight: bold;
+}
+
+DIV.structures-trace[__dbid="ec8a56cdafa321f0900fa656ca9d71bcf3d1b54e"] {
+    padding: 0px;
+    margin: 0px;
+}
+
+DIV.structures-trace[__dbid="ec8a56cdafa321f0900fa656ca9d71bcf3d1b54e"] TABLE {
+  border-bottom: 1px solid #D7D7D7;
+}
+
+DIV.structures-trace[__dbid="ec8a56cdafa321f0900fa656ca9d71bcf3d1b54e"] TABLE TBODY TR TH, DIV.structures-trace TABLE TBODY TR TD {
+    padding: 3px;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+DIV.structures-trace[__dbid="ec8a56cdafa321f0900fa656ca9d71bcf3d1b54e"] TABLE TBODY TR TH.header-file {
+  white-space:nowrap;
+  font-weight: bold;
+  text-align: left;
+}
+
+DIV.structures-trace[__dbid="ec8a56cdafa321f0900fa656ca9d71bcf3d1b54e"] TABLE TBODY TR TH.header-line {
+  white-space:nowrap;
+  font-weight: bold;
+  text-align: right;
+}
+DIV.structures-trace[__dbid="ec8a56cdafa321f0900fa656ca9d71bcf3d1b54e"] TABLE TBODY TR TH.header-inst {
+  white-space:nowrap;
+  font-weight: bold;
+  text-align: left;
+}
+
+DIV.structures-trace[__dbid="ec8a56cdafa321f0900fa656ca9d71bcf3d1b54e"] TABLE TBODY TR TD.cell-file {
+  vertical-align: top;
+  border: 1px solid #D7D7D7;
+  border-bottom: 0px;
+  border-right: 0px;
+}
+DIV.structures-trace[__dbid="ec8a56cdafa321f0900fa656ca9d71bcf3d1b54e"] TABLE TBODY TR TD.cell-line {
+  white-space:nowrap;
+  vertical-align: top;
+  text-align: right;
+  border:1px solid #D7D7D7;
+  border-bottom: 0px;
+  border-right: 0px;
+}
+DIV.structures-trace[__dbid="ec8a56cdafa321f0900fa656ca9d71bcf3d1b54e"] TABLE TBODY TR TD.cell-line:hover, DIV.structures-trace TABLE TBODY TR TD.cell-file:hover {
+    background-color: #ffc73d;
+    cursor: pointer;    
+}
+DIV.structures-trace[__dbid="ec8a56cdafa321f0900fa656ca9d71bcf3d1b54e"] TABLE TBODY TR TD.cell-inst {
+  vertical-align: top;
+  padding-left: 10px;
+  font-weight: bold;
+  border:1px solid #D7D7D7;
+  border-bottom: 0px;
+}
+
+DIV.structures-trace[__dbid="ec8a56cdafa321f0900fa656ca9d71bcf3d1b54e"] TABLE TBODY TR TD.cell-inst DIV.arg {
+  font-weight: normal;
+  padding-left: 3px;
+  padding-right: 3px;
+  display: inline-block;
+}
+DIV.structures-trace[__dbid="ec8a56cdafa321f0900fa656ca9d71bcf3d1b54e"] TABLE TBODY TR TD.cell-inst DIV.arg:hover {
+    background-color: #ffc73d;
+    cursor: pointer;    
+}
+
+DIV.structures-trace[__dbid="ec8a56cdafa321f0900fa656ca9d71bcf3d1b54e"] TABLE TBODY TR TD.cell-inst .separator {
+    padding-left: 1px;
+    padding-right: 3px;
+}

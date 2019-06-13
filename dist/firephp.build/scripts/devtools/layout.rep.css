@@ -1,0 +1,58 @@
+
+BODY {
+    background-color: #ffffff;
+    overflow: hidden;
+}
+
+[_cssid="c6a527ee02d0fb4136b8a82995b5eb9e92b4daa2"].layout-views {
+    height: 100%;
+}
+
+[_cssid="c6a527ee02d0fb4136b8a82995b5eb9e92b4daa2"].layout-views,
+[_cssid="c6a527ee02d0fb4136b8a82995b5eb9e92b4daa2"].layout-views TABLE {
+    font-family: Lucida Grande, Tahoma, sans-serif;
+    font-size: 11px;
+}
+
+[_cssid="c6a527ee02d0fb4136b8a82995b5eb9e92b4daa2"] .layout TD {
+    vertical-align: top;
+}
+
+[_cssid="c6a527ee02d0fb4136b8a82995b5eb9e92b4daa2"] .layout TD.menu-panel {
+    border-bottom: 1px solid #dcdcdc;
+}
+
+[_cssid="c6a527ee02d0fb4136b8a82995b5eb9e92b4daa2"] .layout TD.settings-panel {
+    border-bottom: 1px solid #dcdcdc;
+}
+
+[_cssid="c6a527ee02d0fb4136b8a82995b5eb9e92b4daa2"] .layout TD.inspector-panel {
+    min-width: 200px;
+    overflow: auto;
+}
+
+[_cssid="c6a527ee02d0fb4136b8a82995b5eb9e92b4daa2"] .manage {
+    height: 100%;
+    padding: 20px;
+}
+
+[_cssid="c6a527ee02d0fb4136b8a82995b5eb9e92b4daa2"] .manage > .close-button {
+    display: none;
+    cursor: pointer;
+}
+
+[_cssid="c6a527ee02d0fb4136b8a82995b5eb9e92b4daa2"] .uninitialized {
+    text-align: center;
+    padding-top: 50px;
+    height: 100%;
+}
+[_cssid="c6a527ee02d0fb4136b8a82995b5eb9e92b4daa2"] .uninitialized > P {
+    font-weight: bold;
+    font-size: 16px;
+    color: #dcdcdc;
+}
+[_cssid="c6a527ee02d0fb4136b8a82995b5eb9e92b4daa2"] .uninitialized BUTTON {
+    font-size: 16px;
+    color: #dcdcdc;
+    cursor: pointer;
+}

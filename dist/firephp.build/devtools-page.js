@@ -21,7 +21,7 @@ panels.on("set", function (name, value) {
 
 });
 
-[{"label":"FirePHP","icon":"skin/__icon_devtools_panel_Logo.png","filename":"devtools.html"}].forEach(function (panel) {
+[{"label":"FirePHP","icon":"skin/__icon_devtools_panel_Logo.png","filename":"devtools/index.html"}].forEach(function (panel) {
 
     const url = "scripts/" + panel.filename;
     

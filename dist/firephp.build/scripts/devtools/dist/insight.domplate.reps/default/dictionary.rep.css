@@ -1,0 +1,51 @@
+
+SPAN.dictionary[__dbid="2c764a19c889e87c229bdbb0b8f51a652f3350fb"] > SPAN {
+    color: #9C9C9C;
+}
+
+SPAN.dictionary[__dbid="2c764a19c889e87c229bdbb0b8f51a652f3350fb"] > SPAN.collapsed {
+    color: #0000FF;
+    font-weight: normal;
+    padding-left: 5px;
+    padding-right: 5px;
+}
+
+SPAN.dictionary[__dbid="2c764a19c889e87c229bdbb0b8f51a652f3350fb"] > SPAN.summary {
+    color: #0000FF;
+    font-weight: normal;
+    padding-left: 5px;
+    padding-right: 5px;
+}
+
+SPAN.dictionary[__dbid="2c764a19c889e87c229bdbb0b8f51a652f3350fb"] > SPAN.member {
+    color: #9C9C9C;
+}
+
+SPAN.dictionary[__dbid="2c764a19c889e87c229bdbb0b8f51a652f3350fb"] > DIV.member {
+    display: block;
+    padding-left: 20px;
+}
+SPAN.dictionary[__dbid="2c764a19c889e87c229bdbb0b8f51a652f3350fb"] > DIV.member.expandable {
+    background-image: url(images/twisty-closed.png);
+    background-repeat: no-repeat;
+    background-position: 6px 2px;
+    cursor: pointer;
+}
+SPAN.dictionary[__dbid="2c764a19c889e87c229bdbb0b8f51a652f3350fb"] > DIV.member.expandable.expanded {
+    background-image: url(images/twisty-open.png);
+}
+
+SPAN.dictionary[__dbid="2c764a19c889e87c229bdbb0b8f51a652f3350fb"] > .member > SPAN.name {
+    color: #E59D07;
+    font-weight: normal;
+}
+
+SPAN.dictionary[__dbid="2c764a19c889e87c229bdbb0b8f51a652f3350fb"] > .member > SPAN.value {
+    font-weight: normal;
+}
+
+SPAN.dictionary[__dbid="2c764a19c889e87c229bdbb0b8f51a652f3350fb"] > .member > SPAN.delimiter, SPAN.dictionary > .member > SPAN.separator, SPAN.dictionary > .member SPAN.more {
+    color: #9C9C9C;
+    padding-left: 2px;
+    padding-right: 2px;
+}        

@@ -1,0 +1,16 @@
+
+[_cssid="e5171781037a60512c4733a9fb53edce2af9480d"].console {
+    overflow-x: hidden;
+    overflow-y: auto;
+    border-right: 1px solid #dcdcdc;
+    height: 100vh;
+}
+
+[_cssid="e5171781037a60512c4733a9fb53edce2af9480d"].console DIV.request {
+    padding: 3px;
+    padding-left: 10px;
+    padding-right: 10px;
+    color: #FFFFFF;
+    background-color: #0000FF;
+    border: 1px solid black;
+}

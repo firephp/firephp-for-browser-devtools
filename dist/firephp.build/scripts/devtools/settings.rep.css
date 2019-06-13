@@ -1,0 +1,17 @@
+
+
+    DIV[data-is="tag_5d5390221665baaeb51cc5a8e8b5322e1e374e20"] H2 {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+
+    DIV[data-is="tag_5d5390221665baaeb51cc5a8e8b5322e1e374e20"] UL.settings {
+        padding-left: 10px;
+        padding-right: 10px;
+        list-style-type: none;
+    }
+
+    DIV[data-is="tag_5d5390221665baaeb51cc5a8e8b5322e1e374e20"] UL.settings > LI {
+        white-space: nowrap;
+    }
+
