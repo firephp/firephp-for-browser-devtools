@@ -68,16 +68,19 @@ exports.main = function (JSONREP, node, options) {
                     }
 
                     function showPanel () {
+
                         if (!currentContext) {
                             return;
                         }
                         var key = makeKeyForContext(currentContext);
+
                         var panelEl = el.querySelector('.viewer > DIV[context="' + key + '"]');
+
                         if (!panelEl) {
                             return;
                         }
                         panelEl.style.display = "";
-                        el.querySelector(".close").style.display = "inline-block";                        
+                        el.querySelector(".close").style.display = "inline-block";
                     }
 
                     function destroyPanel () {
@@ -90,14 +93,11 @@ exports.main = function (JSONREP, node, options) {
                             return;
                         }
                         panelEl.parentNode.removeChild(panelEl);
-                        currentContext = null;
                         el.querySelector(".close").style.display = "none";
                     }
 
 
                     window.FC.on("inspectMessage", function (info) {
-
-//console.log("INSPECT MESSAGE!!", info);
 
                         hidePanel();
 
@@ -109,12 +109,12 @@ exports.main = function (JSONREP, node, options) {
 
                         const panel = getPanel();
 
-//console.log("panel::", panel);
-
                         if (!panel) return;
 
-                        window.FC.renderMessageInto(panel, info.message);
+                        delete info.message.meta.wrapper;
 
+                        window.FC.renderMessageInto(panel, info.message);
+                        
                         showPanel();
                     });
 
@@ -129,15 +129,26 @@ exports.main = function (JSONREP, node, options) {
                         currentContext = {
                             tabId: browser.devtools.inspectedWindow.tabId
                         };
+
+                        const panel = getPanel();
+
+                        if (!panel) return;
                         
-                        window.FC.renderMessageInto(getPanel(), info.message);
+                        window.FC.renderMessageInto(panel, info.message);
                         
                         showPanel();
                     });
                         
                     window.FC.on("inspectFile", function (info) {
 
-                        console.log("EVENT:inspectFile", info);
+                        const panel = getPanel();
+
+                        if (!panel) return;
+
+                        window.FC.renderMessageInto(panel, {
+                            type: "string",
+                            value: "Viewing of files is not yet implemented."
+                        });
                     });
 
                     el.querySelector(".close").addEventListener("click", destroyPanel, false);
@@ -157,7 +168,7 @@ exports.main = function (JSONREP, node, options) {
 
 //console.log("CONTEXT IN INSPECTOR", message.context, currentContext);
 
-                                hidePanel();
+                                hidePanel();                                
                                 currentContext = message.context;
                                 showPanel();
                             } else

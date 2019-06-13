@@ -45,7 +45,7 @@ CALL_webext run {
         "devtools": {
             "panels": [
                 {
-                    "devtools.js": {
+                    "devtools/index.js": {
                         "label": "FirePHP",
                         "icon": "$__DIRNAME__/../../src/skin/Logo.png",
                         "code": {

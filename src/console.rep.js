@@ -106,6 +106,7 @@ exports.main = function (JSONREP, node, options) {
                     var lastConsoleId = null;
 
                     if (BROWSER) {
+
                         BROWSER.runtime.onMessage.addListener(function (message) {
 
                             if (
@@ -161,7 +162,7 @@ exports.main = function (JSONREP, node, options) {
                                 ) {
                                     if (persistentConsole) {
                                         return;
-                                    }                                
+                                    }
                                     var key = makeKeyForContext(message.context);
                                     Object.keys(consoles).forEach(function (id) {
                                         if (

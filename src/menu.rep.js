@@ -8,11 +8,10 @@ exports.main = function (JSONREP, node, options) {
         "code": (riotjs:makeRep () >>>
 
             <div class="menu">
+                <button onclick={triggerRelooad}>Reload</button>
                 <button onclick={triggerClear}>Clear</button>
-                &nbsp;
-                <button onclick={triggerManage}>Manage</button>
-                &nbsp;
                 <input type="checkbox" name="settings.persist-on-navigate" onchange={notifyPersistChange}/>Persist
+                <button onclick={triggerManage}>Manage</button>
             </div>
 
             <style>
@@ -27,6 +26,8 @@ exports.main = function (JSONREP, node, options) {
                 :scope DIV .menu > BUTTON {
                     cursor: pointer;
                     width: auto;
+                    padding-left: 1px;
+                    padding-right: 1px;
                 }
                 
             </style>
@@ -34,6 +35,17 @@ exports.main = function (JSONREP, node, options) {
             <script>
 
                 var tag = this;
+
+                tag.triggerRelooad = function (event) {
+
+                    browser.runtime.sendMessage({
+                        to: "background",
+                        event: "reload",
+                        context: {
+                            tabId: browser.devtools.inspectedWindow.tabId
+                        }
+                    });
+                }
 
                 tag.triggerClear = function (event) {
 
