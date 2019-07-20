@@ -31,7 +31,8 @@ CALL_webext run {
                                         },
                                         "console": "Console<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line",
                                         "settings": {
-                                            "@settings": {}
+                                            "@enabler": {},
+                                            "@summary": {}
                                         },
                                         "inspector": "Inspector",
                                         "manage": "Manage"
@@ -40,7 +41,8 @@ CALL_webext run {
                                 "reps": {
                                     "layout": "$__DIRNAME__/../../src/layout.rep.js",
                                     "menu": "$__DIRNAME__/../../src/menu.rep.js",
-                                    "settings": "$__DIRNAME__/../../src/settings.rep.js"
+                                    "enabler": "$__DIRNAME__/../../src/enabler.rep.js",
+                                    "summary": "$__DIRNAME__/../../src/summary.rep.js"
                                 }
                             }
                         }
@@ -60,7 +62,8 @@ CALL_webext run {
                         },
                         "console": "Console<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line<br/>Line",
                         "settings": {
-                            "@settings": {}
+                            "@enabler": {},
+                            "@summary": {}
                         },
                         "inspector": "Inspector",
                         "manage": "Manage"
@@ -69,7 +72,8 @@ CALL_webext run {
                 "reps": {
                     "layout": "$__DIRNAME__/../../src/layout.rep.js",
                     "menu": "$__DIRNAME__/../../src/menu.rep.js",
-                    "settings": "$__DIRNAME__/../../src/settings.rep.js"
+                    "enabler": "$__DIRNAME__/../../src/enabler.rep.js",
+                    "summary": "$__DIRNAME__/../../src/summary.rep.js"
                 }
             }
         }

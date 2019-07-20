@@ -36,7 +36,14 @@ CALL_webext run {
                         "@it.pinf.org.browserify#s1": {
                             "src": "$__DIRNAME__/../../src/background.js",
                             "prime": true,
-                            "format": "pinf"
+                            "format": "pinf",
+                            "babel": {
+                                "presets": {
+                                    "@babel/preset-env": {
+                                        "targets": "last 1 Firefox versions"
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -86,6 +93,13 @@ CALL_webext run {
                                     "fireconsole": "fireconsole.rep.js/dist/fireconsole.rep.js",
                                     "console": "$__DIRNAME__/../../src/console.rep.js",
                                     "enabler": "$__DIRNAME__/../../src/enabler.rep.js"
+                                },
+                                "babel": {
+                                    "presets": {
+                                        "@babel/preset-env": {
+                                            "targets": "last 1 Firefox versions"
+                                        }
+                                    }
                                 }
                             }
                         }

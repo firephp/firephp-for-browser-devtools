@@ -47,7 +47,14 @@ function do_run {
                             "@it.pinf.org.browserify#s1": {
                                 "src": "$__DIRNAME__/src/background.js",
                                 "prime": true,
-                                "format": "pinf"
+                                "format": "pinf",
+                                "babel": {
+                                    "presets": {
+                                        "@babel/preset-env": {
+                                            "targets": "last 1 Firefox versions"
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -91,12 +98,20 @@ function do_run {
                                     "reps": {
                                         "layout": "$__DIRNAME__/src/layout.rep.js",
                                         "menu": "$__DIRNAME__/src/menu.rep.js",
+                                        "summary": "$__DIRNAME__/src/summary.rep.js",
                                         "settings": "$__DIRNAME__/src/settings.rep.js",
                                         "manage": "$__DIRNAME__/src/manage.rep.js",
                                         "inspector": "$__DIRNAME__/src/inspector.rep.js",
                                         "fireconsole": "fireconsole.rep.js/dist/fireconsole.rep.js",
                                         "console": "$__DIRNAME__/src/console.rep.js",
                                         "enabler": "$__DIRNAME__/src/enabler.rep.js"
+                                    },
+                                    "babel": {
+                                        "presets": {
+                                            "@babel/preset-env": {
+                                                "targets": "last 1 Firefox versions"
+                                            }
+                                        }
                                     }
                                 }
                             }

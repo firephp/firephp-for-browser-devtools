@@ -11,7 +11,7 @@ exports.main = function (JSONREP, node, options) {
                 <button onclick={triggerRelooad}>Reload</button>
                 <button onclick={triggerClear}>Clear</button>
                 <input type="checkbox" name="settings.persist-on-navigate" onchange={notifyPersistChange}/>Persist
-                <button onclick={triggerManage}>Manage</button>
+                <button onclick={triggerManage}>Settings</button>
             </div>
 
             <style>
@@ -33,51 +33,33 @@ exports.main = function (JSONREP, node, options) {
             </style>
 
             <script>
+                const COMPONENT = require("./component");
 
-                var tag = this;
+                let tag = this;
+
+                const comp = COMPONENT.for({
+                    browser: browser
+                });
 
                 tag.triggerRelooad = function (event) {
-
-                    browser.runtime.sendMessage({
-                        to: "background",
-                        event: "reload",
-                        context: {
-                            tabId: browser.devtools.inspectedWindow.tabId
-                        }
-                    });
+                    comp.reloadBrowser();
                 }
 
                 tag.triggerClear = function (event) {
-
-                    browser.runtime.sendMessage({
-                        to: "broadcast",
-                        event: "clear",
-                        context: {
-                            tabId: browser.devtools.inspectedWindow.tabId
-                        }
-                    });
+                    comp.clearConsole();
                 }
 
                 tag.triggerManage = function (event) {
-
-                    browser.runtime.sendMessage({
-                        to: "broadcast",
-                        event: "manage",
-                        context: {
-                            tabId: browser.devtools.inspectedWindow.tabId
-                        }
-                    });
+                    comp.showView("manage");
                 }
                 
                 tag.notifyPersistChange = function (event) {
-
                     browser.storage.local.set({
                         "persist-on-navigate": event.target.checked
                     });                       
                 }
 
                 tag.on("mount", function () {
-
                     browser.storage.local.get("persist-on-navigate").then(function (value) {
                         tag.root.querySelector('[name="settings.persist-on-navigate"]').checked = value["persist-on-navigate"] || false;
                     });

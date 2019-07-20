@@ -15,14 +15,16 @@ if ($_SERVER["HTTP_CACHE_CONTROL"] == "max-age=0") {
     $firephp->fb('Error message',FirePHP::ERROR);
     $firephp->fb('Message with label','Label',FirePHP::LOG);
 
-    $arr = array('key1'=>'val1',
-    'key2'=>array(array('v1','v2'),'v3'));
+    $arr = array(
+        'key1'=>'val1',
+        'key2'=>array(array('v1','v2'),'v3')
+    );
 
     $firephp->fb($arr,'TestArray',FirePHP::LOG);
     $firephp->fb(array('2 SQL queries took 0.06 seconds',array(
-    array('SQL Statement','Time','Result'),
-    array('SELECT * FROM Foo','0.02',array('row1','row2')),
-    array('SELECT * FROM Bar','0.04',array('row1','row2'))
+        array('SQL Statement','Time','Result'),
+        array('SELECT * FROM Foo','0.02',array('row1','row2')),
+        array('SELECT * FROM Bar','0.04',array('row1','row2'))
     )),FirePHP::TABLE);
 
     $firephp->group('Group 1');
@@ -33,7 +35,6 @@ if ($_SERVER["HTTP_CACHE_CONTROL"] == "max-age=0") {
     $firephp->groupEnd();
 
     $firephp->fb($arr,'RequestHeaders',FirePHP::DUMP);
-    
-    echo("FirePHP formatted messages sent in HTTP response headers.");
 
+    echo("FirePHP formatted messages sent in HTTP response headers.");
 }

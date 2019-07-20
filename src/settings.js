@@ -38,10 +38,13 @@ exports.getDomainSettingsForDomain = function (domain) {
     return exports.getSetting("domain[" + domain + "].enabled").then(function (enabled) {
         return exports.getSetting("domain[" + domain + "].enableUserAgentHeader").then(function (enableUserAgentHeader) {            
             return exports.getSetting("domain[" + domain + "].enableFirePHPHeader").then(function (enableFirePHPHeader) {            
-                return Promise.resolve({
-                    "enabled": enabled,
-                    "enableUserAgentHeader": enableUserAgentHeader,
-                    "enableFirePHPHeader": enableFirePHPHeader
+                return exports.getSetting("domain[" + domain + "].enableChromeLoggerData").then(function (enableChromeLoggerData) {            
+                    return Promise.resolve({
+                        "enabled": enabled,
+                        "enableUserAgentHeader": enableUserAgentHeader,
+                        "enableFirePHPHeader": enableFirePHPHeader,
+                        "enableChromeLoggerData": enableChromeLoggerData
+                    });
                 });
             });
         });
@@ -54,7 +57,8 @@ exports.isEnabledForDomain = function (domain) {
             settings.enabled &&
             (
                 settings.enableUserAgentHeader ||
-                settings.enableFirePHPHeader
+                settings.enableFirePHPHeader ||
+                settings.enableChromeLoggerData
             )
         );
     });

@@ -48,6 +48,13 @@ CALL_webext run {
                                         });
                                     });
                                 }
+                            },
+                            "babel": {
+                                "presets": {
+                                    "@babel/preset-env": {
+                                        "targets": "last 1 Firefox versions"
+                                    }
+                                }
                             }
                         }
                     }

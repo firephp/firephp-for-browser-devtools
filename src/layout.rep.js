@@ -22,30 +22,35 @@ setTimeout(function () {
 
 exports.main = function (JSONREP, node, options) {
 
-
     if (typeof WINDOW.browser === "undefined") {
         WINDOW.browser = require("./adapters/page-browser-api");
     }
-
 
     var panels = {};
 
     return Promise.all(Object.keys(node).map(function (name) {
 
         if (typeof node[name] === "string") {
-            panels[name] = node[name];
+            panels[name] = panels[name] || [];
+            panels[name].push(node[name]);
             return null;
         }
         
-        return Promise.all(Object.keys(node[name]).map(function (key) {
+        return Promise.all(Object.keys(node[name]).map(function (key, i) {
+            panels[name] = panels[name] || [];
+
             var panelNode = {};
             panelNode[key] = node[name][key];
             return JSONREP.markupNode(panelNode).then(function (code) {
-                panels[name] = code;
+                panels[name][i] = code;
                 return null;
             });
         }));
     })).then(function () {
+
+        Object.keys(panels).forEach(function (name) {
+            panels[name] = panels[name].join("\n");
+        });
 
         return JSONREP.makeRep({
             variables: {
@@ -63,7 +68,7 @@ exports.main = function (JSONREP, node, options) {
                             <tr>
                                 <td class="side-panel">
                                     <table class="layout" height="100%" border="0" cellpadding="0" cellspacing="0">
-                                        <tr>
+                                    <tr>
                                             <td class="menu-panel">
                                                 %%%variables.panels.menu%%%
                                             </td>
@@ -83,11 +88,11 @@ exports.main = function (JSONREP, node, options) {
                             </tr>
                         </table>
                     </div>
-                    <div class="manage">
+                    <div class="manage" style="display: none;">
                         <button class="close-button">Close</button>
                         %%%variables.panels.manage%%%
                     </div>
-                    <div class="uninitialized">
+                    <div class="uninitialized" style="display: none;">
                         <p><button action="reload">Reload</button> to initialize FirePHP</p>
                     </div>
                 </div>
@@ -114,7 +119,6 @@ exports.main = function (JSONREP, node, options) {
                 }
 
                 :scope .layout TD.menu-panel {
-                    border-bottom: 1px solid #dcdcdc;
                 }
                 
                 :scope .layout TD.settings-panel {
@@ -129,11 +133,13 @@ exports.main = function (JSONREP, node, options) {
                 :scope .manage {
                     height: 100%;
                     padding: 20px;
+                    background-color: #efefef;
                 }
 
                 :scope .manage > .close-button {
                     display: none;
                     cursor: pointer;
+                    margin-bottom: 10px;
                 }
                 
                 :scope .uninitialized {
@@ -156,8 +162,30 @@ exports.main = function (JSONREP, node, options) {
             on: {
                 mount: function (el) {
 
-                    var currentContext = null;
-                    var forceManage = false;
+                    const COMPONENT = require("./component");
+
+                    let forceManage = false;
+
+                    const comp = COMPONENT.for({
+                        browser: browser
+                    });
+
+                    comp.on("changed.context", function () {
+                        comp.contextChangeAcknowledged();
+                        sync();
+                    });
+
+                    comp.on("changed.setting", function (name, enabled) {
+                        sync();
+                    });
+
+                    comp.on("message", function (message) {
+                        if (message.event === "manage") {
+                            forceManage = true;
+                            sync();
+                        }
+                    });
+
 
                     var persistLogs = false;
                     browser.storage.onChanged.addListener(function (changes, area) {
@@ -169,108 +197,114 @@ exports.main = function (JSONREP, node, options) {
                         persistLogs = value["persist-on-navigate"];
                     });
 
-                    function getSettingForHostname (hostname, name) {
-                        var key = "domain[" + hostname + "]." + name;
-                        return browser.storage.local.get(key).then(function (value) {
-                            return (value[key] || false);
-                        });
-                    }
+                    let view = null;
+                    let configured = false;
+                    let enabled = false;
 
-                    function isEnabledForHostname (hostname) {                            
-                        return getSettingForHostname(hostname, "enableUserAgentHeader").then(function (enableUserAgentHeader) {
-                            return getSettingForHostname(hostname, "enableFirePHPHeader").then(function (enableFirePHPHeader) {
-                                return (
-                                    enableUserAgentHeader ||
-                                    enableFirePHPHeader                            
-                                );
-                            });                            
-                        });
-                    }
+                    async function sync () {
+                        try {
+                            if (comp.currentContext) {
+                                configured = await comp.isConfigured();
+                                enabled = await comp.getSetting("enabled");
 
-                    function sync () {   
-
-                        if (currentContext) {
-
-                            isEnabledForHostname(currentContext.hostname).then(function (enabled) {
-                                
+                                // User requested to manage settings
                                 if (forceManage) {
-                                    el.querySelector("DIV.manage").style.display = "block";
+                                    view = "manage";
+                                } else
+                                // Default state when first opening
+                                if (
+                                    !configured &&
+                                    !enabled &&
+                                    !persistLogs
+                                ) {
+                                    view = "manage";
+                                } else
+                                // Navigated to a new hostname and clicked enable without first configuring
+                                if (
+                                    persistLogs &&
+                                    enabled &&
+                                    !configured
+                                ) {
+                                    view = "manage";
+                                } else {
+                                    view = "console";
+                                }
+                            } else {
+                                view = "uninitialized";                            
+                            }
 
-                                    if (enabled) {
-                                        el.querySelector("DIV.manage > BUTTON.close-button").style.display = "inline-block";
-                                    } else {
-                                        el.querySelector("DIV.manage > BUTTON.close-button").style.display = "none";
-                                    }
-                                    el.querySelector("DIV.uninitialized").style.display = "none";
-                                    el.querySelector("DIV.ui").style.display = "none";
+console.log("VIEW DETAIS", view, "configured", configured, "enabled", enabled);
 
+                            var toggles = {
+                                ui: false,
+                                manage: false,
+                                uninitialized: false
+                            };
+
+                            if (view === "uninitialized") {
+                                toggles.uninitialized = true;
+                            } else
+                            if (view === "manage") {
+                                toggles.manage = true;
+
+                                if (
+                                    forceManage ||
+                                    configured ||
+                                    persistLogs
+                                ) {
+                                    el.querySelector("DIV.manage > BUTTON.close-button").style.display = "inline-block";
                                 } else {
                                     el.querySelector("DIV.manage > BUTTON.close-button").style.display = "none";
+                                }
+                            } else
+                            if (view === "console") {
+                                toggles.ui = true;
+                            } else {
+                                throw new Error(`'view' with value '${view}' not implemented!`);
+                            }
 
-                                    if (
-                                        enabled ||
-                                        persistLogs
-                                    ) {
-                                        el.querySelector("DIV.manage").style.display = "none";
-                                        el.querySelector("DIV.uninitialized").style.display = "none";
-                                        el.querySelector("DIV.ui").style.display = "block";
-                                    } else {
-                                        el.querySelector("DIV.manage").style.display = "block";
-                                        el.querySelector("DIV.uninitialized").style.display = "none";
-                                        el.querySelector("DIV.ui").style.display = "none";
-                                    }
-                                    return null;
-                                }                            
-                            }).catch(function (err) {
-                                console.error(err);
-                            });
-                        } else {
-                            el.querySelector("DIV.ui").style.display = "none";
-                            el.querySelector("DIV.manage").style.display = "none";
-                            el.querySelector("DIV.uninitialized").style.display = "block";
+                            el.querySelector("DIV.ui").style.display = toggles.ui ? "block" : "none";
+                            el.querySelector("DIV.manage").style.display = toggles.manage ? "block" : "none";
+                            el.querySelector("DIV.uninitialized").style.display = toggles.uninitialized ? "block" : "none";
+
+                        } catch (err) {
+                            console.error("Error during sync():", err);
+                            throw err;
                         }
                     }
 
-                    el.querySelector("DIV.manage > BUTTON.close-button").addEventListener("click", function () {
-                        forceManage = false;
-                        sync();
+                    el.querySelector("DIV.manage > BUTTON.close-button").addEventListener("click", async function () {
+                        try {
+                            // Navigated to a new hostname and clicked enable without first configuring
+                            // and now clicked close. So we disable again as nothing was configured.
+                            if (
+                                persistLogs &&
+                                enabled &&
+                                !configured
+                            ) {
+                                await comp.setSetting("enabled", false);
+                            } else
+                            // Managing settings for enabled hostname and clearing all settings
+                            // and now clicking close. So we disable as nothing is configured.
+                            if (
+                                forceManage &&
+                                enabled &&
+                                !configured
+                            ) {
+                                await comp.setSetting("enabled", false);
+                            }
+                            forceManage = false;
+                            sync();
+                        } catch (err) {
+                            console.error(err);
+                        }
                     }, false);
 
                     el.querySelector('BUTTON[action="reload"]').addEventListener("click", function () {
-                        browser.runtime.sendMessage({
-                            to: "background",
-                            event: "reload",
-                            context: {
-                                tabId: browser.devtools.inspectedWindow.tabId
-                            }
-                        });                        
+                        comp.reloadBrowser();
                     }, false);
-                        
-                    browser.runtime.onMessage.addListener(function (message) {
-
-                        if (
-                            message.context &&
-                            message.context.tabId != browser.devtools.inspectedWindow.tabId
-                        ) {
-                            return;
-                        }
-
-                        if (message.to === "message-listener") {
-                            if (message.event === "currentContext") {
-                                currentContext = message.context;
-                                sync();
-                            } else
-                            if (message.event === "manage") {
-                                forceManage = true;
-                                sync();
-                            }
-                        }
-                    });
-
-                    sync();
                 }
             }
         }, undefined, options);
     });
 };
-        

@@ -46,5 +46,6 @@ if ($_GET['context'] === 'iframe-img') {
     echo('<iframe src="?context=iframe"></iframe>');
     echo('<img src="?context=img"></img>');
     
-    echo("FirePHP formatted messages sent in HTTP response headers.");
+    echo('<p>FirePHP formatted messages sent in HTTP response headers.</p>');
+    echo('<p><a href="http://firephp.org/">firephp.org</p>');
 }

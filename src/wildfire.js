@@ -160,7 +160,7 @@ REQUEST_OBSERVER.register(function (request) {
 
     return SETTINGS.getDomainSettingsForRequest(request).then(function (settings) {
 
-        if (API.VERBOSE) console.log("[wildfire] request domain settings for '" + request.hostname + "':", settings);
+//        if (API.VERBOSE) console.log("[wildfire] request domain settings for '" + request.hostname + "':", settings);
 
         hostnameSettings[request.hostname] = settings;
         
@@ -233,8 +233,6 @@ API.on("http.response", function (response) {
 
     var settings = hostnameSettings[response.request.context.hostname];
 
-    if (API.VERBOSE) console.log("[wildfire] response domain settings for '" + response.request.context.hostname + "':", settings);
-
     if (
         !settings ||
         (
@@ -244,7 +242,9 @@ API.on("http.response", function (response) {
     ) {
         return;
     }
-    
+
+    if (API.VERBOSE) console.log("[wildfire] response domain settings for '" + response.request.context.hostname + "':", settings);
+
     var chromeLoggerMessage = response.headers.filter(function (header) {
         return (header.name === "X-ChromeLogger-Data");
     });
@@ -263,7 +263,6 @@ API.on("http.response", function (response) {
             }
         });
     } else {
-
     //dump("RESPONSE IN EXTENSION2", response);
     //console.log("RESPONSE IN EXTENSION4", response);
         httpHeaderChannel.parseReceived(response.headers, {

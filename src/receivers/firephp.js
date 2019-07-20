@@ -12,7 +12,7 @@ exports.for = function (API) {
                 //message.requestUrl = request.url;
                 message.context = request.context;
     
-	        	API.console.log("FirebugConsole onMessageReceived 1", message);
+//	        	API.console.log("FirebugConsole onMessageReceived 1", message);
 
                 if (
                     API.on &&
@@ -39,7 +39,7 @@ exports.for = function (API) {
                 //message.requestUrl = request.url;
                 message.context = request.context;
                 
-	        	API.console.log("FirePHP onMessageReceived", message);
+//	        	API.console.log("FirePHP onMessageReceived", message);
 
                 if (
                     API.on &&

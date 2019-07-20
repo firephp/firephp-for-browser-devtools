@@ -60,12 +60,12 @@ CALL_webext run {
                                                     "\"Message with label\"",
                                                     "{\"key1\":\"val1\",\"key2\":[[\"v1\",\"v2\"],\"v3\"]}",
                                                     "{\"data\":[[\"SELECT * FROM Foo\",\"0.02\",[\"row1\",\"row2\"]],[\"SELECT * FROM Bar\",\"0.04\",[\"row1\",\"row2\"]]],\"header\":[\"SQL Statement\",\"Time\",\"Result\"],\"title\":\"2 SQL queries took 0.06 seconds\"}",
-                                                    "{\"msg.preprocessor\":\"FirePHPCoreCompatibility\",\"target\":\"console\",\"lang.id\":\"registry.pinf.org/cadorn.org/github/renderers/packages/php/master\",\"group.start\":true,\"group\":\"group-1\",\"file\":\"/03-Messages-FirePHPCore/index.php\",\"line\":28,\"group.title\":\"Group 1\",\"group.expand\":\"group-1\"}",
+                                                    "{\"msg.preprocessor\":\"FirePHPCoreCompatibility\",\"target\":\"console\",\"lang.id\":\"registry.pinf.org/cadorn.org/github/renderers/packages/php/master\",\"group.start\":true,\"group\":\"group-1\",\"file\":\"/03-Messages-FirePHPCore/index.php\",\"line\":30,\"group.title\":\"Group 1\",\"group.expand\":\"group-1\"}",
                                                     "\"Hello World\"",
-                                                    "{\"msg.preprocessor\":\"FirePHPCoreCompatibility\",\"target\":\"console\",\"lang.id\":\"registry.pinf.org/cadorn.org/github/renderers/packages/php/master\",\"group\":\"group-2\",\"group.start\":true,\"file\":\"/03-Messages-FirePHPCore/index.php\",\"line\":30,\"group.title\":\"Group 1\",\"group.expand\":\"group-2\"}",
+                                                    "{\"msg.preprocessor\":\"FirePHPCoreCompatibility\",\"target\":\"console\",\"lang.id\":\"registry.pinf.org/cadorn.org/github/renderers/packages/php/master\",\"group\":\"group-2\",\"group.start\":true,\"file\":\"/03-Messages-FirePHPCore/index.php\",\"line\":32,\"group.title\":\"Group 1\",\"group.expand\":\"group-2\"}",
                                                     "\"Hello World\"",
-                                                    "{\"msg.preprocessor\":\"FirePHPCoreCompatibility\",\"target\":\"console\",\"lang.id\":\"registry.pinf.org/cadorn.org/github/renderers/packages/php/master\",\"group\":\"group-2\",\"group.end\":true,\"file\":\"/03-Messages-FirePHPCore/index.php\",\"line\":32}",
-                                                    "{\"msg.preprocessor\":\"FirePHPCoreCompatibility\",\"target\":\"console\",\"lang.id\":\"registry.pinf.org/cadorn.org/github/renderers/packages/php/master\",\"group\":\"group-1\",\"group.end\":true,\"file\":\"/03-Messages-FirePHPCore/index.php\",\"line\":33}",
+                                                    "{\"msg.preprocessor\":\"FirePHPCoreCompatibility\",\"target\":\"console\",\"lang.id\":\"registry.pinf.org/cadorn.org/github/renderers/packages/php/master\",\"group\":\"group-2\",\"group.end\":true,\"file\":\"/03-Messages-FirePHPCore/index.php\",\"line\":34}",
+                                                    "{\"msg.preprocessor\":\"FirePHPCoreCompatibility\",\"target\":\"console\",\"lang.id\":\"registry.pinf.org/cadorn.org/github/renderers/packages/php/master\",\"group\":\"group-1\",\"group.end\":true,\"file\":\"/03-Messages-FirePHPCore/index.php\",\"line\":35}",
                                                     "{\"RequestHeaders\":{\"key1\":\"val1\",\"key2\":[[\"v1\",\"v2\"],\"v3\"]}}"
                                                 ],
                                                 actual: []
@@ -106,6 +106,13 @@ CALL_webext run {
                                         });
                                     });
                                 }
+                            },
+                            "babel": {
+                                "presets": {
+                                    "@babel/preset-env": {
+                                        "targets": "last 1 Firefox versions"
+                                    }
+                                }
                             }
                         }
                     }
@@ -130,6 +137,13 @@ CALL_webext run {
                                 "reps": {
                                     "fireconsole": "fireconsole.rep.js/dist/fireconsole.rep.js",
                                     "console": "$__DIRNAME__/../../src/console.rep.js"
+                                },
+                                "babel": {
+                                    "presets": {
+                                        "@babel/preset-env": {
+                                            "targets": "last 1 Firefox versions"
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -142,9 +156,6 @@ CALL_webext run {
         "^/tests": {
             "@it.pinf.org.mochajs#s1": {}
         }
-    },
-    "files": {
-        "/dist/resources/insight.domplate.reps/*": "fireconsole.rep.js/dist/insight.domplate.reps"
     },
     "expect": {
         "exit": true,
