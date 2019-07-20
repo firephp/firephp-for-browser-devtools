@@ -1,17 +1,58 @@
 
 
-    DIV[data-is="tag_5d5390221665baaeb51cc5a8e8b5322e1e374e20"] H2 {
-        padding-left: 10px;
-        padding-right: 10px;
+    DIV[data-is="tag_afad688286463ad1b03adcd92d80681c12742cdf"] TABLE TD {
+        vertical-align: top;
     }
 
-    DIV[data-is="tag_5d5390221665baaeb51cc5a8e8b5322e1e374e20"] UL.settings {
-        padding-left: 10px;
-        padding-right: 10px;
+    DIV[data-is="tag_afad688286463ad1b03adcd92d80681c12742cdf"] TABLE TD DIV.settings > UL {
         list-style-type: none;
+        margin: 0px;
+        padding: 0px;
     }
 
-    DIV[data-is="tag_5d5390221665baaeb51cc5a8e8b5322e1e374e20"] UL.settings > LI {
+    DIV[data-is="tag_afad688286463ad1b03adcd92d80681c12742cdf"] TABLE TD DIV.settings > UL > LI {
         white-space: nowrap;
+        border: 1px solid black;
+        margin: 0px;
+        margin-bottom: 3px;
+        padding: 10px;
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+
+    DIV[data-is="tag_afad688286463ad1b03adcd92d80681c12742cdf"] TABLE TD DIV.settings > UL > LI:hover {
+        background-color: #ebebeb;
+    }
+
+    DIV[data-is="tag_afad688286463ad1b03adcd92d80681c12742cdf"] TABLE TD DIV.settings > UL > LI > H2 {
+        maring-top: 0px;
+    }
+
+    DIV[data-is="tag_afad688286463ad1b03adcd92d80681c12742cdf"] TABLE TD DIV.settings > UL > LI > UL {
+        list-style-type: none;
+        margin-bottom: 10px;
+    }
+
+    DIV[data-is="tag_afad688286463ad1b03adcd92d80681c12742cdf"] TABLE TD DIV.info {
+        margin-left: 10px;
+        border: 1px solid #bcbcbc;
+        background-color: #efefef;
+        padding: 10px;
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+
+    DIV[data-is="tag_afad688286463ad1b03adcd92d80681c12742cdf"] TABLE TD DIV.info {
+        float: right;
+    }
+
+    DIV[data-is="tag_afad688286463ad1b03adcd92d80681c12742cdf"] TABLE TD DIV.info H2 {
+        maring-top: 0px;
+    }
+
+    DIV[data-is="tag_afad688286463ad1b03adcd92d80681c12742cdf"] TABLE TD DIV.info > OL {
+        margin: 0px;
+        padding: 0px;
+        margin-left: 20px;
     }
 

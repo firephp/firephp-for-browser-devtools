@@ -34,7 +34,6 @@ function Domplate(exports) {
     }
 
     return new Promise(function (resolve, reject) {
-      console.log("[domplate] Load style:", uri);
       var link = window.document.createElementNS ? window.document.createElementNS("http://www.w3.org/1999/xhtml", "link") : window.document.createElement("link");
       link.rel = "stylesheet";
       link.href = uri;
@@ -962,7 +961,7 @@ exports.makeMarkupRuntime = function (EVAL, context) {
     try {
       if (!iter || !iter.next) {
         console.error("Cannot iterate loop", iter, _typeof(iter), outputs, fn);
-        throw new Exception("Cannot iterate loop as iter.next() method is not defined");
+        throw new Error("Cannot iterate loop as iter.next() method is not defined");
       }
 
       while (1) {

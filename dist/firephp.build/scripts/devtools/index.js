@@ -31,8 +31,6 @@ if (WINDOW.document.body.innerHTML.replace(/[\s\n]*/g, "")) {
 },{"./jsonrep":2}],2:[function(require,module,exports){
 "use strict";
 
-function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
-
 function makeExports(exports) {
   var reps = {};
   var repIndex = 0;
@@ -42,11 +40,11 @@ function makeExports(exports) {
   };
 
   exports.makeRep = function (html, rep, options) {
-    if (_typeof(html) === "object" && typeof html.html !== "undefined" && typeof rep === "undefined") {
+    if (typeof html === "object" && typeof html.html !== "undefined" && typeof rep === "undefined") {
       rep = html;
       html = rep.html;
       delete rep.html;
-    } else if (_typeof(html) === "object" && typeof html.code !== "undefined" && typeof rep === "undefined") {
+    } else if (typeof html === "object" && typeof html.code !== "undefined" && typeof rep === "undefined") {
       rep = html.code;
 
       if (typeof rep === "function") {
@@ -63,11 +61,11 @@ function makeExports(exports) {
   exports.makeRep2 = function (html, options) {
     var rep = undefined;
 
-    if (_typeof(html) === "object" && typeof html.html !== "undefined") {
+    if (typeof html === "object" && typeof html.html !== "undefined") {
       rep = html;
       html = rep.html;
       delete rep.html;
-    } else if (_typeof(html) === "object" && typeof html.code !== "undefined") {
+    } else if (typeof html === "object" && typeof html.code !== "undefined") {
         rep = html.code;
 
         if (typeof rep === "function") {
@@ -82,7 +80,7 @@ function makeExports(exports) {
   };
 
   exports._makeRep = function (html, rep) {
-    if (_typeof(html) === "object" && html[".@"] === "github.com~0ink~codeblock/codeblock:Codeblock") {
+    if (typeof html === "object" && html[".@"] === "github.com~0ink~codeblock/codeblock:Codeblock") {
       html = exports.Codeblock.FromJSON(html).compile(rep).getCode().replace(/^\n|\n$/g, "");
     }
 
@@ -201,7 +199,6 @@ function makeExports(exports) {
       }
 
       return new Promise(function (resolve, reject) {
-        console.log("Load rep:", uri);
         exports.PINF.sandbox(uri, resolve, reject);
       });
     };
@@ -248,7 +245,6 @@ function makeExports(exports) {
       if (allCss.length > 0) {
         var style = WINDOW.document.createElement('style');
         style.innerHTML = allCss.join("\n");
-        console.log("Inject <style>:", style.innerHTML);
         WINDOW.document.body.appendChild(style);
       }
 

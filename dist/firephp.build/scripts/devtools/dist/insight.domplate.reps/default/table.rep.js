@@ -15,6 +15,11 @@ function impl(domplate) {
   var T = domplate.tags;
   return {
     VAR_hideShortTagOnExpand: false,
+    meta: {
+      console: {
+        enableInspect: false
+      }
+    },
     tag: T.DIV({
       "class": "table"
     }, T.TABLE({
@@ -112,6 +117,9 @@ function impl(domplate) {
     },
     onCellClick: function onCellClick(event) {
       event.stopPropagation();
+
+      var masterRow = this._getMasterRow(event.target);
+
       var tag = event.target;
 
       while (tag.parentNode) {
@@ -122,7 +130,7 @@ function impl(domplate) {
         tag = tag.parentNode;
       }
 
-      domplate.dispatchEvent('inspectNode', [event, {
+      masterRow.contextObject.dispatchEvent('inspectNode', [event, {
         "args": {
           "node": tag.cellNodeObj
         }
@@ -177,7 +185,7 @@ var __escape__ = context.__escape__;
 var __if__ = context.__if__;
 var __loop__ = context.__loop__;
 var __link__ = context.__link__;
-return (function (__code__, __context__, __in__, __out__) {  with (this) {  with (__in__) {    __code__.push("","<div", " __dbid=\"","74ee62420bbd018e49a15dd611616e7597ae1b04", "\"", " __dtid=\"","insight.domplate.reps/default/table", "\"", " class=\"","table", " ", "\"",">","<table", " cellpadding=\"","3", "\"", " cellspacing=\"","0", "\"",">","<tbody",">","<tr", " class=\"",__escape__(getHeaderClass(node)), " ", "\"",">");    __loop__.apply(this, [getHeaders(context,node), __out__, function(column, __out__) {    __code__.push("","<th", " class=\"","header", " ", "\"",">");__link__(column.tag, __code__, __out__, {"node":column.node});    __code__.push("","</th>");    }]);__if__.apply(this, [hasNoHeader(node), __out__, function(__out__) {    __code__.push("","<th",">","</th>");}]);    __code__.push("","</tr>");    __loop__.apply(this, [getRows(node), __out__, function(row, __out__) {    __code__.push("","<tr",">");    __loop__.apply(this, [getCells(context,row), __out__, function(cell, __out__) {    __code__.push("","<td", " class=\"","cell", " ", "\"",">");__out__.push(onCellClick,cell.node);__link__(cell.tag, __code__, __out__, {"node":cell.node,"context":context});    __code__.push("","</td>");    }]);    __code__.push("","</tr>");    }]);    __code__.push("","</tbody>","</table>","</div>");  }}})
+return (function (__code__, __context__, __in__, __out__) {  with (this) {  with (__in__) {    __code__.push("","<div", " __dbid=\"","39ff1ebd3d2ba584e6cc7b584b5b45791c136b55", "\"", " __dtid=\"","insight.domplate.reps/default/table", "\"", " class=\"","table", " ", "\"",">","<table", " cellpadding=\"","3", "\"", " cellspacing=\"","0", "\"",">","<tbody",">","<tr", " class=\"",__escape__(getHeaderClass(node)), " ", "\"",">");    __loop__.apply(this, [getHeaders(context,node), __out__, function(column, __out__) {    __code__.push("","<th", " class=\"","header", " ", "\"",">");__link__(column.tag, __code__, __out__, {"node":column.node});    __code__.push("","</th>");    }]);__if__.apply(this, [hasNoHeader(node), __out__, function(__out__) {    __code__.push("","<th",">","</th>");}]);    __code__.push("","</tr>");    __loop__.apply(this, [getRows(node), __out__, function(row, __out__) {    __code__.push("","<tr",">");    __loop__.apply(this, [getCells(context,row), __out__, function(cell, __out__) {    __code__.push("","<td", " class=\"","cell", " ", "\"",">");__out__.push(onCellClick,cell.node);__link__(cell.tag, __code__, __out__, {"node":cell.node,"context":context});    __code__.push("","</td>");    }]);    __code__.push("","</tr>");    }]);    __code__.push("","</tbody>","</table>","</div>");  }}})
 }
 ,
 "shortTag":function (context) {
@@ -186,10 +194,10 @@ var __escape__ = context.__escape__;
 var __if__ = context.__if__;
 var __loop__ = context.__loop__;
 var __link__ = context.__link__;
-return (function (__code__, __context__, __in__, __out__) {  with (this) {  with (__in__) {    __code__.push("","<span", " __dbid=\"","74ee62420bbd018e49a15dd611616e7597ae1b04", "\"", " __dtid=\"","insight.domplate.reps/default/table", "\"", " class=\"","table", " ", "\"",">");__link__(getTitleTag(context,node), __code__, __out__, {"node":getTitleNode(node),"context":context});    __code__.push("","</span>");  }}})
+return (function (__code__, __context__, __in__, __out__) {  with (this) {  with (__in__) {    __code__.push("","<span", " __dbid=\"","39ff1ebd3d2ba584e6cc7b584b5b45791c136b55", "\"", " __dtid=\"","insight.domplate.reps/default/table", "\"", " class=\"","table", " ", "\"",">");__link__(getTitleTag(context,node), __code__, __out__, {"node":getTitleNode(node),"context":context});    __code__.push("","</span>");  }}})
 }
 };
-  rep.__dbid = "74ee62420bbd018e49a15dd611616e7597ae1b04";
+  rep.__dbid = "39ff1ebd3d2ba584e6cc7b584b5b45791c136b55";
   rep.__dtid = "insight.domplate.reps/default/table";
   var res = domplate.domplate(rep);
   var injectedCss = false;

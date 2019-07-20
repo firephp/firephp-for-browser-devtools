@@ -32,7 +32,6 @@ function Domplate(exports) {
     }
 
     return new Promise(function (resolve, reject) {
-      console.log("[domplate] Load style:", uri);
       var link = window.document.createElementNS ? window.document.createElementNS("http://www.w3.org/1999/xhtml", "link") : window.document.createElement("link");
       link.rel = "stylesheet";
       link.href = uri;
@@ -960,7 +959,7 @@ exports.makeMarkupRuntime = function (EVAL, context) {
     try {
       if (!iter || !iter.next) {
         console.error("Cannot iterate loop", iter, _typeof(iter), outputs, fn);
-        throw new Exception("Cannot iterate loop as iter.next() method is not defined");
+        throw new Error("Cannot iterate loop as iter.next() method is not defined");
       }
 
       while (1) {
@@ -2519,7 +2518,7 @@ exports.generateFromMessage = function(message, format)
         throw new Error("NYI");
 
     if(meta["msg.preprocessor"] && meta["msg.preprocessor"]=="FirePHPCoreCompatibility") {
-
+;debugger;
         var parts = convertFirePHPCoreData(meta, data);
         if (typeof message.setMeta == "function")
             message.setMeta(JSON.encode(parts[0]));
@@ -2647,7 +2646,7 @@ var Node = function(objectGraph, data, parentNode) {
     var self = this;
 //    self.parentNode = parentNode || null;
     self.type = data.type;
-    self.value = data[data.type];
+    self.value = (typeof data.value !== "undefined" && data.value) || date[data.type];
     self.meta = objectGraph.meta || {};
     UTIL.every(data, function(item) {
         if(item[0]!="type" && item[0]!=self.type) {
@@ -2866,7 +2865,7 @@ Encoder.prototype.encode = function(data, meta, options) {
     
     try {
         if(typeof this.origin != "undefined") {
-            graph["origin"] = this.encodeVariable(this.origin);
+            graph["origin"] = this.encodeVariable(meta, this.origin);
         }
     } catch(err) {
         console.warn("Error encoding variable", err.stack);
@@ -2893,46 +2892,66 @@ Encoder.prototype.encode = function(data, meta, options) {
     return null;
 }
 
-Encoder.prototype.encodeVariable = function(variable, objectDepth, arrayDepth, overallDepth) {
+function setMeta (node, name, value) {
+    node.meta = node.meta || {};
+    node.meta[name] = value;
+}
+
+function completeWithMeta (meta, node) {
+    node.meta = node.meta || {};
+    Object.keys(meta).forEach(function (name) {
+        if (typeof node.meta[name] === 'undefined') {
+            node.meta[name] = meta[name];
+        }
+    });
+    return node;
+}
+
+Encoder.prototype.encodeVariable = function(meta, variable, objectDepth, arrayDepth, overallDepth) {
     objectDepth = objectDepth || 1;
     arrayDepth = arrayDepth || 1;
     overallDepth = overallDepth || 1;
     
     if(variable===null) {
-        var ret = {"type": "constant", "constant": "null"};
+        var ret = {"type": "constant", "value": "null"};
         if(this.options["includeLanguageMeta"]) {
-            ret["lang.type"] = "null";
+            setMeta(ret, "lang.type", "null");
         }
+        ret = completeWithMeta(meta, ret);
         return ret;
     } else
     if(variable===true || variable===false) {
-        var ret = {"type": "constant", "constant": (variable===true)?"true":"false"};
+        var ret = {"type": "constant", "value": (variable===true)?"true":"false"};
         if(this.options["includeLanguageMeta"]) {
-            ret["lang.type"] = "boolean";
+            setMeta(ret, "lang.type", "boolean");
         }
+        ret = completeWithMeta(meta, ret);
         return ret;
     }
 
     var type = typeof variable;
     if(type=="undefined") {
-        var ret = {"type": "constant", "constant": "undefined"};
+        var ret = {"type": "constant", "value": "undefined"};
         if(this.options["includeLanguageMeta"]) {
-            ret["lang.type"] = "undefined";
+            setMeta(ret, "lang.type", "undefined");
         }
+        completeWithMeta(meta, ret);
         return ret;
     } else
     if(type=="number") {
         if(Math.round(variable)==variable) {
-            var ret = {"type": "string", "string": ""+variable};
+            var ret = {"type": "string", "value": ""+variable};
             if(this.options["includeLanguageMeta"]) {
-                ret["lang.type"] = "integer";
+                setMeta(ret, "lang.type", "integer");
             }
+            completeWithMeta(meta, ret);
             return ret;
         } else {
-            var ret = {"type": "string", "string": ""+variable};
+            var ret = {"type": "string", "value": ""+variable};
             if(this.options["includeLanguageMeta"]) {
-                ret["lang.type"] = "float";
+                setMeta(ret, "lang.type", "float");
             }
+            completeWithMeta(meta, ret);
             return ret;
         }
     } else
@@ -2940,50 +2959,56 @@ Encoder.prototype.encodeVariable = function(variable, objectDepth, arrayDepth, o
         // HACK: This should be done via an option
         // FirePHPCore compatibility: Detect resource string
         if(variable=="** Excluded by Filter **") {
-            var ret = {"type": "string", "string": variable};
-            ret["encoder.notice"] = "Excluded by Filter";
-            ret["encoder.trimmed"] = true;
+            var ret = {"type": "string", "value": variable};
+            setMeta(ret, "encoder.notice", "Excluded by Filter");
+            setMeta(ret, "encoder.trimmed", true);
             if(this.options["includeLanguageMeta"]) {
-                ret["lang.type"] = "string";
+                setMeta(ret, "lang.type", "string");
             }
+            completeWithMeta(meta, ret);
             return ret;
         } else
         if(variable.match(/^\*\*\sRecursion\s\([^\(]*\)\s\*\*$/)) {
-            var ret = {"type": "string", "string": variable};
-            ret["encoder.notice"] = "Recursion";
-            ret["encoder.trimmed"] = true;
+            var ret = {"type": "string", "value": variable};
+            setMeta(ret, "encoder.notice", "Recursion");
+            setMeta(ret, "encoder.trimmed", true);
             if(this.options["includeLanguageMeta"]) {
-                ret["lang.type"] = "string";
+                setMeta(ret, "lang.type", "string");
             }
+            completeWithMeta(meta, ret);
             return ret;
         } else
         if(variable.match(/^\*\*\sResource\sid\s#\d*\s\*\*$/)) {
-            var ret = {"type": "string", "string": variable.substring(3, variable.length-3)};
+            var ret = {"type": "string", "value": variable.substring(3, variable.length-3)};
             if(this.options["includeLanguageMeta"]) {
-                ret["lang.type"] = "resource";
+                setMeta(ret, "lang.type", "resource");
             }
+            completeWithMeta(meta, ret);
             return ret;
         } else {
-            var ret = {"type": "string", "string": variable};
+            var ret = {"type": "string", "value": variable};
             if(this.options["includeLanguageMeta"]) {
-                ret["lang.type"] = "string";
+                setMeta(ret, "lang.type", "string");
             }
+            completeWithMeta(meta, ret);
             return ret;
         }
     }
 
     if (variable && variable.__no_serialize === true) {
-        var ret = {"type": "string", "string": "Object"};
-        ret["encoder.notice"] = "Excluded by __no_serialize";
-        ret["encoder.trimmed"] = true;
+        var ret = {"type": "string", "value": "Object"};
+        setMeta(ret, "encoder.notice", "Excluded by __no_serialize");
+        setMeta(ret, "encoder.trimmed", true);
+        completeWithMeta(meta, ret);
         return ret;
     }
 
     if(type=="function") {
         var ret = {"type": "string", "string": ""+variable};
         if(this.options["includeLanguageMeta"]) {
-            ret["lang.type"] = "function";
+            setMeta(ret, "lang.type", "function");
         }
+        completeWithMeta(meta, ret);
         return ret;
     } else
     if(type=="object") {
@@ -2992,18 +3017,20 @@ Encoder.prototype.encodeVariable = function(variable, objectDepth, arrayDepth, o
             if(UTIL.isArrayLike(variable)) {
                 var ret = {
                     "type": "array",
-                    "array": this.encodeArray(variable, objectDepth, arrayDepth, overallDepth)
+                    "value": this.encodeArray(meta, variable, objectDepth, arrayDepth, overallDepth)
                 };
                 if(this.options["includeLanguageMeta"]) {
-                    ret["lang.type"] = "array";
+                    setMeta(ret, "lang.type", "array");
                 }
+                ret = completeWithMeta(meta, ret);
                 return ret;
             }
         } catch (err) {
 // TODO: Find a better way to encode variables that cause security exceptions when accessed etc...
             var ret = {"type": "string", "string": "Cannot serialize"};
-            ret["encoder.notice"] = "Cannot serialize";
-            ret["encoder.trimmed"] = true;
+            setMeta(ret, "encoder.notice", "Cannot serialize");
+            setMeta(ret, "encoder.trimmed", true);
+            completeWithMeta(meta, ret);
             return ret;
         }
         // HACK: This should be done via an option
@@ -3012,38 +3039,41 @@ Encoder.prototype.encodeVariable = function(variable, objectDepth, arrayDepth, o
         if(typeof variable["__className"] != "undefined"  ) {
             var ret = {
                 "type": "reference",
-                "reference": this.encodeInstance(variable, objectDepth, arrayDepth, overallDepth)
+                "value": this.encodeInstance(meta, variable, objectDepth, arrayDepth, overallDepth)
             };
+            completeWithMeta(meta, ret);
             return ret;
         } else {
             var ret;
             if (/^\[Exception\.\.\.\s/.test(variable)) {
                 ret = {
                     "type": "map",
-                    "map": this.encodeException(variable, objectDepth, arrayDepth, overallDepth)
+                    "value": this.encodeException(meta, variable, objectDepth, arrayDepth, overallDepth)
                 };
             } else {
                 ret = {
                     "type": "map",
-                    "map": this.encodeAssociativeArray(variable, objectDepth, arrayDepth, overallDepth)
+                    "value": this.encodeAssociativeArray(meta, variable, objectDepth, arrayDepth, overallDepth)
                 };
             }
             if(this.options["includeLanguageMeta"]) {
-                ret["lang.type"] = "array";
+                setMeta(ret, "lang.type", "map");
             }
+            completeWithMeta(meta, ret);
             return ret;
         }
     }
 
-    var ret = {"type": "string", "string": "Variable with type '" + type + "' unknown: "+variable};
+    var ret = {"type": "string", "value": "Variable with type '" + type + "' unknown: "+variable};
     if(this.options["includeLanguageMeta"]) {
-        ret["lang.type"] = "unknown";
+        setMeta(ret, "lang.type", "unknown");
     }
+    completeWithMeta(meta, ret);
     return ret;
 //    return "["+(typeof variable)+"]["+variable+"]";    
 }
 
-Encoder.prototype.encodeArray = function(variable, objectDepth, arrayDepth, overallDepth) {
+Encoder.prototype.encodeArray = function(meta, variable, objectDepth, arrayDepth, overallDepth) {
     objectDepth = objectDepth || 1;
     arrayDepth = arrayDepth || 1;
     overallDepth = overallDepth || 1;
@@ -3056,13 +3086,13 @@ Encoder.prototype.encodeArray = function(variable, objectDepth, arrayDepth, over
     var self = this,
         items = [];
     UTIL.forEach(variable, function(item) {
-        items.push(self.encodeVariable(item, 1, arrayDepth + 1, overallDepth + 1));
+        items.push(self.encodeVariable(meta, item, 1, arrayDepth + 1, overallDepth + 1));
     });
     return items;
 }
 
 
-Encoder.prototype.encodeAssociativeArray = function(variable, objectDepth, arrayDepth, overallDepth) {
+Encoder.prototype.encodeAssociativeArray = function(meta, variable, objectDepth, arrayDepth, overallDepth) {
     objectDepth = objectDepth || 1;
     arrayDepth = arrayDepth || 1;
     overallDepth = overallDepth || 1;
@@ -3084,20 +3114,20 @@ Encoder.prototype.encodeAssociativeArray = function(variable, objectDepth, array
         }
         
         items.push([
-            self.encodeVariable(key, 1, arrayDepth + 1, overallDepth + 1),
-            self.encodeVariable(variable[key], 1, arrayDepth + 1, overallDepth + 1)
+            self.encodeVariable(meta, key, 1, arrayDepth + 1, overallDepth + 1),
+            self.encodeVariable(meta, variable[key], 1, arrayDepth + 1, overallDepth + 1)
         ]);
     }
     return items;
 }
 
 
-Encoder.prototype.encodeException = function(variable, objectDepth, arrayDepth, overallDepth) {
+Encoder.prototype.encodeException = function(meta, variable, objectDepth, arrayDepth, overallDepth) {
     var self = this,
         items = [];
     items.push([
-        self.encodeVariable("message", 1, arrayDepth + 1, overallDepth + 1),
-        self.encodeVariable((""+variable), 1, arrayDepth + 1, overallDepth + 1)
+        self.encodeVariable(meta, "message", 1, arrayDepth + 1, overallDepth + 1),
+        self.encodeVariable(meta, (""+variable), 1, arrayDepth + 1, overallDepth + 1)
     ]);
     return items;
 }
@@ -3118,7 +3148,7 @@ Encoder.prototype.getInstanceId = function(object) {
     return null;
 }
 
-Encoder.prototype.encodeInstance = function(object, objectDepth, arrayDepth, overallDepth) {
+Encoder.prototype.encodeInstance = function(meta, object, objectDepth, arrayDepth, overallDepth) {
     objectDepth = objectDepth || 1;
     arrayDepth = arrayDepth || 1;
     overallDepth = overallDepth || 1;
@@ -3128,12 +3158,12 @@ Encoder.prototype.encodeInstance = function(object, objectDepth, arrayDepth, ove
     }
     this.instances.push([
         object,
-        this.encodeObject(object, objectDepth, arrayDepth, overallDepth)
+        this.encodeObject(meta, object, objectDepth, arrayDepth, overallDepth)
     ]);
     return UTIL.len(this.instances)-1;
 }
 
-Encoder.prototype.encodeObject = function(object, objectDepth, arrayDepth, overallDepth) {
+Encoder.prototype.encodeObject = function(meta, object, objectDepth, arrayDepth, overallDepth) {
     objectDepth = objectDepth || 1;
     arrayDepth = arrayDepth || 1;
     overallDepth = overallDepth || 1;
@@ -3153,17 +3183,17 @@ Encoder.prototype.encodeObject = function(object, objectDepth, arrayDepth, overa
     var isPHPClass = false;
     if(typeof object["__className"] != "undefined") {
         isPHPClass = true;
-        ret["lang.class"] = object["__className"];
+        setMeta(ret, "lang.class", object["__className"]);
         delete(object["__className"]);
         if(this.options["includeLanguageMeta"]) {
-            ret["lang.type"] = "object";
+            setMeta(ret, "lang.type", "object");
         }
     }
 
     // HACK: This should be done via an option
     // FirePHPCore compatibility: we have an exception if a class name is present
     if(typeof object["__isException"] != "undefined" && object["__isException"]) {
-        ret["lang.type"] = "exception";
+        setMeta(ret, "lang.type", "exception");
     }
 
     UTIL.forEach(object, function(item) {
@@ -3173,7 +3203,7 @@ Encoder.prototype.encodeObject = function(object, objectDepth, arrayDepth, overa
                 return;
             }
             if(isPHPClass) {
-                var val = self.encodeVariable(item[1], objectDepth + 1, 1, overallDepth + 1),
+                var val = self.encodeVariable(meta, item[1], objectDepth + 1, 1, overallDepth + 1),
                     parts = item[0].split(":"),
                     name = parts[parts.length-1];
                 if(parts[0]=="public") {
@@ -3193,14 +3223,16 @@ Encoder.prototype.encodeObject = function(object, objectDepth, arrayDepth, overa
                 }
                 ret["dictionary"][name] = val;
             } else {
-                ret["dictionary"][item[0]] = self.encodeVariable(item[1], objectDepth + 1, 1, overallDepth + 1);
+                ret["dictionary"][item[0]] = self.encodeVariable(meta, item[1], objectDepth + 1, 1, overallDepth + 1);
             }
         } catch(e) {
             console.warn(e);
             ret["dictionary"]["__oops__"] = {"notice": "Error encoding member (" + e + ")"};
         }
     });
-    
+
+    completeWithMeta(meta, ret);
+
     return ret;
 }
 },{"fp-modules-for-nodejs/lib/json":4,"fp-modules-for-nodejs/lib/util":5}],4:[function(require,module,exports){
@@ -4430,7 +4462,9 @@ function Renderer (options) {
 
         // TODO: Optionally pre-fill with already loaded reps.
         // TODO: Move node traversal into helper module.
-        var loadTypes = {};
+        var loadTypes = {
+//            "default/unknown": true
+        };
         function traverse (node) {
 
             if (node.type) {
@@ -4444,60 +4478,118 @@ function Renderer (options) {
                 // DEPRECATED
                 if (node.meta.renderer === "structures/table") {
                     loadTypes["default/table"] = true;
+                    loadTypes["default/string"] = true;
                     node.type = "table";
                 } else
                 // DEPRECATED
                 if (node.meta.renderer === "structures/trace") {
                     loadTypes["default/trace"] = true;
+                    loadTypes["default/string"] = true;
                     node.type = "trace";
                 } else
                 if (
                     node.meta["lang"] &&
                     node.meta["lang.type"]
                 ) {
-                    if (
-                        node.meta["lang"] === "php" &&
-                        node.meta["lang.type"] === "array"
-                    ) {
-                        if (node.value[0] && Array.isArray(node.value[0])) {
+                    // TODO: Lookup 'node.meta["lang"]/node.meta["lang.type"]' and see
+                    // what it extends to determine what sub-structures to parse.
+                    if (node.meta["lang"] === "php") {
+                        if (node.meta["lang.type"] === "array") {
+                            if (node.value[0] && Array.isArray(node.value[0])) {
+                                loadTypes["php/array-associative"] = true;
+                                node.value.forEach(function (pair) {
+                                    traverse(pair[0]);
+                                    traverse(pair[1]);
+                                });
+                            } else {
+                                loadTypes["php/array-indexed"] = true;
+                                node.value.forEach(function (node) {
+                                    traverse(node);
+                                });
+                            }
+                        } else
+                        if (node.meta["lang.type"] === "map") {
                             loadTypes["php/array-associative"] = true;
                             node.value.forEach(function (pair) {
                                 traverse(pair[0]);
                                 traverse(pair[1]);
                             });
+                        } else
+                        if (node.meta["lang.type"] === "exception") {
+                            loadTypes["php/exception"] = true;
+                            loadTypes["default/string"] = true;
+                            if (node.value.title) {
+                                traverse(node.value.title);
+                            }
+                            if (node.value.stack) {
+                                node.value.stack.forEach(function (frame) {
+                                    frame.args.forEach(function (arg) {
+                                        traverse(arg);
+                                    });
+                                });
+                            }
                         } else {
-                            loadTypes["php/array-indexed"] = true;
-                            node.value.forEach(function (node) {
-                                traverse(node);
-                            });
+                            loadTypes[node.meta["lang"] + "/" + node.meta["lang.type"]] = true;
+
+                            if (node.meta["lang.type"] === "table") {
+                                loadTypes["default/string"] = true;
+                            } else
+                            if (node.meta["lang.type"] === "trace") {
+                                loadTypes["default/string"] = true;
+                            }    
                         }
                     } else {
                         loadTypes[node.meta["lang"] + "/" + node.meta["lang.type"]] = true;
+
+                        if (node.meta["lang.type"] === "table") {
+                            loadTypes["default/string"] = true;
+                        } else
+                        if (node.meta["lang.type"] === "trace") {
+                            loadTypes["default/string"] = true;
+                        }
                     }
+/*                    
+                } else
+                if (node.meta["lang.id"] === "registry.pinf.org/cadorn.org/github/renderers/packages/php/master") {
+                    if (node.meta["renderer"] === "http://registry.pinf.org/cadorn.org/renderers/packages/insight/0:structures/table") {
+                        loadTypes["default/table"] = true;
+                        loadTypes["default/string"] = true;
+                        node.type = "table";
+                    }
+*/
                 }
                 if (node.meta.wrapper) {
                     loadTypes[node.meta.wrapper] = true;
+
+                    if (node.meta.wrapper === "wrappers/request") {
+                        if (node.value.title) {
+                            traverse(node.value.title);
+                        }
+                    }
                 }
             }
 
             if (typeof node.value !== 'undefined') {
-                if (node.type === "array") {
+
+                let type = node.type || node.meta["lang.type"];
+
+                if (type === "array") {
                     node.value.forEach(function (node) {
                         traverse(node);
                     });
                 } else
-                if (node.type === "dictionary") {
+                if (type === "dictionary") {
                     Object.keys(node.value).forEach(function (key) {
                         traverse(node.value[key]);
                     });
                 } else
-                if (node.type === "map") {
+                if (type === "map") {
                     node.value.forEach(function (pair) {
                         traverse(pair[0]);
                         traverse(pair[1]);
                     });
                 } else
-                if (node.type === "reference") {
+                if (type === "reference") {
                     if (node.value.instance) {
                         traverse(node.value.instance);
                     } else
@@ -4505,7 +4597,7 @@ function Renderer (options) {
                         traverse(node.getInstance());
                     }
                 } else
-                if (node.type === "table") {
+                if (type === "table") {
                     if (node.value.title) {
                         traverse(node.value.title);
                     }
@@ -4522,7 +4614,7 @@ function Renderer (options) {
                         });
                     }
                 } else
-                if (node.type === "trace") {
+                if (type === "trace") {
                     if (node.value.title) {
                         traverse(node.value.title);
                     }
@@ -4550,7 +4642,8 @@ function Renderer (options) {
         }));
     }
 
-    self.renderNodeInto = function (node, selectorOrElement) {
+    self.renderNodeInto = function (node, selectorOrElement, options) {
+        options = options || {};
 
         var el = (
             typeof selectorOrElement === 'string' && document.querySelector(selectorOrElement)
@@ -4567,7 +4660,13 @@ function Renderer (options) {
 
             if (wrapperRep) {
 
-                wrapperRep.tag.replace({
+                if (!wrapperRep[options.tagName || 'tag']) {
+                    console.error("node", node);
+                    console.error("wrapperRep", wrapperRep);
+                    throw new Error(`Could not get tag '${options.tagName || 'tag'}' from wrapper!`);
+                }
+
+                wrapperRep[options.tagName || 'tag'].replace({
                     context: context,
                     node: node
                 }, el);
@@ -4577,7 +4676,7 @@ function Renderer (options) {
 
             var rep = context.repForNode(node);
 
-            rep.tag.replace({
+            rep[options.tagName || 'tag'].replace({
                 context: context,
                 node: node
             }, el);
@@ -4667,10 +4766,29 @@ function Loader (options) {
                         } else {
                             type = "array-indexed";
                         }
+                    } else
+                    if (type === "map") {
+                        type = "array-associative";
                     }
-                }                
+                }
+            } else
+            if (node.meta["lang.id"] === "registry.pinf.org/cadorn.org/github/renderers/packages/php/master") {
+                lang = "php";
+                type = node.meta["lang.type"];
+                if (node.meta["renderer"] === "http://registry.pinf.org/cadorn.org/renderers/packages/insight/0:structures/table") {
+                    lang = "default";
+                    type = "table";
+                }
             }
         }
+
+        if (!type) {
+            console.error("node", node);
+            console.error("lang", lang);
+            throw new Error('Could not determine type for node!');
+        }
+
+//        console.log("repUriForNode() lang, type:", lang, type);
 
         return self.repUriForType(lang, type);
     }

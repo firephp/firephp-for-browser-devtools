@@ -9,6 +9,515 @@ _module.exports = init();
        var pmodule = bundle.module;
 
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.mainModule = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
+var root = require('./_root');
+
+/** Built-in value references. */
+var Symbol = root.Symbol;
+
+module.exports = Symbol;
+
+},{"./_root":6}],2:[function(require,module,exports){
+var Symbol = require('./_Symbol'),
+    getRawTag = require('./_getRawTag'),
+    objectToString = require('./_objectToString');
+
+/** `Object#toString` result references. */
+var nullTag = '[object Null]',
+    undefinedTag = '[object Undefined]';
+
+/** Built-in value references. */
+var symToStringTag = Symbol ? Symbol.toStringTag : undefined;
+
+/**
+ * The base implementation of `getTag` without fallbacks for buggy environments.
+ *
+ * @private
+ * @param {*} value The value to query.
+ * @returns {string} Returns the `toStringTag`.
+ */
+function baseGetTag(value) {
+  if (value == null) {
+    return value === undefined ? undefinedTag : nullTag;
+  }
+  return (symToStringTag && symToStringTag in Object(value))
+    ? getRawTag(value)
+    : objectToString(value);
+}
+
+module.exports = baseGetTag;
+
+},{"./_Symbol":1,"./_getRawTag":4,"./_objectToString":5}],3:[function(require,module,exports){
+(function (global){
+/** Detect free variable `global` from Node.js. */
+var freeGlobal = typeof global == 'object' && global && global.Object === Object && global;
+
+module.exports = freeGlobal;
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{}],4:[function(require,module,exports){
+var Symbol = require('./_Symbol');
+
+/** Used for built-in method references. */
+var objectProto = Object.prototype;
+
+/** Used to check objects for own properties. */
+var hasOwnProperty = objectProto.hasOwnProperty;
+
+/**
+ * Used to resolve the
+ * [`toStringTag`](http://ecma-international.org/ecma-262/7.0/#sec-object.prototype.tostring)
+ * of values.
+ */
+var nativeObjectToString = objectProto.toString;
+
+/** Built-in value references. */
+var symToStringTag = Symbol ? Symbol.toStringTag : undefined;
+
+/**
+ * A specialized version of `baseGetTag` which ignores `Symbol.toStringTag` values.
+ *
+ * @private
+ * @param {*} value The value to query.
+ * @returns {string} Returns the raw `toStringTag`.
+ */
+function getRawTag(value) {
+  var isOwn = hasOwnProperty.call(value, symToStringTag),
+      tag = value[symToStringTag];
+
+  try {
+    value[symToStringTag] = undefined;
+    var unmasked = true;
+  } catch (e) {}
+
+  var result = nativeObjectToString.call(value);
+  if (unmasked) {
+    if (isOwn) {
+      value[symToStringTag] = tag;
+    } else {
+      delete value[symToStringTag];
+    }
+  }
+  return result;
+}
+
+module.exports = getRawTag;
+
+},{"./_Symbol":1}],5:[function(require,module,exports){
+/** Used for built-in method references. */
+var objectProto = Object.prototype;
+
+/**
+ * Used to resolve the
+ * [`toStringTag`](http://ecma-international.org/ecma-262/7.0/#sec-object.prototype.tostring)
+ * of values.
+ */
+var nativeObjectToString = objectProto.toString;
+
+/**
+ * Converts `value` to a string using `Object.prototype.toString`.
+ *
+ * @private
+ * @param {*} value The value to convert.
+ * @returns {string} Returns the converted string.
+ */
+function objectToString(value) {
+  return nativeObjectToString.call(value);
+}
+
+module.exports = objectToString;
+
+},{}],6:[function(require,module,exports){
+var freeGlobal = require('./_freeGlobal');
+
+/** Detect free variable `self`. */
+var freeSelf = typeof self == 'object' && self && self.Object === Object && self;
+
+/** Used as a reference to the global object. */
+var root = freeGlobal || freeSelf || Function('return this')();
+
+module.exports = root;
+
+},{"./_freeGlobal":3}],7:[function(require,module,exports){
+var isObject = require('./isObject'),
+    now = require('./now'),
+    toNumber = require('./toNumber');
+
+/** Error message constants. */
+var FUNC_ERROR_TEXT = 'Expected a function';
+
+/* Built-in method references for those with the same name as other `lodash` methods. */
+var nativeMax = Math.max,
+    nativeMin = Math.min;
+
+/**
+ * Creates a debounced function that delays invoking `func` until after `wait`
+ * milliseconds have elapsed since the last time the debounced function was
+ * invoked. The debounced function comes with a `cancel` method to cancel
+ * delayed `func` invocations and a `flush` method to immediately invoke them.
+ * Provide `options` to indicate whether `func` should be invoked on the
+ * leading and/or trailing edge of the `wait` timeout. The `func` is invoked
+ * with the last arguments provided to the debounced function. Subsequent
+ * calls to the debounced function return the result of the last `func`
+ * invocation.
+ *
+ * **Note:** If `leading` and `trailing` options are `true`, `func` is
+ * invoked on the trailing edge of the timeout only if the debounced function
+ * is invoked more than once during the `wait` timeout.
+ *
+ * If `wait` is `0` and `leading` is `false`, `func` invocation is deferred
+ * until to the next tick, similar to `setTimeout` with a timeout of `0`.
+ *
+ * See [David Corbacho's article](https://css-tricks.com/debouncing-throttling-explained-examples/)
+ * for details over the differences between `_.debounce` and `_.throttle`.
+ *
+ * @static
+ * @memberOf _
+ * @since 0.1.0
+ * @category Function
+ * @param {Function} func The function to debounce.
+ * @param {number} [wait=0] The number of milliseconds to delay.
+ * @param {Object} [options={}] The options object.
+ * @param {boolean} [options.leading=false]
+ *  Specify invoking on the leading edge of the timeout.
+ * @param {number} [options.maxWait]
+ *  The maximum time `func` is allowed to be delayed before it's invoked.
+ * @param {boolean} [options.trailing=true]
+ *  Specify invoking on the trailing edge of the timeout.
+ * @returns {Function} Returns the new debounced function.
+ * @example
+ *
+ * // Avoid costly calculations while the window size is in flux.
+ * jQuery(window).on('resize', _.debounce(calculateLayout, 150));
+ *
+ * // Invoke `sendMail` when clicked, debouncing subsequent calls.
+ * jQuery(element).on('click', _.debounce(sendMail, 300, {
+ *   'leading': true,
+ *   'trailing': false
+ * }));
+ *
+ * // Ensure `batchLog` is invoked once after 1 second of debounced calls.
+ * var debounced = _.debounce(batchLog, 250, { 'maxWait': 1000 });
+ * var source = new EventSource('/stream');
+ * jQuery(source).on('message', debounced);
+ *
+ * // Cancel the trailing debounced invocation.
+ * jQuery(window).on('popstate', debounced.cancel);
+ */
+function debounce(func, wait, options) {
+  var lastArgs,
+      lastThis,
+      maxWait,
+      result,
+      timerId,
+      lastCallTime,
+      lastInvokeTime = 0,
+      leading = false,
+      maxing = false,
+      trailing = true;
+
+  if (typeof func != 'function') {
+    throw new TypeError(FUNC_ERROR_TEXT);
+  }
+  wait = toNumber(wait) || 0;
+  if (isObject(options)) {
+    leading = !!options.leading;
+    maxing = 'maxWait' in options;
+    maxWait = maxing ? nativeMax(toNumber(options.maxWait) || 0, wait) : maxWait;
+    trailing = 'trailing' in options ? !!options.trailing : trailing;
+  }
+
+  function invokeFunc(time) {
+    var args = lastArgs,
+        thisArg = lastThis;
+
+    lastArgs = lastThis = undefined;
+    lastInvokeTime = time;
+    result = func.apply(thisArg, args);
+    return result;
+  }
+
+  function leadingEdge(time) {
+    // Reset any `maxWait` timer.
+    lastInvokeTime = time;
+    // Start the timer for the trailing edge.
+    timerId = setTimeout(timerExpired, wait);
+    // Invoke the leading edge.
+    return leading ? invokeFunc(time) : result;
+  }
+
+  function remainingWait(time) {
+    var timeSinceLastCall = time - lastCallTime,
+        timeSinceLastInvoke = time - lastInvokeTime,
+        timeWaiting = wait - timeSinceLastCall;
+
+    return maxing
+      ? nativeMin(timeWaiting, maxWait - timeSinceLastInvoke)
+      : timeWaiting;
+  }
+
+  function shouldInvoke(time) {
+    var timeSinceLastCall = time - lastCallTime,
+        timeSinceLastInvoke = time - lastInvokeTime;
+
+    // Either this is the first call, activity has stopped and we're at the
+    // trailing edge, the system time has gone backwards and we're treating
+    // it as the trailing edge, or we've hit the `maxWait` limit.
+    return (lastCallTime === undefined || (timeSinceLastCall >= wait) ||
+      (timeSinceLastCall < 0) || (maxing && timeSinceLastInvoke >= maxWait));
+  }
+
+  function timerExpired() {
+    var time = now();
+    if (shouldInvoke(time)) {
+      return trailingEdge(time);
+    }
+    // Restart the timer.
+    timerId = setTimeout(timerExpired, remainingWait(time));
+  }
+
+  function trailingEdge(time) {
+    timerId = undefined;
+
+    // Only invoke if we have `lastArgs` which means `func` has been
+    // debounced at least once.
+    if (trailing && lastArgs) {
+      return invokeFunc(time);
+    }
+    lastArgs = lastThis = undefined;
+    return result;
+  }
+
+  function cancel() {
+    if (timerId !== undefined) {
+      clearTimeout(timerId);
+    }
+    lastInvokeTime = 0;
+    lastArgs = lastCallTime = lastThis = timerId = undefined;
+  }
+
+  function flush() {
+    return timerId === undefined ? result : trailingEdge(now());
+  }
+
+  function debounced() {
+    var time = now(),
+        isInvoking = shouldInvoke(time);
+
+    lastArgs = arguments;
+    lastThis = this;
+    lastCallTime = time;
+
+    if (isInvoking) {
+      if (timerId === undefined) {
+        return leadingEdge(lastCallTime);
+      }
+      if (maxing) {
+        // Handle invocations in a tight loop.
+        timerId = setTimeout(timerExpired, wait);
+        return invokeFunc(lastCallTime);
+      }
+    }
+    if (timerId === undefined) {
+      timerId = setTimeout(timerExpired, wait);
+    }
+    return result;
+  }
+  debounced.cancel = cancel;
+  debounced.flush = flush;
+  return debounced;
+}
+
+module.exports = debounce;
+
+},{"./isObject":8,"./now":11,"./toNumber":12}],8:[function(require,module,exports){
+/**
+ * Checks if `value` is the
+ * [language type](http://www.ecma-international.org/ecma-262/7.0/#sec-ecmascript-language-types)
+ * of `Object`. (e.g. arrays, functions, objects, regexes, `new Number(0)`, and `new String('')`)
+ *
+ * @static
+ * @memberOf _
+ * @since 0.1.0
+ * @category Lang
+ * @param {*} value The value to check.
+ * @returns {boolean} Returns `true` if `value` is an object, else `false`.
+ * @example
+ *
+ * _.isObject({});
+ * // => true
+ *
+ * _.isObject([1, 2, 3]);
+ * // => true
+ *
+ * _.isObject(_.noop);
+ * // => true
+ *
+ * _.isObject(null);
+ * // => false
+ */
+function isObject(value) {
+  var type = typeof value;
+  return value != null && (type == 'object' || type == 'function');
+}
+
+module.exports = isObject;
+
+},{}],9:[function(require,module,exports){
+/**
+ * Checks if `value` is object-like. A value is object-like if it's not `null`
+ * and has a `typeof` result of "object".
+ *
+ * @static
+ * @memberOf _
+ * @since 4.0.0
+ * @category Lang
+ * @param {*} value The value to check.
+ * @returns {boolean} Returns `true` if `value` is object-like, else `false`.
+ * @example
+ *
+ * _.isObjectLike({});
+ * // => true
+ *
+ * _.isObjectLike([1, 2, 3]);
+ * // => true
+ *
+ * _.isObjectLike(_.noop);
+ * // => false
+ *
+ * _.isObjectLike(null);
+ * // => false
+ */
+function isObjectLike(value) {
+  return value != null && typeof value == 'object';
+}
+
+module.exports = isObjectLike;
+
+},{}],10:[function(require,module,exports){
+var baseGetTag = require('./_baseGetTag'),
+    isObjectLike = require('./isObjectLike');
+
+/** `Object#toString` result references. */
+var symbolTag = '[object Symbol]';
+
+/**
+ * Checks if `value` is classified as a `Symbol` primitive or object.
+ *
+ * @static
+ * @memberOf _
+ * @since 4.0.0
+ * @category Lang
+ * @param {*} value The value to check.
+ * @returns {boolean} Returns `true` if `value` is a symbol, else `false`.
+ * @example
+ *
+ * _.isSymbol(Symbol.iterator);
+ * // => true
+ *
+ * _.isSymbol('abc');
+ * // => false
+ */
+function isSymbol(value) {
+  return typeof value == 'symbol' ||
+    (isObjectLike(value) && baseGetTag(value) == symbolTag);
+}
+
+module.exports = isSymbol;
+
+},{"./_baseGetTag":2,"./isObjectLike":9}],11:[function(require,module,exports){
+var root = require('./_root');
+
+/**
+ * Gets the timestamp of the number of milliseconds that have elapsed since
+ * the Unix epoch (1 January 1970 00:00:00 UTC).
+ *
+ * @static
+ * @memberOf _
+ * @since 2.4.0
+ * @category Date
+ * @returns {number} Returns the timestamp.
+ * @example
+ *
+ * _.defer(function(stamp) {
+ *   console.log(_.now() - stamp);
+ * }, _.now());
+ * // => Logs the number of milliseconds it took for the deferred invocation.
+ */
+var now = function() {
+  return root.Date.now();
+};
+
+module.exports = now;
+
+},{"./_root":6}],12:[function(require,module,exports){
+var isObject = require('./isObject'),
+    isSymbol = require('./isSymbol');
+
+/** Used as references for various `Number` constants. */
+var NAN = 0 / 0;
+
+/** Used to match leading and trailing whitespace. */
+var reTrim = /^\s+|\s+$/g;
+
+/** Used to detect bad signed hexadecimal string values. */
+var reIsBadHex = /^[-+]0x[0-9a-f]+$/i;
+
+/** Used to detect binary string values. */
+var reIsBinary = /^0b[01]+$/i;
+
+/** Used to detect octal string values. */
+var reIsOctal = /^0o[0-7]+$/i;
+
+/** Built-in method references without a dependency on `root`. */
+var freeParseInt = parseInt;
+
+/**
+ * Converts `value` to a number.
+ *
+ * @static
+ * @memberOf _
+ * @since 4.0.0
+ * @category Lang
+ * @param {*} value The value to process.
+ * @returns {number} Returns the number.
+ * @example
+ *
+ * _.toNumber(3.2);
+ * // => 3.2
+ *
+ * _.toNumber(Number.MIN_VALUE);
+ * // => 5e-324
+ *
+ * _.toNumber(Infinity);
+ * // => Infinity
+ *
+ * _.toNumber('3.2');
+ * // => 3.2
+ */
+function toNumber(value) {
+  if (typeof value == 'number') {
+    return value;
+  }
+  if (isSymbol(value)) {
+    return NAN;
+  }
+  if (isObject(value)) {
+    var other = typeof value.valueOf == 'function' ? value.valueOf() : value;
+    value = isObject(other) ? (other + '') : other;
+  }
+  if (typeof value != 'string') {
+    return value === 0 ? value : +value;
+  }
+  value = value.replace(reTrim, '');
+  var isBinary = reIsBinary.test(value);
+  return (isBinary || reIsOctal.test(value))
+    ? freeParseInt(value.slice(2), isBinary ? 2 : 8)
+    : (reIsBadHex.test(value) ? NAN : +value);
+}
+
+module.exports = toNumber;
+
+},{"./isObject":8,"./isSymbol":10}],13:[function(require,module,exports){
 "use strict";
 
 var WINDOW = window;
@@ -22,41 +531,63 @@ exports.main = function (JSONREP, node, options) {
   var panels = {};
   return Promise.all(Object.keys(node).map(function (name) {
     if (typeof node[name] === "string") {
-      panels[name] = node[name];
+      panels[name] = panels[name] || [];
+      panels[name].push(node[name]);
       return null;
     }
 
-    return Promise.all(Object.keys(node[name]).map(function (key) {
+    return Promise.all(Object.keys(node[name]).map(function (key, i) {
+      panels[name] = panels[name] || [];
       var panelNode = {};
       panelNode[key] = node[name][key];
       return JSONREP.markupNode(panelNode).then(function (code) {
-        panels[name] = code;
+        panels[name][i] = code;
         return null;
       });
     }));
   })).then(function () {
+    Object.keys(panels).forEach(function (name) {
+      panels[name] = panels[name].join("\n");
+    });
     return JSONREP.makeRep({
       variables: {
         panels: panels
       },
       html: {
         ".@": "github.com~0ink~codeblock/codeblock:Codeblock",
-        "_code": "<div class=\"layout-views\">\\n    <div class=\"ui\" style=\"display: none;\">\\n        <table class=\"layout\" height=\"100%\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\">\\n            <tr>\\n                <td class=\"console-panel\" width=\"100%\" height=\"100%\" rowspan=\"2\">\\n                    %%%variables.panels.console%%%\\n                </td>\\n            </tr>\\n            <tr>\\n                <td class=\"side-panel\">\\n                    <table class=\"layout\" height=\"100%\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\">\\n                        <tr>\\n                            <td class=\"menu-panel\">\\n                                %%%variables.panels.menu%%%\\n                            </td>\\n                        </tr>\\n                        <tr>\\n                            <td class=\"settings-panel\">\\n                                %%%variables.panels.settings%%%\\n                            </td>\\n                        </tr>\\n                        <tr>\\n                            <td class=\"inspector-panel\" height=\"100%\">\\n                                %%%variables.panels.inspector%%%\\n                            </td>\\n                        </tr>\\n                    </table>\\n                </td>\\n            </tr>\\n        </table>\\n    </div>\\n    <div class=\"manage\">\\n        <button class=\"close-button\">Close</button>\\n        %%%variables.panels.manage%%%\\n    </div>\\n    <div class=\"uninitialized\">\\n        <p><button action=\"reload\">Reload</button> to initialize FirePHP</p>\\n    </div>\\n</div>",
+        "_code": "<div class=\"layout-views\">\\n    <div class=\"ui\" style=\"display: none;\">\\n        <table class=\"layout\" height=\"100%\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\">\\n            <tr>\\n                <td class=\"console-panel\" width=\"100%\" height=\"100%\" rowspan=\"2\">\\n                    %%%variables.panels.console%%%\\n                </td>\\n            </tr>\\n            <tr>\\n                <td class=\"side-panel\">\\n                    <table class=\"layout\" height=\"100%\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\">\\n                    <tr>\\n                            <td class=\"menu-panel\">\\n                                %%%variables.panels.menu%%%\\n                            </td>\\n                        </tr>\\n                        <tr>\\n                            <td class=\"settings-panel\">\\n                                %%%variables.panels.settings%%%\\n                            </td>\\n                        </tr>\\n                        <tr>\\n                            <td class=\"inspector-panel\" height=\"100%\">\\n                                %%%variables.panels.inspector%%%\\n                            </td>\\n                        </tr>\\n                    </table>\\n                </td>\\n            </tr>\\n        </table>\\n    </div>\\n    <div class=\"manage\" style=\"display: none;\">\\n        <button class=\"close-button\">Close</button>\\n        %%%variables.panels.manage%%%\\n    </div>\\n    <div class=\"uninitialized\" style=\"display: none;\">\\n        <p><button action=\"reload\">Reload</button> to initialize FirePHP</p>\\n    </div>\\n</div>",
         "_format": "html",
         "_args": ["variables"],
         "_compiled": false
       },
       css: {
         ".@": "github.com~0ink~codeblock/codeblock:Codeblock",
-        "_code": "{\"_cssid\":\"c6a527ee02d0fb4136b8a82995b5eb9e92b4daa2\",\"repUri\":\"layout\"}",
+        "_code": "{\"_cssid\":\"321befe612ef624dd245518a1f8f7e087946fbe4\",\"repUri\":\"layout\"}",
         "_format": "json",
         "_args": [],
         "_compiled": false
       },
       on: {
-        mount: function mount(el) {
-          var currentContext = null;
+        mount: function (el) {
+          var COMPONENT = require("./component");
+
           var forceManage = false;
+          var comp = COMPONENT.for({
+            browser: browser
+          });
+          comp.on("changed.context", function () {
+            comp.contextChangeAcknowledged();
+            sync();
+          });
+          comp.on("changed.setting", function (name, enabled) {
+            sync();
+          });
+          comp.on("message", function (message) {
+            if (message.event === "manage") {
+              forceManage = true;
+              sync();
+            }
+          });
           var persistLogs = false;
           browser.storage.onChanged.addListener(function (changes, area) {
             if (changes["persist-on-navigate"]) {
@@ -66,115 +597,103 @@ exports.main = function (JSONREP, node, options) {
           browser.storage.local.get("persist-on-navigate").then(function (value) {
             persistLogs = value["persist-on-navigate"];
           });
+          var view = null;
+          var configured = false;
+          var enabled = false;
 
-          function getSettingForHostname(hostname, name) {
-            var key = "domain[" + hostname + "]." + name;
-            return browser.storage.local.get(key).then(function (value) {
-              return value[key] || false;
-            });
-          }
+          async function sync() {
+            try {
+              if (comp.currentContext) {
+                configured = await comp.isConfigured();
+                enabled = await comp.getSetting("enabled");
 
-          function isEnabledForHostname(hostname) {
-            return getSettingForHostname(hostname, "enableUserAgentHeader").then(function (enableUserAgentHeader) {
-              return getSettingForHostname(hostname, "enableFirePHPHeader").then(function (enableFirePHPHeader) {
-                return enableUserAgentHeader || enableFirePHPHeader;
-              });
-            });
-          }
-
-          function sync() {
-            if (currentContext) {
-              isEnabledForHostname(currentContext.hostname).then(function (enabled) {
                 if (forceManage) {
-                  el.querySelector("DIV.manage").style.display = "block";
+                  view = "manage";
+                } else if (!configured && !enabled && !persistLogs) {
+                    view = "manage";
+                  } else if (persistLogs && enabled && !configured) {
+                      view = "manage";
+                    } else {
+                      view = "console";
+                    }
+              } else {
+                view = "uninitialized";
+              }
 
-                  if (enabled) {
-                    el.querySelector("DIV.manage > BUTTON.close-button").style.display = "inline-block";
-                  } else {
-                    el.querySelector("DIV.manage > BUTTON.close-button").style.display = "none";
-                  }
+              console.log("VIEW DETAIS", view, "configured", configured, "enabled", enabled);
+              var toggles = {
+                ui: false,
+                manage: false,
+                uninitialized: false
+              };
 
-                  el.querySelector("DIV.uninitialized").style.display = "none";
-                  el.querySelector("DIV.ui").style.display = "none";
+              if (view === "uninitialized") {
+                toggles.uninitialized = true;
+              } else if (view === "manage") {
+                toggles.manage = true;
+
+                if (forceManage || configured || persistLogs) {
+                  el.querySelector("DIV.manage > BUTTON.close-button").style.display = "inline-block";
                 } else {
                   el.querySelector("DIV.manage > BUTTON.close-button").style.display = "none";
-
-                  if (enabled || persistLogs) {
-                    el.querySelector("DIV.manage").style.display = "none";
-                    el.querySelector("DIV.uninitialized").style.display = "none";
-                    el.querySelector("DIV.ui").style.display = "block";
-                  } else {
-                    el.querySelector("DIV.manage").style.display = "block";
-                    el.querySelector("DIV.uninitialized").style.display = "none";
-                    el.querySelector("DIV.ui").style.display = "none";
-                  }
-
-                  return null;
                 }
-              }).catch(function (err) {
-                console.error(err);
-              });
-            } else {
-              el.querySelector("DIV.ui").style.display = "none";
-              el.querySelector("DIV.manage").style.display = "none";
-              el.querySelector("DIV.uninitialized").style.display = "block";
+              } else if (view === "console") {
+                toggles.ui = true;
+              } else {
+                throw new Error("'view' with value '".concat(view, "' not implemented!"));
+              }
+
+              el.querySelector("DIV.ui").style.display = toggles.ui ? "block" : "none";
+              el.querySelector("DIV.manage").style.display = toggles.manage ? "block" : "none";
+              el.querySelector("DIV.uninitialized").style.display = toggles.uninitialized ? "block" : "none";
+            } catch (err) {
+              console.error("Error during sync():", err);
+              throw err;
             }
           }
 
-          el.querySelector("DIV.manage > BUTTON.close-button").addEventListener("click", function () {
-            forceManage = false;
-            sync();
+          el.querySelector("DIV.manage > BUTTON.close-button").addEventListener("click", async function () {
+            try {
+              if (persistLogs && enabled && !configured) {
+                await comp.setSetting("enabled", false);
+              } else if (forceManage && enabled && !configured) {
+                  await comp.setSetting("enabled", false);
+                }
+
+              forceManage = false;
+              sync();
+            } catch (err) {
+              console.error(err);
+            }
           }, false);
           el.querySelector('BUTTON[action="reload"]').addEventListener("click", function () {
-            browser.runtime.sendMessage({
-              to: "background",
-              event: "reload",
-              context: {
-                tabId: browser.devtools.inspectedWindow.tabId
-              }
-            });
+            comp.reloadBrowser();
           }, false);
-          browser.runtime.onMessage.addListener(function (message) {
-            if (message.context && message.context.tabId != browser.devtools.inspectedWindow.tabId) {
-              return;
-            }
-
-            if (message.to === "message-listener") {
-              if (message.event === "currentContext") {
-                currentContext = message.context;
-                sync();
-              } else if (message.event === "manage") {
-                forceManage = true;
-                sync();
-              }
-            }
-          });
-          sync();
         }
       }
     }, undefined, options);
   });
 };
-},{"./adapters/page-browser-api":2,"./lib/jquery3.min":3}],2:[function(require,module,exports){
+},{"./adapters/page-browser-api":14,"./component":15,"./lib/jquery3.min":16}],14:[function(require,module,exports){
 "use strict";
 
 module.exports = {
   runtime: {
     onMessage: {
-      addListener: function addListener(listener) {
+      addListener: function (listener) {
         console.log("[page-browser] browser.runtime.onMessage.addListener (listener):", listener);
       }
     },
-    sendMessage: function sendMessage(message) {
+    sendMessage: function (message) {
       console.log("[page-browser] browser.runtime.sendMessage (message):", message);
     }
   },
   storage: {
     onChanged: {
-      addListener: function addListener(listener) {}
+      addListener: function (listener) {}
     },
     local: {
-      get: function get(name) {
+      get: function (name) {
         return Promise.resolve(false);
       }
     }
@@ -185,15 +704,178 @@ module.exports = {
     }
   }
 };
-},{}],3:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
+(function (setImmediate){
 "use strict";
 
-function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+var EVENTS = require("events");
+
+var DEBOUNCE = require('lodash/debounce');
+
+exports.for = function (ctx) {
+  var events = new EVENTS.EventEmitter();
+  events.currentContext = null;
+  setImmediate(function () {
+    onContextMessage(null);
+    broadcastCurrentContext();
+  });
+  var contextChangeAcknowledged = false;
+
+  events.contextChangeAcknowledged = function () {
+    contextChangeAcknowledged = true;
+  };
+
+  function onContextMessage(context) {
+    if (context !== events.currentContext && (!events.currentContext || !context || context.pageUid !== events.currentContext.pageUid)) {
+      events.currentContext = context;
+      contextChangeAcknowledged = false;
+    }
+
+    if (!contextChangeAcknowledged) {
+      events.emit("changed.context", events.currentContext);
+    }
+  }
+
+  ctx.browser.runtime.onMessage.addListener(function (message) {
+    try {
+      if (typeof ctx.browser !== "undefined" && message.context && message.context.tabId != ctx.browser.devtools.inspectedWindow.tabId) {
+        return;
+      }
+
+      if (message.to === "message-listener") {
+        if (message.event === "currentContext" && typeof message.context !== "undefined") {
+          onContextMessage(message.context);
+        }
+
+        events.emit("message", message);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  });
+  ctx.browser.storage.onChanged.addListener(function (changes, area) {
+    try {
+      if (!events.currentContext) {
+        return;
+      }
+
+      var prefix = "domain[".concat(events.currentContext.hostname, "].");
+
+      for (var item of Object.keys(changes)) {
+        if (!/^domain\[.+\]\..+$/.test(item)) continue;
+
+        if (item.substring(0, prefix.length) === prefix) {
+          var name = item.substring(prefix.length);
+          events.emit("setting." + name, changes[item].newValue);
+          events.emit("changed.setting", name, changes[item].newValue);
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  });
+  var broadcastCurrentContext = DEBOUNCE(function () {
+    ctx.browser.runtime.sendMessage({
+      to: "broadcast",
+      event: "currentContext"
+    });
+  }, 250);
+
+  events.getSetting = function (name) {
+    if (!events.currentContext) {
+      return Promise.resolve(null);
+    }
+
+    return events._getSettingForHostname(events.currentContext.hostname, name);
+  };
+
+  events._getSettingForHostname = function (hostname, name) {
+    if (typeof ctx.browser === "undefined") {
+      return Promise.resolve(null);
+    }
+
+    var key = "domain[" + hostname + "]." + name;
+    return ctx.browser.storage.local.get(key).then(function (value) {
+      return value[key] || false;
+    }).catch(function (err) {
+      console.error(err);
+      throw err;
+    });
+  };
+
+  events.setSetting = function (name, value) {
+    if (!events.currentContext) {
+      throw new Error("Cannot set setting for name '".concat(name, "' due to no 'currentContext'!"));
+    }
+
+    return events._setSettingForHostname(events.currentContext.hostname, name, value);
+  };
+
+  events._setSettingForHostname = function (hostname, name, value) {
+    if (typeof ctx.browser === "undefined") {
+      return Promise.resolve(null);
+    }
+
+    return events._getSettingForHostname(hostname, name).then(function (existingValue) {
+      if (value === existingValue) {
+        return;
+      }
+
+      var obj = {};
+      obj["domain[" + hostname + "]." + name] = value;
+      return ctx.browser.storage.local.set(obj).then(broadcastCurrentContext);
+    }).catch(function (err) {
+      console.error(err);
+      throw err;
+    });
+  };
+
+  events.isConfigured = function () {
+    return events.getSetting("enableUserAgentHeader").then(function (enableUserAgentHeader) {
+      return events.getSetting("enableFirePHPHeader").then(function (enableFirePHPHeader) {
+        return events.getSetting("enableChromeLoggerData").then(function (enableChromeLoggerData) {
+          return enableUserAgentHeader || enableFirePHPHeader || enableChromeLoggerData;
+        });
+      });
+    });
+  };
+
+  events.reloadBrowser = function () {
+    ctx.browser.runtime.sendMessage({
+      to: "background",
+      event: "reload",
+      context: {
+        tabId: ctx.browser.devtools.inspectedWindow.tabId
+      }
+    });
+  };
+
+  events.clearConsole = function () {
+    ctx.browser.runtime.sendMessage({
+      to: "broadcast",
+      event: "clear"
+    });
+  };
+
+  events.showView = function (name) {
+    if (name === "manage") {
+      ctx.browser.runtime.sendMessage({
+        to: "broadcast",
+        event: "manage"
+      });
+    }
+  };
+
+  return events;
+};
+}).call(this,require("timers").setImmediate)
+},{"events":17,"lodash/debounce":7,"timers":19}],16:[function(require,module,exports){
+"use strict";
 
 !function (a, b) {
   "use strict";
 
-  "object" == (typeof module === "undefined" ? "undefined" : _typeof(module)) && "object" == _typeof(module.exports) ? module.exports = a.document ? b(a, !0) : function (a) {
+  "object" == typeof module && "object" == typeof module.exports ? module.exports = a.document ? b(a, !0) : function (a) {
     if (!a.document) throw new Error("jQuery requires a window with a document");
     return b(a);
   } : b(a);
@@ -221,13 +903,13 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
   }
 
   var q = "3.2.1",
-      r = function r(a, b) {
+      r = function (a, b) {
     return new r.fn.init(a, b);
   },
       s = /^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g,
       t = /^-ms-/,
       u = /-([a-z])/g,
-      v = function v(a, b) {
+      v = function (a, b) {
     return b.toUpperCase();
   };
 
@@ -235,39 +917,39 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
     jquery: q,
     constructor: r,
     length: 0,
-    toArray: function toArray() {
+    toArray: function () {
       return f.call(this);
     },
-    get: function get(a) {
+    get: function (a) {
       return null == a ? f.call(this) : a < 0 ? this[a + this.length] : this[a];
     },
-    pushStack: function pushStack(a) {
+    pushStack: function (a) {
       var b = r.merge(this.constructor(), a);
       return b.prevObject = this, b;
     },
-    each: function each(a) {
+    each: function (a) {
       return r.each(this, a);
     },
-    map: function map(a) {
+    map: function (a) {
       return this.pushStack(r.map(this, function (b, c) {
         return a.call(b, c, b);
       }));
     },
-    slice: function slice() {
+    slice: function () {
       return this.pushStack(f.apply(this, arguments));
     },
-    first: function first() {
+    first: function () {
       return this.eq(0);
     },
-    last: function last() {
+    last: function () {
       return this.eq(-1);
     },
-    eq: function eq(a) {
+    eq: function (a) {
       var b = this.length,
           c = +a + (a < 0 ? b : 0);
       return this.pushStack(c >= 0 && c < b ? [this[c]] : []);
     },
-    end: function end() {
+    end: function () {
       return this.prevObject || this.constructor();
     },
     push: h,
@@ -285,7 +967,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
         i = arguments.length,
         j = !1;
 
-    for ("boolean" == typeof g && (j = g, g = arguments[h] || {}, h++), "object" == _typeof(g) || r.isFunction(g) || (g = {}), h === i && (g = this, h--); h < i; h++) {
+    for ("boolean" == typeof g && (j = g, g = arguments[h] || {}, h++), "object" == typeof g || r.isFunction(g) || (g = {}), h === i && (g = this, h--); h < i; h++) {
       if (null != (a = arguments[h])) for (b in a) {
         c = g[b], d = a[b], g !== d && (j && d && (r.isPlainObject(d) || (e = Array.isArray(d))) ? (e ? (e = !1, f = c && Array.isArray(c) ? c : []) : f = c && r.isPlainObject(c) ? c : {}, g[b] = r.extend(j, f, d)) : void 0 !== d && (g[b] = d));
       }
@@ -295,25 +977,25 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
   }, r.extend({
     expando: "jQuery" + (q + Math.random()).replace(/\D/g, ""),
     isReady: !0,
-    error: function error(a) {
+    error: function (a) {
       throw new Error(a);
     },
-    noop: function noop() {},
-    isFunction: function isFunction(a) {
+    noop: function () {},
+    isFunction: function (a) {
       return "function" === r.type(a);
     },
-    isWindow: function isWindow(a) {
+    isWindow: function (a) {
       return null != a && a === a.window;
     },
-    isNumeric: function isNumeric(a) {
+    isNumeric: function (a) {
       var b = r.type(a);
       return ("number" === b || "string" === b) && !isNaN(a - parseFloat(a));
     },
-    isPlainObject: function isPlainObject(a) {
+    isPlainObject: function (a) {
       var b, c;
       return !(!a || "[object Object]" !== k.call(a)) && (!(b = e(a)) || (c = l.call(b, "constructor") && b.constructor, "function" == typeof c && m.call(c) === n));
     },
-    isEmptyObject: function isEmptyObject(a) {
+    isEmptyObject: function (a) {
       var b;
 
       for (b in a) {
@@ -322,16 +1004,16 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
 
       return !0;
     },
-    type: function type(a) {
-      return null == a ? a + "" : "object" == _typeof(a) || "function" == typeof a ? j[k.call(a)] || "object" : _typeof(a);
+    type: function (a) {
+      return null == a ? a + "" : "object" == typeof a || "function" == typeof a ? j[k.call(a)] || "object" : typeof a;
     },
-    globalEval: function globalEval(a) {
+    globalEval: function (a) {
       p(a);
     },
-    camelCase: function camelCase(a) {
+    camelCase: function (a) {
       return a.replace(t, "ms-").replace(u, v);
     },
-    each: function each(a, b) {
+    each: function (a, b) {
       var c,
           d = 0;
 
@@ -345,31 +1027,31 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
 
       return a;
     },
-    trim: function trim(a) {
+    trim: function (a) {
       return null == a ? "" : (a + "").replace(s, "");
     },
-    makeArray: function makeArray(a, b) {
+    makeArray: function (a, b) {
       var c = b || [];
       return null != a && (w(Object(a)) ? r.merge(c, "string" == typeof a ? [a] : a) : h.call(c, a)), c;
     },
-    inArray: function inArray(a, b, c) {
+    inArray: function (a, b, c) {
       return null == b ? -1 : i.call(b, a, c);
     },
-    merge: function merge(a, b) {
+    merge: function (a, b) {
       for (var c = +b.length, d = 0, e = a.length; d < c; d++) {
         a[e++] = b[d];
       }
 
       return a.length = e, a;
     },
-    grep: function grep(a, b, c) {
+    grep: function (a, b, c) {
       for (var d, e = [], f = 0, g = a.length, h = !c; f < g; f++) {
         d = !b(a[f], f), d !== h && e.push(a[f]);
       }
 
       return e;
     },
-    map: function map(a, b, c) {
+    map: function (a, b, c) {
       var d,
           e,
           f = 0,
@@ -382,9 +1064,9 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
       return g.apply([], h);
     },
     guid: 1,
-    proxy: function proxy(a, b) {
+    proxy: function (a, b) {
       var c, d, e;
-      if ("string" == typeof b && (c = a[b], b = a, a = c), r.isFunction(a)) return d = f.call(arguments, 2), e = function e() {
+      if ("string" == typeof b && (c = a[b], b = a, a = c), r.isFunction(a)) return d = f.call(arguments, 2), e = function () {
         return a.apply(b || this, d.concat(f.call(arguments)));
       }, e.guid = a.guid = a.guid || r.guid++, e;
     },
@@ -427,7 +1109,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
         y = ha(),
         z = ha(),
         A = ha(),
-        B = function B(a, b) {
+        B = function (a, b) {
       return a === b && (l = !0), 0;
     },
         C = {}.hasOwnProperty,
@@ -436,7 +1118,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
         F = D.push,
         G = D.push,
         H = D.slice,
-        I = function I(a, b) {
+        I = function (a, b) {
       for (var c = 0, d = a.length; c < d; c++) {
         if (a[c] === b) return c;
       }
@@ -471,15 +1153,15 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
         Z = /^(?:#([\w-]+)|(\w+)|\.([\w-]+))$/,
         $ = /[+~]/,
         _ = new RegExp("\\\\([\\da-f]{1,6}" + K + "?|(" + K + ")|.)", "ig"),
-        aa = function aa(a, b, c) {
+        aa = function (a, b, c) {
       var d = "0x" + b - 65536;
       return d !== d || c ? b : d < 0 ? String.fromCharCode(d + 65536) : String.fromCharCode(d >> 10 | 55296, 1023 & d | 56320);
     },
         ba = /([\0-\x1f\x7f]|^-?\d)|^-$|[^\0-\x1f\x7f-\uFFFF\w-]/g,
-        ca = function ca(a, b) {
-      return b ? "\0" === a ? "\uFFFD" : a.slice(0, -1) + "\\" + a.charCodeAt(a.length - 1).toString(16) + " " : "\\" + a;
+        ca = function (a, b) {
+      return b ? "\0" === a ? "\ufffd" : a.slice(0, -1) + "\\" + a.charCodeAt(a.length - 1).toString(16) + " " : "\\" + a;
     },
-        da = function da() {
+        da = function () {
       m();
     },
         ea = ta(function (a) {
@@ -828,20 +1510,20 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
         }
       },
       preFilter: {
-        ATTR: function ATTR(a) {
+        ATTR: function (a) {
           return a[1] = a[1].replace(_, aa), a[3] = (a[3] || a[4] || a[5] || "").replace(_, aa), "~=" === a[2] && (a[3] = " " + a[3] + " "), a.slice(0, 4);
         },
-        CHILD: function CHILD(a) {
+        CHILD: function (a) {
           return a[1] = a[1].toLowerCase(), "nth" === a[1].slice(0, 3) ? (a[3] || ga.error(a[0]), a[4] = +(a[4] ? a[5] + (a[6] || 1) : 2 * ("even" === a[3] || "odd" === a[3])), a[5] = +(a[7] + a[8] || "odd" === a[3])) : a[3] && ga.error(a[0]), a;
         },
-        PSEUDO: function PSEUDO(a) {
+        PSEUDO: function (a) {
           var b,
               c = !a[6] && a[2];
           return V.CHILD.test(a[0]) ? null : (a[3] ? a[2] = a[4] || a[5] || "" : c && T.test(c) && (b = g(c, !0)) && (b = c.indexOf(")", c.length - b) - c.length) && (a[0] = a[0].slice(0, b), a[2] = c.slice(0, b)), a.slice(0, 3));
         }
       },
       filter: {
-        TAG: function TAG(a) {
+        TAG: function (a) {
           var b = a.replace(_, aa).toLowerCase();
           return "*" === a ? function () {
             return !0;
@@ -849,19 +1531,19 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
             return a.nodeName && a.nodeName.toLowerCase() === b;
           };
         },
-        CLASS: function CLASS(a) {
+        CLASS: function (a) {
           var b = y[a + " "];
           return b || (b = new RegExp("(^|" + K + ")" + a + "(" + K + "|$)")) && y(a, function (a) {
             return b.test("string" == typeof a.className && a.className || "undefined" != typeof a.getAttribute && a.getAttribute("class") || "");
           });
         },
-        ATTR: function ATTR(a, b, c) {
+        ATTR: function (a, b, c) {
           return function (d) {
             var e = ga.attr(d, a);
             return null == e ? "!=" === b : !b || (e += "", "=" === b ? e === c : "!=" === b ? e !== c : "^=" === b ? c && 0 === e.indexOf(c) : "*=" === b ? c && e.indexOf(c) > -1 : "$=" === b ? c && e.slice(-c.length) === c : "~=" === b ? (" " + e.replace(O, " ") + " ").indexOf(c) > -1 : "|=" === b && (e === c || e.slice(0, c.length + 1) === c + "-"));
           };
         },
-        CHILD: function CHILD(a, b, c, d, e) {
+        CHILD: function (a, b, c, d, e) {
           var f = "nth" !== a.slice(0, 3),
               g = "last" !== a.slice(-4),
               h = "of-type" === b;
@@ -912,7 +1594,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
             }
           };
         },
-        PSEUDO: function PSEUDO(a, b) {
+        PSEUDO: function (a, b) {
           var c,
               e = d.pseudos[a] || d.setFilters[a.toLowerCase()] || ga.error("unsupported pseudo: " + a);
           return e[u] ? e(b) : e.length > 1 ? (c = [a, a, "", b], d.setFilters.hasOwnProperty(a.toLowerCase()) ? ia(function (a, c) {
@@ -966,46 +1648,46 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
             return !1;
           };
         }),
-        target: function target(b) {
+        target: function (b) {
           var c = a.location && a.location.hash;
           return c && c.slice(1) === b.id;
         },
-        root: function root(a) {
+        root: function (a) {
           return a === o;
         },
-        focus: function focus(a) {
+        focus: function (a) {
           return a === n.activeElement && (!n.hasFocus || n.hasFocus()) && !!(a.type || a.href || ~a.tabIndex);
         },
         enabled: oa(!1),
         disabled: oa(!0),
-        checked: function checked(a) {
+        checked: function (a) {
           var b = a.nodeName.toLowerCase();
           return "input" === b && !!a.checked || "option" === b && !!a.selected;
         },
-        selected: function selected(a) {
+        selected: function (a) {
           return a.parentNode && a.parentNode.selectedIndex, a.selected === !0;
         },
-        empty: function empty(a) {
+        empty: function (a) {
           for (a = a.firstChild; a; a = a.nextSibling) {
             if (a.nodeType < 6) return !1;
           }
 
           return !0;
         },
-        parent: function parent(a) {
+        parent: function (a) {
           return !d.pseudos.empty(a);
         },
-        header: function header(a) {
+        header: function (a) {
           return X.test(a.nodeName);
         },
-        input: function input(a) {
+        input: function (a) {
           return W.test(a.nodeName);
         },
-        button: function button(a) {
+        button: function (a) {
           var b = a.nodeName.toLowerCase();
           return "input" === b && "button" === a.type || "button" === b;
         },
-        text: function text(a) {
+        text: function (a) {
           var b;
           return "input" === a.nodeName.toLowerCase() && "text" === a.type && (null == (b = a.getAttribute("type")) || "text" === b.toLowerCase());
         },
@@ -1241,16 +1923,16 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
     function za(a, b) {
       var c = b.length > 0,
           e = a.length > 0,
-          f = function f(_f, g, h, i, k) {
+          f = function (f, g, h, i, k) {
         var l,
             o,
             q,
             r = 0,
             s = "0",
-            t = _f && [],
+            t = f && [],
             u = [],
             v = j,
-            x = _f || e && d.find.TAG("*", k),
+            x = f || e && d.find.TAG("*", k),
             y = w += null == v ? 1 : Math.random() || .1,
             z = x.length;
 
@@ -1268,7 +1950,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
             k && (w = y);
           }
 
-          c && ((l = !q && l) && r--, _f && t.push(l));
+          c && ((l = !q && l) && r--, f && t.push(l));
         }
 
         if (r += s, c && s !== r) {
@@ -1278,14 +1960,14 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
             q(t, u, g, h);
           }
 
-          if (_f) {
+          if (f) {
             if (r > 0) while (s--) {
               t[s] || u[s] || (u[s] = E.call(i));
             }
             u = wa(u);
           }
 
-          G.apply(i, u), k && !_f && u.length > 0 && r + b.length > 1 && ga.uniqueSort(i);
+          G.apply(i, u), k && !f && u.length > 0 && r + b.length > 1 && ga.uniqueSort(i);
         }
 
         return k && (w = y, j = v), t;
@@ -1359,7 +2041,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
 
   r.find = x, r.expr = x.selectors, r.expr[":"] = r.expr.pseudos, r.uniqueSort = r.unique = x.uniqueSort, r.text = x.getText, r.isXMLDoc = x.isXML, r.contains = x.contains, r.escapeSelector = x.escape;
 
-  var y = function y(a, b, c) {
+  var y = function (a, b, c) {
     var d = [],
         e = void 0 !== c;
 
@@ -1372,7 +2054,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
 
     return d;
   },
-      z = function z(a, b) {
+      z = function (a, b) {
     for (var c = []; a; a = a.nextSibling) {
       1 === a.nodeType && a !== b && c.push(a);
     }
@@ -1406,7 +2088,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
       return 1 === a.nodeType;
     }));
   }, r.fn.extend({
-    find: function find(a) {
+    find: function (a) {
       var b,
           c,
           d = this.length,
@@ -1423,13 +2105,13 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
 
       return d > 1 ? r.uniqueSort(c) : c;
     },
-    filter: function filter(a) {
+    filter: function (a) {
       return this.pushStack(E(this, a || [], !1));
     },
-    not: function not(a) {
+    not: function (a) {
       return this.pushStack(E(this, a || [], !0));
     },
-    is: function is(a) {
+    is: function (a) {
       return !!E(this, "string" == typeof a && A.test(a) ? r(a) : a || [], !1).length;
     }
   });
@@ -1465,7 +2147,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
     prev: !0
   };
   r.fn.extend({
-    has: function has(a) {
+    has: function (a) {
       var b = r(a, this),
           c = b.length;
       return this.filter(function () {
@@ -1474,7 +2156,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
         }
       });
     },
-    closest: function closest(a, b) {
+    closest: function (a, b) {
       var c,
           d = 0,
           e = this.length,
@@ -1490,13 +2172,13 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
       }
       return this.pushStack(f.length > 1 ? r.uniqueSort(f) : f);
     },
-    index: function index(a) {
+    index: function (a) {
       return a ? "string" == typeof a ? i.call(r(a), this[0]) : i.call(this, a.jquery ? a[0] : a) : this[0] && this[0].parentNode ? this.first().prevAll().length : -1;
     },
-    add: function add(a, b) {
+    add: function (a, b) {
       return this.pushStack(r.uniqueSort(r.merge(this.get(), r(a, b))));
     },
-    addBack: function addBack(a) {
+    addBack: function (a) {
       return this.add(null == a ? this.prevObject : this.prevObject.filter(a));
     }
   });
@@ -1510,41 +2192,41 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
   }
 
   r.each({
-    parent: function parent(a) {
+    parent: function (a) {
       var b = a.parentNode;
       return b && 11 !== b.nodeType ? b : null;
     },
-    parents: function parents(a) {
+    parents: function (a) {
       return y(a, "parentNode");
     },
-    parentsUntil: function parentsUntil(a, b, c) {
+    parentsUntil: function (a, b, c) {
       return y(a, "parentNode", c);
     },
-    next: function next(a) {
+    next: function (a) {
       return K(a, "nextSibling");
     },
-    prev: function prev(a) {
+    prev: function (a) {
       return K(a, "previousSibling");
     },
-    nextAll: function nextAll(a) {
+    nextAll: function (a) {
       return y(a, "nextSibling");
     },
-    prevAll: function prevAll(a) {
+    prevAll: function (a) {
       return y(a, "previousSibling");
     },
-    nextUntil: function nextUntil(a, b, c) {
+    nextUntil: function (a, b, c) {
       return y(a, "nextSibling", c);
     },
-    prevUntil: function prevUntil(a, b, c) {
+    prevUntil: function (a, b, c) {
       return y(a, "previousSibling", c);
     },
-    siblings: function siblings(a) {
+    siblings: function (a) {
       return z((a.parentNode || {}).firstChild, a);
     },
-    children: function children(a) {
+    children: function (a) {
       return z(a.firstChild);
     },
-    contents: function contents(a) {
+    contents: function (a) {
       return B(a, "iframe") ? a.contentDocument : (B(a, "template") && (a = a.content || a), r.merge([], a.childNodes));
     }
   }, function (a, b) {
@@ -1572,7 +2254,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
         f = [],
         g = [],
         h = -1,
-        i = function i() {
+        i = function () {
       for (e = e || a.once, d = b = !0; g.length; h = -1) {
         c = g.shift();
 
@@ -1584,14 +2266,14 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
       a.memory || (c = !1), b = !1, e && (f = c ? [] : "");
     },
         j = {
-      add: function add() {
+      add: function () {
         return f && (c && !b && (h = f.length - 1, g.push(c)), function d(b) {
           r.each(b, function (b, c) {
             r.isFunction(c) ? a.unique && j.has(c) || f.push(c) : c && c.length && "string" !== r.type(c) && d(c);
           });
         }(arguments), c && !b && i()), this;
       },
-      remove: function remove() {
+      remove: function () {
         return r.each(arguments, function (a, b) {
           var c;
 
@@ -1600,31 +2282,31 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
           }
         }), this;
       },
-      has: function has(a) {
+      has: function (a) {
         return a ? r.inArray(a, f) > -1 : f.length > 0;
       },
-      empty: function empty() {
+      empty: function () {
         return f && (f = []), this;
       },
-      disable: function disable() {
+      disable: function () {
         return e = g = [], f = c = "", this;
       },
-      disabled: function disabled() {
+      disabled: function () {
         return !f;
       },
-      lock: function lock() {
+      lock: function () {
         return e = g = [], c || b || (f = c = ""), this;
       },
-      locked: function locked() {
+      locked: function () {
         return !!e;
       },
-      fireWith: function fireWith(a, c) {
+      fireWith: function (a, c) {
         return e || (c = c || [], c = [a, c.slice ? c.slice() : c], g.push(c), b || i()), this;
       },
-      fire: function fire() {
+      fire: function () {
         return j.fireWith(this, arguments), this;
       },
-      fired: function fired() {
+      fired: function () {
         return !!d;
       }
     };
@@ -1651,20 +2333,20 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
   }
 
   r.extend({
-    Deferred: function Deferred(b) {
+    Deferred: function (b) {
       var c = [["notify", "progress", r.Callbacks("memory"), r.Callbacks("memory"), 2], ["resolve", "done", r.Callbacks("once memory"), r.Callbacks("once memory"), 0, "resolved"], ["reject", "fail", r.Callbacks("once memory"), r.Callbacks("once memory"), 1, "rejected"]],
           d = "pending",
           e = {
-        state: function state() {
+        state: function () {
           return d;
         },
-        always: function always() {
+        always: function () {
           return f.done(arguments).fail(arguments), this;
         },
-        "catch": function _catch(a) {
+        "catch": function (a) {
           return e.then(null, a);
         },
-        pipe: function pipe() {
+        pipe: function () {
           var a = arguments;
           return r.Deferred(function (b) {
             r.each(c, function (c, d) {
@@ -1676,19 +2358,19 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
             }), a = null;
           }).promise();
         },
-        then: function then(b, d, e) {
+        then: function (b, d, e) {
           var f = 0;
 
           function g(b, c, d, e) {
             return function () {
               var h = this,
                   i = arguments,
-                  j = function j() {
+                  j = function () {
                 var a, j;
 
                 if (!(b < f)) {
                   if (a = d.apply(h, i), a === c.promise()) throw new TypeError("Thenable self-resolution");
-                  j = a && ("object" == _typeof(a) || "function" == typeof a) && a.then, r.isFunction(j) ? e ? j.call(a, g(f, c, N, e), g(f, c, O, e)) : (f++, j.call(a, g(f, c, N, e), g(f, c, O, e), g(f, c, N, c.notifyWith))) : (d !== N && (h = void 0, i = [a]), (e || c.resolveWith)(h, i));
+                  j = a && ("object" == typeof a || "function" == typeof a) && a.then, r.isFunction(j) ? e ? j.call(a, g(f, c, N, e), g(f, c, O, e)) : (f++, j.call(a, g(f, c, N, e), g(f, c, O, e), g(f, c, N, c.notifyWith))) : (d !== N && (h = void 0, i = [a]), (e || c.resolveWith)(h, i));
                 }
               },
                   k = e ? j : function () {
@@ -1707,7 +2389,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
             c[0][3].add(g(0, a, r.isFunction(e) ? e : N, a.notifyWith)), c[1][3].add(g(0, a, r.isFunction(b) ? b : N)), c[2][3].add(g(0, a, r.isFunction(d) ? d : O));
           }).promise();
         },
-        promise: function promise(a) {
+        promise: function (a) {
           return null != a ? r.extend(a, e) : e;
         }
       },
@@ -1722,13 +2404,13 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
         }, f[b[0] + "With"] = g.fireWith;
       }), e.promise(f), b && b.call(f, f), f;
     },
-    when: function when(a) {
+    when: function (a) {
       var b = arguments.length,
           c = b,
           d = Array(c),
           e = f.call(arguments),
           g = r.Deferred(),
-          h = function h(a) {
+          h = function (a) {
         return function (c) {
           d[a] = this, e[a] = arguments.length > 1 ? f.call(arguments) : c, --b || g.resolveWith(d, e);
         };
@@ -1759,7 +2441,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
   }, r.extend({
     isReady: !1,
     readyWait: 1,
-    ready: function ready(a) {
+    ready: function (a) {
       (a === !0 ? --r.readyWait : r.isReady) || (r.isReady = !0, a !== !0 && --r.readyWait > 0 || R.resolveWith(d, [r]));
     }
   }), r.ready.then = R.then;
@@ -1770,7 +2452,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
 
   "complete" === d.readyState || "loading" !== d.readyState && !d.documentElement.doScroll ? a.setTimeout(r.ready) : (d.addEventListener("DOMContentLoaded", S), a.addEventListener("load", S));
 
-  var T = function T(a, b, c, d, e, f, g) {
+  var T = function (a, b, c, d, e, f, g) {
     var h = 0,
         i = a.length,
         j = null == c;
@@ -1781,7 +2463,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
       for (h in c) {
         T(a, b, h, c[h], !0, f, g);
       }
-    } else if (void 0 !== d && (e = !0, r.isFunction(d) || (g = !0), j && (g ? (b.call(a, d), b = null) : (j = b, b = function b(a, _b, c) {
+    } else if (void 0 !== d && (e = !0, r.isFunction(d) || (g = !0), j && (g ? (b.call(a, d), b = null) : (j = b, b = function (a, b, c) {
       return j.call(r(a), c);
     })), b)) for (; h < i; h++) {
       b(a[h], c, g ? d : d.call(a[h], h, b(a[h], c)));
@@ -1789,7 +2471,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
 
     return e ? a : j ? b.call(a) : i ? b(a[0], c) : f;
   },
-      U = function U(a) {
+      U = function (a) {
     return 1 === a.nodeType || 9 === a.nodeType || !+a.nodeType;
   };
 
@@ -1798,14 +2480,14 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
   }
 
   V.uid = 1, V.prototype = {
-    cache: function cache(a) {
+    cache: function (a) {
       var b = a[this.expando];
       return b || (b = {}, U(a) && (a.nodeType ? a[this.expando] = b : Object.defineProperty(a, this.expando, {
         value: b,
         configurable: !0
       }))), b;
     },
-    set: function set(a, b, c) {
+    set: function (a, b, c) {
       var d,
           e = this.cache(a);
       if ("string" == typeof b) e[r.camelCase(b)] = c;else for (d in b) {
@@ -1813,13 +2495,13 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
       }
       return e;
     },
-    get: function get(a, b) {
+    get: function (a, b) {
       return void 0 === b ? this.cache(a) : a[this.expando] && a[this.expando][r.camelCase(b)];
     },
-    access: function access(a, b, c) {
+    access: function (a, b, c) {
       return void 0 === b || b && "string" == typeof b && void 0 === c ? this.get(a, b) : (this.set(a, b, c), void 0 !== c ? c : b);
     },
-    remove: function remove(a, b) {
+    remove: function (a, b) {
       var c,
           d = a[this.expando];
 
@@ -1835,7 +2517,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
         (void 0 === b || r.isEmptyObject(d)) && (a.nodeType ? a[this.expando] = void 0 : delete a[this.expando]);
       }
     },
-    hasData: function hasData(a) {
+    hasData: function (a) {
       var b = a[this.expando];
       return void 0 !== b && !r.isEmptyObject(b);
     }
@@ -1862,23 +2544,23 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
   }
 
   r.extend({
-    hasData: function hasData(a) {
+    hasData: function (a) {
       return X.hasData(a) || W.hasData(a);
     },
-    data: function data(a, b, c) {
+    data: function (a, b, c) {
       return X.access(a, b, c);
     },
-    removeData: function removeData(a, b) {
+    removeData: function (a, b) {
       X.remove(a, b);
     },
-    _data: function _data(a, b, c) {
+    _data: function (a, b, c) {
       return W.access(a, b, c);
     },
-    _removeData: function _removeData(a, b) {
+    _removeData: function (a, b) {
       W.remove(a, b);
     }
   }), r.fn.extend({
-    data: function data(a, b) {
+    data: function (a, b) {
       var c,
           d,
           e,
@@ -1899,7 +2581,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
         return e;
       }
 
-      return "object" == _typeof(a) ? this.each(function () {
+      return "object" == typeof a ? this.each(function () {
         X.set(this, a);
       }) : T(this, function (b) {
         var c;
@@ -1912,30 +2594,30 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
         });
       }, null, b, arguments.length > 1, null, !0);
     },
-    removeData: function removeData(a) {
+    removeData: function (a) {
       return this.each(function () {
         X.remove(this, a);
       });
     }
   }), r.extend({
-    queue: function queue(a, b, c) {
+    queue: function (a, b, c) {
       var d;
       if (a) return b = (b || "fx") + "queue", d = W.get(a, b), c && (!d || Array.isArray(c) ? d = W.access(a, b, r.makeArray(c)) : d.push(c)), d || [];
     },
-    dequeue: function dequeue(a, b) {
+    dequeue: function (a, b) {
       b = b || "fx";
 
       var c = r.queue(a, b),
           d = c.length,
           e = c.shift(),
           f = r._queueHooks(a, b),
-          g = function g() {
+          g = function () {
         r.dequeue(a, b);
       };
 
       "inprogress" === e && (e = c.shift(), d--), e && ("fx" === b && c.unshift("inprogress"), delete f.stop, e.call(a, g, f)), !d && f && f.empty.fire();
     },
-    _queueHooks: function _queueHooks(a, b) {
+    _queueHooks: function (a, b) {
       var c = b + "queueHooks";
       return W.get(a, c) || W.access(a, c, {
         empty: r.Callbacks("once memory").add(function () {
@@ -1944,28 +2626,28 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
       });
     }
   }), r.fn.extend({
-    queue: function queue(a, b) {
+    queue: function (a, b) {
       var c = 2;
       return "string" != typeof a && (b = a, a = "fx", c--), arguments.length < c ? r.queue(this[0], a) : void 0 === b ? this : this.each(function () {
         var c = r.queue(this, a, b);
         r._queueHooks(this, a), "fx" === a && "inprogress" !== c[0] && r.dequeue(this, a);
       });
     },
-    dequeue: function dequeue(a) {
+    dequeue: function (a) {
       return this.each(function () {
         r.dequeue(this, a);
       });
     },
-    clearQueue: function clearQueue(a) {
+    clearQueue: function (a) {
       return this.queue(a || "fx", []);
     },
-    promise: function promise(a, b) {
+    promise: function (a, b) {
       var c,
           d = 1,
           e = r.Deferred(),
           f = this,
           g = this.length,
-          h = function h() {
+          h = function () {
         --d || e.resolveWith(f, [f]);
       };
 
@@ -1982,10 +2664,10 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
   var aa = /[+-]?(?:\d*\.|)\d+(?:[eE][+-]?\d+|)/.source,
       ba = new RegExp("^(?:([+-])=|)(" + aa + ")([a-z%]*)$", "i"),
       ca = ["Top", "Right", "Bottom", "Left"],
-      da = function da(a, b) {
+      da = function (a, b) {
     return a = b || a, "none" === a.style.display || "" === a.style.display && r.contains(a.ownerDocument, a) && "none" === r.css(a, "display");
   },
-      ea = function ea(a, b, c, d) {
+      ea = function (a, b, c, d) {
     var e,
         f,
         g = {};
@@ -2050,13 +2732,13 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
   }
 
   r.fn.extend({
-    show: function show() {
+    show: function () {
       return ia(this, !0);
     },
-    hide: function hide() {
+    hide: function () {
       return ia(this);
     },
-    toggle: function toggle(a) {
+    toggle: function (a) {
       return "boolean" == typeof a ? a ? this.show() : this.hide() : this.each(function () {
         da(this) ? r(this).show() : r(this).hide();
       });
@@ -2144,7 +2826,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
   function ya(a, b, c, d, e, f) {
     var g, h;
 
-    if ("object" == _typeof(b)) {
+    if ("object" == typeof b) {
       "string" != typeof c && (d = d || c, c = void 0);
 
       for (h in b) {
@@ -2155,7 +2837,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
     }
 
     if (null == d && null == e ? (e = c, d = c = void 0) : null == e && ("string" == typeof c ? (e = d, d = void 0) : (e = d, d = c, c = void 0)), e === !1) e = wa;else if (!e) return a;
-    return 1 === f && (g = e, e = function e(a) {
+    return 1 === f && (g = e, e = function (a) {
       return r().off(a), g.apply(this, arguments);
     }, e.guid = g.guid || (g.guid = r.guid++)), a.each(function () {
       r.event.add(this, b, e, d, c);
@@ -2164,7 +2846,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
 
   r.event = {
     global: {},
-    add: function add(a, b, c, d, e) {
+    add: function (a, b, c, d, e) {
       var f,
           g,
           h,
@@ -2197,7 +2879,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
         }
       }
     },
-    remove: function remove(a, b, c, d, e) {
+    remove: function (a, b, c, d, e) {
       var f,
           g,
           h,
@@ -2231,7 +2913,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
         r.isEmptyObject(i) && W.remove(a, "handle events");
       }
     },
-    dispatch: function dispatch(a) {
+    dispatch: function (a) {
       var b = r.event.fix(a),
           c,
           d,
@@ -2261,7 +2943,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
         return k.postDispatch && k.postDispatch.call(this, b), b.result;
       }
     },
-    handlers: function handlers(a, b) {
+    handlers: function (a, b) {
       var c,
           d,
           e,
@@ -2287,7 +2969,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
         handlers: b.slice(i)
       }), h;
     },
-    addProp: function addProp(a, b) {
+    addProp: function (a, b) {
       Object.defineProperty(r.Event.prototype, a, {
         enumerable: !0,
         configurable: !0,
@@ -2296,7 +2978,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
         } : function () {
           if (this.originalEvent) return this.originalEvent[a];
         },
-        set: function set(b) {
+        set: function (b) {
           Object.defineProperty(this, a, {
             enumerable: !0,
             configurable: !0,
@@ -2306,7 +2988,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
         }
       });
     },
-    fix: function fix(a) {
+    fix: function (a) {
       return a[r.expando] ? a : new r.Event(a);
     },
     special: {
@@ -2314,27 +2996,27 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
         noBubble: !0
       },
       focus: {
-        trigger: function trigger() {
+        trigger: function () {
           if (this !== xa() && this.focus) return this.focus(), !1;
         },
         delegateType: "focusin"
       },
       blur: {
-        trigger: function trigger() {
+        trigger: function () {
           if (this === xa() && this.blur) return this.blur(), !1;
         },
         delegateType: "focusout"
       },
       click: {
-        trigger: function trigger() {
+        trigger: function () {
           if ("checkbox" === this.type && this.click && B(this, "input")) return this.click(), !1;
         },
-        _default: function _default(a) {
+        _default: function (a) {
           return B(a.target, "a");
         }
       },
       beforeunload: {
-        postDispatch: function postDispatch(a) {
+        postDispatch: function (a) {
           void 0 !== a.result && a.originalEvent && (a.originalEvent.returnValue = a.result);
         }
       }
@@ -2349,15 +3031,15 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
     isPropagationStopped: wa,
     isImmediatePropagationStopped: wa,
     isSimulated: !1,
-    preventDefault: function preventDefault() {
+    preventDefault: function () {
       var a = this.originalEvent;
       this.isDefaultPrevented = va, a && !this.isSimulated && a.preventDefault();
     },
-    stopPropagation: function stopPropagation() {
+    stopPropagation: function () {
       var a = this.originalEvent;
       this.isPropagationStopped = va, a && !this.isSimulated && a.stopPropagation();
     },
-    stopImmediatePropagation: function stopImmediatePropagation() {
+    stopImmediatePropagation: function () {
       var a = this.originalEvent;
       this.isImmediatePropagationStopped = va, a && !this.isSimulated && a.stopImmediatePropagation(), this.stopPropagation();
     }
@@ -2391,7 +3073,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
     targetTouches: !0,
     toElement: !0,
     touches: !0,
-    which: function which(a) {
+    which: function (a) {
       var b = a.button;
       return null == a.which && sa.test(a.type) ? null != a.charCode ? a.charCode : a.keyCode : !a.which && void 0 !== b && ta.test(a.type) ? 1 & b ? 1 : 2 & b ? 3 : 4 & b ? 2 : 0 : a.which;
     }
@@ -2404,7 +3086,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
     r.event.special[a] = {
       delegateType: b,
       bindType: b,
-      handle: function handle(a) {
+      handle: function (a) {
         var c,
             d = this,
             e = a.relatedTarget,
@@ -2413,17 +3095,17 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
       }
     };
   }), r.fn.extend({
-    on: function on(a, b, c, d) {
+    on: function (a, b, c, d) {
       return ya(this, a, b, c, d);
     },
-    one: function one(a, b, c, d) {
+    one: function (a, b, c, d) {
       return ya(this, a, b, c, d, 1);
     },
-    off: function off(a, b, c) {
+    off: function (a, b, c) {
       var d, e;
       if (a && a.preventDefault && a.handleObj) return d = a.handleObj, r(a.delegateTarget).off(d.namespace ? d.origType + "." + d.namespace : d.origType, d.selector, d.handler), this;
 
-      if ("object" == _typeof(a)) {
+      if ("object" == typeof a) {
         for (e in a) {
           this.off(e, b, a[e]);
         }
@@ -2518,10 +3200,10 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
   }
 
   r.extend({
-    htmlPrefilter: function htmlPrefilter(a) {
+    htmlPrefilter: function (a) {
       return a.replace(za, "<$1></$2>");
     },
-    clone: function clone(a, b, c) {
+    clone: function (a, b, c) {
       var d,
           e,
           f,
@@ -2536,7 +3218,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
       } else Ha(a, h);
       return g = na(h, "script"), g.length > 0 && oa(g, !i && na(a, "script")), h;
     },
-    cleanData: function cleanData(a) {
+    cleanData: function (a) {
       for (var b, c, d, e = r.event.special, f = 0; void 0 !== (c = a[f]); f++) {
         if (U(c)) {
           if (b = c[W.expando]) {
@@ -2551,20 +3233,20 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
       }
     }
   }), r.fn.extend({
-    detach: function detach(a) {
+    detach: function (a) {
       return Ka(this, a, !0);
     },
-    remove: function remove(a) {
+    remove: function (a) {
       return Ka(this, a);
     },
-    text: function text(a) {
+    text: function (a) {
       return T(this, function (a) {
         return void 0 === a ? r.text(this) : this.empty().each(function () {
           1 !== this.nodeType && 11 !== this.nodeType && 9 !== this.nodeType || (this.textContent = a);
         });
       }, null, a, arguments.length);
     },
-    append: function append() {
+    append: function () {
       return Ja(this, arguments, function (a) {
         if (1 === this.nodeType || 11 === this.nodeType || 9 === this.nodeType) {
           var b = Ea(this, a);
@@ -2572,7 +3254,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
         }
       });
     },
-    prepend: function prepend() {
+    prepend: function () {
       return Ja(this, arguments, function (a) {
         if (1 === this.nodeType || 11 === this.nodeType || 9 === this.nodeType) {
           var b = Ea(this, a);
@@ -2580,29 +3262,29 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
         }
       });
     },
-    before: function before() {
+    before: function () {
       return Ja(this, arguments, function (a) {
         this.parentNode && this.parentNode.insertBefore(a, this);
       });
     },
-    after: function after() {
+    after: function () {
       return Ja(this, arguments, function (a) {
         this.parentNode && this.parentNode.insertBefore(a, this.nextSibling);
       });
     },
-    empty: function empty() {
+    empty: function () {
       for (var a, b = 0; null != (a = this[b]); b++) {
         1 === a.nodeType && (r.cleanData(na(a, !1)), a.textContent = "");
       }
 
       return this;
     },
-    clone: function clone(a, b) {
+    clone: function (a, b) {
       return a = null != a && a, b = null == b ? a : b, this.map(function () {
         return r.clone(this, a, b);
       });
     },
-    html: function html(a) {
+    html: function (a) {
       return T(this, function (a) {
         var b = this[0] || {},
             c = 0,
@@ -2624,7 +3306,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
         b && this.empty().append(a);
       }, null, a, arguments.length);
     },
-    replaceWith: function replaceWith() {
+    replaceWith: function () {
       var a = [];
       return Ja(this, arguments, function (b) {
         var c = this.parentNode;
@@ -2649,7 +3331,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
 
   var La = /^margin/,
       Ma = new RegExp("^(" + aa + ")(?!px)[a-z%]+$", "i"),
-      Na = function Na(b) {
+      Na = function (b) {
     var c = b.ownerDocument.defaultView;
     return c && c.opener || (c = a), c.getComputedStyle(b);
   };
@@ -2670,16 +3352,16 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
         h = d.createElement("div"),
         i = d.createElement("div");
     i.style && (i.style.backgroundClip = "content-box", i.cloneNode(!0).style.backgroundClip = "", o.clearCloneStyle = "content-box" === i.style.backgroundClip, h.style.cssText = "border:0;width:8px;height:0;top:0;left:-9999px;padding:0;margin-top:1px;position:absolute", h.appendChild(i), r.extend(o, {
-      pixelPosition: function pixelPosition() {
+      pixelPosition: function () {
         return b(), c;
       },
-      boxSizingReliable: function boxSizingReliable() {
+      boxSizingReliable: function () {
         return b(), e;
       },
-      pixelMarginRight: function pixelMarginRight() {
+      pixelMarginRight: function () {
         return b(), f;
       },
-      reliableMarginLeft: function reliableMarginLeft() {
+      reliableMarginLeft: function () {
         return b(), g;
       }
     }));
@@ -2696,7 +3378,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
 
   function Pa(a, b) {
     return {
-      get: function get() {
+      get: function () {
         return a() ? void delete this.get : (this.get = b).apply(this, arguments);
       }
     };
@@ -2758,7 +3440,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
   r.extend({
     cssHooks: {
       opacity: {
-        get: function get(a, b) {
+        get: function (a, b) {
           if (b) {
             var c = Oa(a, "opacity");
             return "" === c ? "1" : c;
@@ -2784,7 +3466,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
     cssProps: {
       "float": "cssFloat"
     },
-    style: function style(a, b, c, d) {
+    style: function (a, b, c, d) {
       if (a && 3 !== a.nodeType && 8 !== a.nodeType && a.style) {
         var e,
             f,
@@ -2792,10 +3474,10 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
             h = r.camelCase(b),
             i = Ra.test(b),
             j = a.style;
-        return i || (b = Xa(h)), g = r.cssHooks[b] || r.cssHooks[h], void 0 === c ? g && "get" in g && void 0 !== (e = g.get(a, !1, d)) ? e : j[b] : (f = _typeof(c), "string" === f && (e = ba.exec(c)) && e[1] && (c = fa(a, b, e), f = "number"), null != c && c === c && ("number" === f && (c += e && e[3] || (r.cssNumber[h] ? "" : "px")), o.clearCloneStyle || "" !== c || 0 !== b.indexOf("background") || (j[b] = "inherit"), g && "set" in g && void 0 === (c = g.set(a, c, d)) || (i ? j.setProperty(b, c) : j[b] = c)), void 0);
+        return i || (b = Xa(h)), g = r.cssHooks[b] || r.cssHooks[h], void 0 === c ? g && "get" in g && void 0 !== (e = g.get(a, !1, d)) ? e : j[b] : (f = typeof c, "string" === f && (e = ba.exec(c)) && e[1] && (c = fa(a, b, e), f = "number"), null != c && c === c && ("number" === f && (c += e && e[3] || (r.cssNumber[h] ? "" : "px")), o.clearCloneStyle || "" !== c || 0 !== b.indexOf("background") || (j[b] = "inherit"), g && "set" in g && void 0 === (c = g.set(a, c, d)) || (i ? j.setProperty(b, c) : j[b] = c)), void 0);
       }
     },
-    css: function css(a, b, c, d) {
+    css: function (a, b, c, d) {
       var e,
           f,
           g,
@@ -2805,12 +3487,12 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
     }
   }), r.each(["height", "width"], function (a, b) {
     r.cssHooks[b] = {
-      get: function get(a, c, d) {
+      get: function (a, c, d) {
         if (c) return !Qa.test(r.css(a, "display")) || a.getClientRects().length && a.getBoundingClientRect().width ? $a(a, b, d) : ea(a, Sa, function () {
           return $a(a, b, d);
         });
       },
-      set: function set(a, c, d) {
+      set: function (a, c, d) {
         var e,
             f = d && Na(a),
             g = d && Za(a, b, d, "border-box" === r.css(a, "boxSizing", !1, f), f);
@@ -2829,7 +3511,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
     border: "Width"
   }, function (a, b) {
     r.cssHooks[a + b] = {
-      expand: function expand(c) {
+      expand: function (c) {
         for (var d = 0, e = {}, f = "string" == typeof c ? c.split(" ") : [c]; d < 4; d++) {
           e[a + ca[d] + b] = f[d] || f[d - 2] || f[0];
         }
@@ -2838,7 +3520,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
       }
     }, La.test(a) || (r.cssHooks[a + b].set = Ya);
   }), r.fn.extend({
-    css: function css(a, b) {
+    css: function (a, b) {
       return T(this, function (a, b, c) {
         var d,
             e,
@@ -2864,37 +3546,37 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
 
   r.Tween = _a, _a.prototype = {
     constructor: _a,
-    init: function init(a, b, c, d, e, f) {
+    init: function (a, b, c, d, e, f) {
       this.elem = a, this.prop = c, this.easing = e || r.easing._default, this.options = b, this.start = this.now = this.cur(), this.end = d, this.unit = f || (r.cssNumber[c] ? "" : "px");
     },
-    cur: function cur() {
+    cur: function () {
       var a = _a.propHooks[this.prop];
       return a && a.get ? a.get(this) : _a.propHooks._default.get(this);
     },
-    run: function run(a) {
+    run: function (a) {
       var b,
           c = _a.propHooks[this.prop];
       return this.options.duration ? this.pos = b = r.easing[this.easing](a, this.options.duration * a, 0, 1, this.options.duration) : this.pos = b = a, this.now = (this.end - this.start) * b + this.start, this.options.step && this.options.step.call(this.elem, this.now, this), c && c.set ? c.set(this) : _a.propHooks._default.set(this), this;
     }
   }, _a.prototype.init.prototype = _a.prototype, _a.propHooks = {
     _default: {
-      get: function get(a) {
+      get: function (a) {
         var b;
         return 1 !== a.elem.nodeType || null != a.elem[a.prop] && null == a.elem.style[a.prop] ? a.elem[a.prop] : (b = r.css(a.elem, a.prop, ""), b && "auto" !== b ? b : 0);
       },
-      set: function set(a) {
+      set: function (a) {
         r.fx.step[a.prop] ? r.fx.step[a.prop](a) : 1 !== a.elem.nodeType || null == a.elem.style[r.cssProps[a.prop]] && !r.cssHooks[a.prop] ? a.elem[a.prop] = a.now : r.style(a.elem, a.prop, a.now + a.unit);
       }
     }
   }, _a.propHooks.scrollTop = _a.propHooks.scrollLeft = {
-    set: function set(a) {
+    set: function (a) {
       a.elem.nodeType && a.elem.parentNode && (a.elem[a.prop] = a.now);
     }
   }, r.easing = {
-    linear: function linear(a) {
+    linear: function (a) {
       return a;
     },
-    swing: function swing(a) {
+    swing: function (a) {
       return .5 - Math.cos(a * Math.PI) / 2;
     },
     _default: "swing"
@@ -3011,7 +3693,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
         h = r.Deferred().always(function () {
       delete i.elem;
     }),
-        i = function i() {
+        i = function () {
       if (e) return !1;
 
       for (var b = ab || fb(), c = Math.max(0, j.startTime + j.duration - b), d = c / j.duration || 0, f = 1 - d, g = 0, i = j.tweens.length; g < i; g++) {
@@ -3032,11 +3714,11 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
       startTime: ab || fb(),
       duration: c.duration,
       tweens: [],
-      createTween: function createTween(b, c) {
+      createTween: function (b, c) {
         var d = r.Tween(a, j.opts, b, c, j.opts.specialEasing[b] || j.opts.easing);
         return j.tweens.push(d), d;
       },
-      stop: function stop(b) {
+      stop: function (b) {
         var c = 0,
             d = b ? j.tweens.length : 0;
         if (e) return this;
@@ -3068,7 +3750,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
         return fa(c.elem, a, ba.exec(b), c), c;
       }]
     },
-    tweener: function tweener(a, b) {
+    tweener: function (a, b) {
       r.isFunction(a) ? (b = a, a = ["*"]) : a = a.match(L);
 
       for (var c, d = 0, e = a.length; d < e; d++) {
@@ -3076,11 +3758,11 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
       }
     },
     prefilters: [ib],
-    prefilter: function prefilter(a, b) {
+    prefilter: function (a, b) {
       b ? kb.prefilters.unshift(a) : kb.prefilters.push(a);
     }
   }), r.speed = function (a, b, c) {
-    var d = a && "object" == _typeof(a) ? r.extend({}, a) : {
+    var d = a && "object" == typeof a ? r.extend({}, a) : {
       complete: c || !c && b || r.isFunction(a) && a,
       duration: a,
       easing: c && b || b && !r.isFunction(b) && b
@@ -3089,23 +3771,23 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
       r.isFunction(d.old) && d.old.call(this), d.queue && r.dequeue(this, d.queue);
     }, d;
   }, r.fn.extend({
-    fadeTo: function fadeTo(a, b, c, d) {
+    fadeTo: function (a, b, c, d) {
       return this.filter(da).css("opacity", 0).show().end().animate({
         opacity: b
       }, a, c, d);
     },
-    animate: function animate(a, b, c, d) {
+    animate: function (a, b, c, d) {
       var e = r.isEmptyObject(a),
           f = r.speed(b, c, d),
-          g = function g() {
+          g = function () {
         var b = kb(this, r.extend({}, a), f);
         (e || W.get(this, "finish")) && b.stop(!0);
       };
 
       return g.finish = g, e || f.queue === !1 ? this.each(g) : this.queue(f.queue, g);
     },
-    stop: function stop(a, b, c) {
-      var d = function d(a) {
+    stop: function (a, b, c) {
+      var d = function (a) {
         var b = a.stop;
         delete a.stop, b(c);
       };
@@ -3126,7 +3808,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
         !b && c || r.dequeue(this, a);
       });
     },
-    finish: function finish(a) {
+    finish: function (a) {
       return a !== !1 && (a = a || "fx"), this.each(function () {
         var b,
             c = W.get(this),
@@ -3206,16 +3888,16 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
   var lb,
       mb = r.expr.attrHandle;
   r.fn.extend({
-    attr: function attr(a, b) {
+    attr: function (a, b) {
       return T(this, r.attr, a, b, arguments.length > 1);
     },
-    removeAttr: function removeAttr(a) {
+    removeAttr: function (a) {
       return this.each(function () {
         r.removeAttr(this, a);
       });
     }
   }), r.extend({
-    attr: function attr(a, b, c) {
+    attr: function (a, b, c) {
       var d,
           e,
           f = a.nodeType;
@@ -3223,7 +3905,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
     },
     attrHooks: {
       type: {
-        set: function set(a, b) {
+        set: function (a, b) {
           if (!o.radioValue && "radio" === b && B(a, "input")) {
             var c = a.value;
             return a.setAttribute("type", b), c && (a.value = c), b;
@@ -3231,7 +3913,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
         }
       }
     },
-    removeAttr: function removeAttr(a, b) {
+    removeAttr: function (a, b) {
       var c,
           d = 0,
           e = b && b.match(L);
@@ -3240,7 +3922,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
       }
     }
   }), lb = {
-    set: function set(a, b, c) {
+    set: function (a, b, c) {
       return b === !1 ? r.removeAttr(a, c) : a.setAttribute(c, c), c;
     }
   }, r.each(r.expr.match.bool.source.match(/\w+/g), function (a, b) {
@@ -3256,16 +3938,16 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
   var nb = /^(?:input|select|textarea|button)$/i,
       ob = /^(?:a|area)$/i;
   r.fn.extend({
-    prop: function prop(a, b) {
+    prop: function (a, b) {
       return T(this, r.prop, a, b, arguments.length > 1);
     },
-    removeProp: function removeProp(a) {
+    removeProp: function (a) {
       return this.each(function () {
         delete this[r.propFix[a] || a];
       });
     }
   }), r.extend({
-    prop: function prop(a, b, c) {
+    prop: function (a, b, c) {
       var d,
           e,
           f = a.nodeType;
@@ -3273,7 +3955,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
     },
     propHooks: {
       tabIndex: {
-        get: function get(a) {
+        get: function (a) {
           var b = r.find.attr(a, "tabindex");
           return b ? parseInt(b, 10) : nb.test(a.nodeName) || ob.test(a.nodeName) && a.href ? 0 : -1;
         }
@@ -3284,11 +3966,11 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
       "class": "className"
     }
   }), o.optSelected || (r.propHooks.selected = {
-    get: function get(a) {
+    get: function (a) {
       var b = a.parentNode;
       return b && b.parentNode && b.parentNode.selectedIndex, null;
     },
-    set: function set(a) {
+    set: function (a) {
       var b = a.parentNode;
       b && (b.selectedIndex, b.parentNode && b.parentNode.selectedIndex);
     }
@@ -3306,7 +3988,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
   }
 
   r.fn.extend({
-    addClass: function addClass(a) {
+    addClass: function (a) {
       var b,
           c,
           d,
@@ -3337,7 +4019,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
 
       return this;
     },
-    removeClass: function removeClass(a) {
+    removeClass: function (a) {
       var b,
           c,
           d,
@@ -3371,9 +4053,8 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
 
       return this;
     },
-    toggleClass: function toggleClass(a, b) {
-      var c = _typeof(a);
-
+    toggleClass: function (a, b) {
+      var c = typeof a;
       return "boolean" == typeof b && "string" === c ? b ? this.addClass(a) : this.removeClass(a) : r.isFunction(a) ? this.each(function (c) {
         r(this).toggleClass(a.call(this, c, qb(this), b), b);
       }) : this.each(function () {
@@ -3388,7 +4069,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
         } else void 0 !== a && "boolean" !== c || (b = qb(this), b && W.set(this, "__className__", b), this.setAttribute && this.setAttribute("class", b || a === !1 ? "" : W.get(this, "__className__") || ""));
       });
     },
-    hasClass: function hasClass(a) {
+    hasClass: function (a) {
       var b,
           c,
           d = 0;
@@ -3403,7 +4084,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
   });
   var rb = /\r/g;
   r.fn.extend({
-    val: function val(a) {
+    val: function (a) {
       var b,
           c,
           d,
@@ -3421,13 +4102,13 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
   }), r.extend({
     valHooks: {
       option: {
-        get: function get(a) {
+        get: function (a) {
           var b = r.find.attr(a, "value");
           return null != b ? b : pb(r.text(a));
         }
       },
       select: {
-        get: function get(a) {
+        get: function (a) {
           var b,
               c,
               d,
@@ -3446,7 +4127,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
 
           return h;
         },
-        set: function set(a, b) {
+        set: function (a, b) {
           var c,
               d,
               e = a.options,
@@ -3463,7 +4144,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
     }
   }), r.each(["radio", "checkbox"], function () {
     r.valHooks[this] = {
-      set: function set(a, b) {
+      set: function (a, b) {
         if (Array.isArray(b)) return a.checked = r.inArray(r(a).val(), b) > -1;
       }
     }, o.checkOn || (r.valHooks[this].get = function (a) {
@@ -3472,7 +4153,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
   });
   var sb = /^(?:focusinfocus|focusoutblur)$/;
   r.extend(r.event, {
-    trigger: function trigger(b, c, e, f) {
+    trigger: function (b, c, e, f) {
       var g,
           h,
           i,
@@ -3484,7 +4165,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
           p = l.call(b, "type") ? b.type : b,
           q = l.call(b, "namespace") ? b.namespace.split(".") : [];
 
-      if (h = i = e = e || d, 3 !== e.nodeType && 8 !== e.nodeType && !sb.test(p + r.event.triggered) && (p.indexOf(".") > -1 && (q = p.split("."), p = q.shift(), q.sort()), k = p.indexOf(":") < 0 && "on" + p, b = b[r.expando] ? b : new r.Event(p, "object" == _typeof(b) && b), b.isTrigger = f ? 2 : 3, b.namespace = q.join("."), b.rnamespace = b.namespace ? new RegExp("(^|\\.)" + q.join("\\.(?:.*\\.|)") + "(\\.|$)") : null, b.result = void 0, b.target || (b.target = e), c = null == c ? [b] : r.makeArray(c, [b]), n = r.event.special[p] || {}, f || !n.trigger || n.trigger.apply(e, c) !== !1)) {
+      if (h = i = e = e || d, 3 !== e.nodeType && 8 !== e.nodeType && !sb.test(p + r.event.triggered) && (p.indexOf(".") > -1 && (q = p.split("."), p = q.shift(), q.sort()), k = p.indexOf(":") < 0 && "on" + p, b = b[r.expando] ? b : new r.Event(p, "object" == typeof b && b), b.isTrigger = f ? 2 : 3, b.namespace = q.join("."), b.rnamespace = b.namespace ? new RegExp("(^|\\.)" + q.join("\\.(?:.*\\.|)") + "(\\.|$)") : null, b.result = void 0, b.target || (b.target = e), c = null == c ? [b] : r.makeArray(c, [b]), n = r.event.special[p] || {}, f || !n.trigger || n.trigger.apply(e, c) !== !1)) {
         if (!f && !n.noBubble && !r.isWindow(e)) {
           for (j = n.delegateType || p, sb.test(j + p) || (h = h.parentNode); h; h = h.parentNode) {
             o.push(h), i = h;
@@ -3502,7 +4183,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
         return b.type = p, f || b.isDefaultPrevented() || n._default && n._default.apply(o.pop(), c) !== !1 || !U(e) || k && r.isFunction(e[p]) && !r.isWindow(e) && (i = e[k], i && (e[k] = null), r.event.triggered = p, e[p](), r.event.triggered = void 0, i && (e[k] = i)), b.result;
       }
     },
-    simulate: function simulate(a, b, c) {
+    simulate: function (a, b, c) {
       var d = r.extend(new r.Event(), c, {
         type: a,
         isSimulated: !0
@@ -3510,12 +4191,12 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
       r.event.trigger(d, null, b);
     }
   }), r.fn.extend({
-    trigger: function trigger(a, b) {
+    trigger: function (a, b) {
       return this.each(function () {
         r.event.trigger(a, b, this);
       });
     },
-    triggerHandler: function triggerHandler(a, b) {
+    triggerHandler: function (a, b) {
       var c = this[0];
       if (c) return r.event.trigger(a, b, c, !0);
     }
@@ -3524,24 +4205,24 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
       return arguments.length > 0 ? this.on(b, null, a, c) : this.trigger(b);
     };
   }), r.fn.extend({
-    hover: function hover(a, b) {
+    hover: function (a, b) {
       return this.mouseenter(a).mouseleave(b || a);
     }
   }), o.focusin = "onfocusin" in a, o.focusin || r.each({
     focus: "focusin",
     blur: "focusout"
   }, function (a, b) {
-    var c = function c(a) {
+    var c = function (a) {
       r.event.simulate(b, a.target, r.event.fix(a));
     };
 
     r.event.special[b] = {
-      setup: function setup() {
+      setup: function () {
         var d = this.ownerDocument || this,
             e = W.access(d, b);
         e || d.addEventListener(a, c, !0), W.access(d, b, (e || 0) + 1);
       },
-      teardown: function teardown() {
+      teardown: function () {
         var d = this.ownerDocument || this,
             e = W.access(d, b) - 1;
         e ? W.access(d, b, e) : (d.removeEventListener(a, c, !0), W.remove(d, b));
@@ -3573,7 +4254,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
   function Ab(a, b, c, d) {
     var e;
     if (Array.isArray(b)) r.each(b, function (b, e) {
-      c || wb.test(a) ? d(a, e) : Ab(a + "[" + ("object" == _typeof(e) && null != e ? b : "") + "]", e, c, d);
+      c || wb.test(a) ? d(a, e) : Ab(a + "[" + ("object" == typeof e && null != e ? b : "") + "]", e, c, d);
     });else if (c || "object" !== r.type(b)) d(a, b);else for (e in b) {
       Ab(a + "[" + e + "]", b[e], c, d);
     }
@@ -3582,7 +4263,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
   r.param = function (a, b) {
     var c,
         d = [],
-        e = function e(a, b) {
+        e = function (a, b) {
       var c = r.isFunction(b) ? b() : b;
       d[d.length] = encodeURIComponent(a) + "=" + encodeURIComponent(null == c ? "" : c);
     };
@@ -3594,10 +4275,10 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
     }
     return d.join("&");
   }, r.fn.extend({
-    serialize: function serialize() {
+    serialize: function () {
       return r.param(this.serializeArray());
     },
-    serializeArray: function serializeArray() {
+    serializeArray: function () {
       return this.map(function () {
         var a = r.prop(this, "elements");
         return a ? r.makeArray(a) : this;
@@ -3781,13 +4462,13 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
         context: !0
       }
     },
-    ajaxSetup: function ajaxSetup(a, b) {
+    ajaxSetup: function (a, b) {
       return b ? Ob(Ob(a, r.ajaxSettings), b) : Ob(r.ajaxSettings, a);
     },
     ajaxPrefilter: Mb(Ib),
     ajaxTransport: Mb(Jb),
-    ajax: function ajax(b, c) {
-      "object" == _typeof(b) && (c = b, b = void 0), c = c || {};
+    ajax: function (b, c) {
+      "object" == typeof b && (c = b, b = void 0), c = c || {};
       var e,
           f,
           g,
@@ -3809,7 +4490,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
           x = "canceled",
           y = {
         readyState: 0,
-        getResponseHeader: function getResponseHeader(a) {
+        getResponseHeader: function (a) {
           var b;
 
           if (k) {
@@ -3826,23 +4507,23 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
 
           return null == b ? null : b;
         },
-        getAllResponseHeaders: function getAllResponseHeaders() {
+        getAllResponseHeaders: function () {
           return k ? g : null;
         },
-        setRequestHeader: function setRequestHeader(a, b) {
+        setRequestHeader: function (a, b) {
           return null == k && (a = w[a.toLowerCase()] = w[a.toLowerCase()] || a, v[a] = b), this;
         },
-        overrideMimeType: function overrideMimeType(a) {
+        overrideMimeType: function (a) {
           return null == k && (o.mimeType = a), this;
         },
-        statusCode: function statusCode(a) {
+        statusCode: function (a) {
           var b;
           if (a) if (k) y.always(a[y.status]);else for (b in a) {
             u[b] = [u[b], a[b]];
           }
           return this;
         },
-        abort: function abort(a) {
+        abort: function (a) {
           var b = a || x;
           return e && e.abort(b), A(0, b), this;
         }
@@ -3893,10 +4574,10 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
 
       return y;
     },
-    getJSON: function getJSON(a, b, c) {
+    getJSON: function (a, b, c) {
       return r.get(a, b, c, "json");
     },
-    getScript: function getScript(a, b) {
+    getScript: function (a, b) {
       return r.get(a, void 0, b, "script");
     }
   }), r.each(["get", "post"], function (a, b) {
@@ -3920,7 +4601,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
       "throws": !0
     });
   }, r.fn.extend({
-    wrapAll: function wrapAll(a) {
+    wrapAll: function (a) {
       var b;
       return this[0] && (r.isFunction(a) && (a = a.call(this[0])), b = r(a, this[0].ownerDocument).eq(0).clone(!0), this[0].parentNode && b.insertBefore(this[0]), b.map(function () {
         var a = this;
@@ -3932,7 +4613,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
         return a;
       }).append(this)), this;
     },
-    wrapInner: function wrapInner(a) {
+    wrapInner: function (a) {
       return r.isFunction(a) ? this.each(function (b) {
         r(this).wrapInner(a.call(this, b));
       }) : this.each(function () {
@@ -3941,13 +4622,13 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
         c.length ? c.wrapAll(a) : b.append(a);
       });
     },
-    wrap: function wrap(a) {
+    wrap: function (a) {
       var b = r.isFunction(a);
       return this.each(function (c) {
         r(this).wrapAll(b ? a.call(this, c) : a);
       });
     },
-    unwrap: function unwrap(a) {
+    unwrap: function (a) {
       return this.parent(a).not("body").each(function () {
         r(this).replaceWith(this.childNodes);
       }), this;
@@ -3967,10 +4648,9 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
   },
       Sb = r.ajaxSettings.xhr();
   o.cors = !!Sb && "withCredentials" in Sb, o.ajax = Sb = !!Sb, r.ajaxTransport(function (b) {
-    var _c, d;
-
+    var c, d;
     if (o.cors || Sb && !b.crossDomain) return {
-      send: function send(e, f) {
+      send: function (e, f) {
         var g,
             h = b.xhr();
         if (h.open(b.type, b.url, b.async, b.username, b.password), b.xhrFields) for (g in b.xhrFields) {
@@ -3982,28 +4662,28 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
           h.setRequestHeader(g, e[g]);
         }
 
-        _c = function c(a) {
+        c = function (a) {
           return function () {
-            _c && (_c = d = h.onload = h.onerror = h.onabort = h.onreadystatechange = null, "abort" === a ? h.abort() : "error" === a ? "number" != typeof h.status ? f(0, "error") : f(h.status, h.statusText) : f(Rb[h.status] || h.status, h.statusText, "text" !== (h.responseType || "text") || "string" != typeof h.responseText ? {
+            c && (c = d = h.onload = h.onerror = h.onabort = h.onreadystatechange = null, "abort" === a ? h.abort() : "error" === a ? "number" != typeof h.status ? f(0, "error") : f(h.status, h.statusText) : f(Rb[h.status] || h.status, h.statusText, "text" !== (h.responseType || "text") || "string" != typeof h.responseText ? {
               binary: h.response
             } : {
               text: h.responseText
             }, h.getAllResponseHeaders()));
           };
-        }, h.onload = _c(), d = h.onerror = _c("error"), void 0 !== h.onabort ? h.onabort = d : h.onreadystatechange = function () {
+        }, h.onload = c(), d = h.onerror = c("error"), void 0 !== h.onabort ? h.onabort = d : h.onreadystatechange = function () {
           4 === h.readyState && a.setTimeout(function () {
-            _c && d();
+            c && d();
           });
-        }, _c = _c("abort");
+        }, c = c("abort");
 
         try {
           h.send(b.hasContent && b.data || null);
         } catch (i) {
-          if (_c) throw i;
+          if (c) throw i;
         }
       },
-      abort: function abort() {
-        _c && _c();
+      abort: function () {
+        c && c();
       }
     };
   }), r.ajaxPrefilter(function (a) {
@@ -4016,7 +4696,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
       script: /\b(?:java|ecma)script\b/
     },
     converters: {
-      "text script": function textScript(a) {
+      "text script": function (a) {
         return r.globalEval(a), a;
       }
     }
@@ -4024,19 +4704,18 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
     void 0 === a.cache && (a.cache = !1), a.crossDomain && (a.type = "GET");
   }), r.ajaxTransport("script", function (a) {
     if (a.crossDomain) {
-      var b, _c2;
-
+      var b, c;
       return {
-        send: function send(e, f) {
+        send: function (e, f) {
           b = r("<script>").prop({
             charset: a.scriptCharset,
             src: a.url
-          }).on("load error", _c2 = function c(a) {
-            b.remove(), _c2 = null, a && f("error" === a.type ? 404 : 200, a.type);
+          }).on("load error", c = function (a) {
+            b.remove(), c = null, a && f("error" === a.type ? 404 : 200, a.type);
           }), d.head.appendChild(b[0]);
         },
-        abort: function abort() {
-          _c2 && _c2();
+        abort: function () {
+          c && c();
         }
       };
     }
@@ -4045,7 +4724,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
       Ub = /(=)\?(?=&|$)|\?\?/;
   r.ajaxSetup({
     jsonp: "callback",
-    jsonpCallback: function jsonpCallback() {
+    jsonpCallback: function () {
       var a = Tb.pop() || r.expando + "_" + ub++;
       return this[a] = !0, a;
     }
@@ -4075,7 +4754,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
         f,
         g = this,
         h = a.indexOf(" ");
-    return h > -1 && (d = pb(a.slice(h)), a = a.slice(0, h)), r.isFunction(b) ? (c = b, b = void 0) : b && "object" == _typeof(b) && (e = "POST"), g.length > 0 && r.ajax({
+    return h > -1 && (d = pb(a.slice(h)), a = a.slice(0, h)), r.isFunction(b) ? (c = b, b = void 0) : b && "object" == typeof b && (e = "POST"), g.length > 0 && r.ajax({
       url: a,
       type: e || "GET",
       dataType: "html",
@@ -4096,7 +4775,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
       return a === b.elem;
     }).length;
   }, r.offset = {
-    setOffset: function setOffset(a, b, c) {
+    setOffset: function (a, b, c) {
       var d,
           e,
           f,
@@ -4110,7 +4789,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
       "static" === k && (a.style.position = "relative"), h = l.offset(), f = r.css(a, "top"), i = r.css(a, "left"), j = ("absolute" === k || "fixed" === k) && (f + i).indexOf("auto") > -1, j ? (d = l.position(), g = d.top, e = d.left) : (g = parseFloat(f) || 0, e = parseFloat(i) || 0), r.isFunction(b) && (b = b.call(a, c, r.extend({}, h))), null != b.top && (m.top = b.top - h.top + g), null != b.left && (m.left = b.left - h.left + e), "using" in b ? b.using.call(a, m) : l.css(m);
     }
   }, r.fn.extend({
-    offset: function offset(a) {
+    offset: function (a) {
       if (arguments.length) return void 0 === a ? this : this.each(function (b) {
         r.offset.setOffset(this, a, b);
       });
@@ -4127,7 +4806,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
         left: 0
       };
     },
-    position: function position() {
+    position: function () {
       if (this[0]) {
         var a,
             b,
@@ -4145,7 +4824,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
         };
       }
     },
-    offsetParent: function offsetParent() {
+    offsetParent: function () {
       return this.map(function () {
         var a = this.offsetParent;
 
@@ -4191,16 +4870,16 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
       };
     });
   }), r.fn.extend({
-    bind: function bind(a, b, c) {
+    bind: function (a, b, c) {
       return this.on(a, null, b, c);
     },
-    unbind: function unbind(a, b) {
+    unbind: function (a, b) {
       return this.off(a, null, b);
     },
-    delegate: function delegate(a, b, c, d) {
+    delegate: function (a, b, c, d) {
       return this.on(b, a, c, d);
     },
-    undelegate: function undelegate(a, b, c) {
+    undelegate: function (a, b, c) {
       return 1 === arguments.length ? this.off(a, "**") : this.off(b, a || "**", c);
     }
   }), r.holdReady = function (a) {
@@ -4214,7 +4893,797 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
     return a.$ === r && (a.$ = Wb), b && a.jQuery === r && (a.jQuery = Vb), r;
   }, b || (a.jQuery = a.$ = r), r;
 });
-},{}]},{},[1])(1)
+},{}],17:[function(require,module,exports){
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+var objectCreate = Object.create || objectCreatePolyfill
+var objectKeys = Object.keys || objectKeysPolyfill
+var bind = Function.prototype.bind || functionBindPolyfill
+
+function EventEmitter() {
+  if (!this._events || !Object.prototype.hasOwnProperty.call(this, '_events')) {
+    this._events = objectCreate(null);
+    this._eventsCount = 0;
+  }
+
+  this._maxListeners = this._maxListeners || undefined;
+}
+module.exports = EventEmitter;
+
+// Backwards-compat with node 0.10.x
+EventEmitter.EventEmitter = EventEmitter;
+
+EventEmitter.prototype._events = undefined;
+EventEmitter.prototype._maxListeners = undefined;
+
+// By default EventEmitters will print a warning if more than 10 listeners are
+// added to it. This is a useful default which helps finding memory leaks.
+var defaultMaxListeners = 10;
+
+var hasDefineProperty;
+try {
+  var o = {};
+  if (Object.defineProperty) Object.defineProperty(o, 'x', { value: 0 });
+  hasDefineProperty = o.x === 0;
+} catch (err) { hasDefineProperty = false }
+if (hasDefineProperty) {
+  Object.defineProperty(EventEmitter, 'defaultMaxListeners', {
+    enumerable: true,
+    get: function() {
+      return defaultMaxListeners;
+    },
+    set: function(arg) {
+      // check whether the input is a positive number (whose value is zero or
+      // greater and not a NaN).
+      if (typeof arg !== 'number' || arg < 0 || arg !== arg)
+        throw new TypeError('"defaultMaxListeners" must be a positive number');
+      defaultMaxListeners = arg;
+    }
+  });
+} else {
+  EventEmitter.defaultMaxListeners = defaultMaxListeners;
+}
+
+// Obviously not all Emitters should be limited to 10. This function allows
+// that to be increased. Set to zero for unlimited.
+EventEmitter.prototype.setMaxListeners = function setMaxListeners(n) {
+  if (typeof n !== 'number' || n < 0 || isNaN(n))
+    throw new TypeError('"n" argument must be a positive number');
+  this._maxListeners = n;
+  return this;
+};
+
+function $getMaxListeners(that) {
+  if (that._maxListeners === undefined)
+    return EventEmitter.defaultMaxListeners;
+  return that._maxListeners;
+}
+
+EventEmitter.prototype.getMaxListeners = function getMaxListeners() {
+  return $getMaxListeners(this);
+};
+
+// These standalone emit* functions are used to optimize calling of event
+// handlers for fast cases because emit() itself often has a variable number of
+// arguments and can be deoptimized because of that. These functions always have
+// the same number of arguments and thus do not get deoptimized, so the code
+// inside them can execute faster.
+function emitNone(handler, isFn, self) {
+  if (isFn)
+    handler.call(self);
+  else {
+    var len = handler.length;
+    var listeners = arrayClone(handler, len);
+    for (var i = 0; i < len; ++i)
+      listeners[i].call(self);
+  }
+}
+function emitOne(handler, isFn, self, arg1) {
+  if (isFn)
+    handler.call(self, arg1);
+  else {
+    var len = handler.length;
+    var listeners = arrayClone(handler, len);
+    for (var i = 0; i < len; ++i)
+      listeners[i].call(self, arg1);
+  }
+}
+function emitTwo(handler, isFn, self, arg1, arg2) {
+  if (isFn)
+    handler.call(self, arg1, arg2);
+  else {
+    var len = handler.length;
+    var listeners = arrayClone(handler, len);
+    for (var i = 0; i < len; ++i)
+      listeners[i].call(self, arg1, arg2);
+  }
+}
+function emitThree(handler, isFn, self, arg1, arg2, arg3) {
+  if (isFn)
+    handler.call(self, arg1, arg2, arg3);
+  else {
+    var len = handler.length;
+    var listeners = arrayClone(handler, len);
+    for (var i = 0; i < len; ++i)
+      listeners[i].call(self, arg1, arg2, arg3);
+  }
+}
+
+function emitMany(handler, isFn, self, args) {
+  if (isFn)
+    handler.apply(self, args);
+  else {
+    var len = handler.length;
+    var listeners = arrayClone(handler, len);
+    for (var i = 0; i < len; ++i)
+      listeners[i].apply(self, args);
+  }
+}
+
+EventEmitter.prototype.emit = function emit(type) {
+  var er, handler, len, args, i, events;
+  var doError = (type === 'error');
+
+  events = this._events;
+  if (events)
+    doError = (doError && events.error == null);
+  else if (!doError)
+    return false;
+
+  // If there is no 'error' event listener then throw.
+  if (doError) {
+    if (arguments.length > 1)
+      er = arguments[1];
+    if (er instanceof Error) {
+      throw er; // Unhandled 'error' event
+    } else {
+      // At least give some kind of context to the user
+      var err = new Error('Unhandled "error" event. (' + er + ')');
+      err.context = er;
+      throw err;
+    }
+    return false;
+  }
+
+  handler = events[type];
+
+  if (!handler)
+    return false;
+
+  var isFn = typeof handler === 'function';
+  len = arguments.length;
+  switch (len) {
+      // fast cases
+    case 1:
+      emitNone(handler, isFn, this);
+      break;
+    case 2:
+      emitOne(handler, isFn, this, arguments[1]);
+      break;
+    case 3:
+      emitTwo(handler, isFn, this, arguments[1], arguments[2]);
+      break;
+    case 4:
+      emitThree(handler, isFn, this, arguments[1], arguments[2], arguments[3]);
+      break;
+      // slower
+    default:
+      args = new Array(len - 1);
+      for (i = 1; i < len; i++)
+        args[i - 1] = arguments[i];
+      emitMany(handler, isFn, this, args);
+  }
+
+  return true;
+};
+
+function _addListener(target, type, listener, prepend) {
+  var m;
+  var events;
+  var existing;
+
+  if (typeof listener !== 'function')
+    throw new TypeError('"listener" argument must be a function');
+
+  events = target._events;
+  if (!events) {
+    events = target._events = objectCreate(null);
+    target._eventsCount = 0;
+  } else {
+    // To avoid recursion in the case that type === "newListener"! Before
+    // adding it to the listeners, first emit "newListener".
+    if (events.newListener) {
+      target.emit('newListener', type,
+          listener.listener ? listener.listener : listener);
+
+      // Re-assign `events` because a newListener handler could have caused the
+      // this._events to be assigned to a new object
+      events = target._events;
+    }
+    existing = events[type];
+  }
+
+  if (!existing) {
+    // Optimize the case of one listener. Don't need the extra array object.
+    existing = events[type] = listener;
+    ++target._eventsCount;
+  } else {
+    if (typeof existing === 'function') {
+      // Adding the second element, need to change to array.
+      existing = events[type] =
+          prepend ? [listener, existing] : [existing, listener];
+    } else {
+      // If we've already got an array, just append.
+      if (prepend) {
+        existing.unshift(listener);
+      } else {
+        existing.push(listener);
+      }
+    }
+
+    // Check for listener leak
+    if (!existing.warned) {
+      m = $getMaxListeners(target);
+      if (m && m > 0 && existing.length > m) {
+        existing.warned = true;
+        var w = new Error('Possible EventEmitter memory leak detected. ' +
+            existing.length + ' "' + String(type) + '" listeners ' +
+            'added. Use emitter.setMaxListeners() to ' +
+            'increase limit.');
+        w.name = 'MaxListenersExceededWarning';
+        w.emitter = target;
+        w.type = type;
+        w.count = existing.length;
+        if (typeof console === 'object' && console.warn) {
+          console.warn('%s: %s', w.name, w.message);
+        }
+      }
+    }
+  }
+
+  return target;
+}
+
+EventEmitter.prototype.addListener = function addListener(type, listener) {
+  return _addListener(this, type, listener, false);
+};
+
+EventEmitter.prototype.on = EventEmitter.prototype.addListener;
+
+EventEmitter.prototype.prependListener =
+    function prependListener(type, listener) {
+      return _addListener(this, type, listener, true);
+    };
+
+function onceWrapper() {
+  if (!this.fired) {
+    this.target.removeListener(this.type, this.wrapFn);
+    this.fired = true;
+    switch (arguments.length) {
+      case 0:
+        return this.listener.call(this.target);
+      case 1:
+        return this.listener.call(this.target, arguments[0]);
+      case 2:
+        return this.listener.call(this.target, arguments[0], arguments[1]);
+      case 3:
+        return this.listener.call(this.target, arguments[0], arguments[1],
+            arguments[2]);
+      default:
+        var args = new Array(arguments.length);
+        for (var i = 0; i < args.length; ++i)
+          args[i] = arguments[i];
+        this.listener.apply(this.target, args);
+    }
+  }
+}
+
+function _onceWrap(target, type, listener) {
+  var state = { fired: false, wrapFn: undefined, target: target, type: type, listener: listener };
+  var wrapped = bind.call(onceWrapper, state);
+  wrapped.listener = listener;
+  state.wrapFn = wrapped;
+  return wrapped;
+}
+
+EventEmitter.prototype.once = function once(type, listener) {
+  if (typeof listener !== 'function')
+    throw new TypeError('"listener" argument must be a function');
+  this.on(type, _onceWrap(this, type, listener));
+  return this;
+};
+
+EventEmitter.prototype.prependOnceListener =
+    function prependOnceListener(type, listener) {
+      if (typeof listener !== 'function')
+        throw new TypeError('"listener" argument must be a function');
+      this.prependListener(type, _onceWrap(this, type, listener));
+      return this;
+    };
+
+// Emits a 'removeListener' event if and only if the listener was removed.
+EventEmitter.prototype.removeListener =
+    function removeListener(type, listener) {
+      var list, events, position, i, originalListener;
+
+      if (typeof listener !== 'function')
+        throw new TypeError('"listener" argument must be a function');
+
+      events = this._events;
+      if (!events)
+        return this;
+
+      list = events[type];
+      if (!list)
+        return this;
+
+      if (list === listener || list.listener === listener) {
+        if (--this._eventsCount === 0)
+          this._events = objectCreate(null);
+        else {
+          delete events[type];
+          if (events.removeListener)
+            this.emit('removeListener', type, list.listener || listener);
+        }
+      } else if (typeof list !== 'function') {
+        position = -1;
+
+        for (i = list.length - 1; i >= 0; i--) {
+          if (list[i] === listener || list[i].listener === listener) {
+            originalListener = list[i].listener;
+            position = i;
+            break;
+          }
+        }
+
+        if (position < 0)
+          return this;
+
+        if (position === 0)
+          list.shift();
+        else
+          spliceOne(list, position);
+
+        if (list.length === 1)
+          events[type] = list[0];
+
+        if (events.removeListener)
+          this.emit('removeListener', type, originalListener || listener);
+      }
+
+      return this;
+    };
+
+EventEmitter.prototype.removeAllListeners =
+    function removeAllListeners(type) {
+      var listeners, events, i;
+
+      events = this._events;
+      if (!events)
+        return this;
+
+      // not listening for removeListener, no need to emit
+      if (!events.removeListener) {
+        if (arguments.length === 0) {
+          this._events = objectCreate(null);
+          this._eventsCount = 0;
+        } else if (events[type]) {
+          if (--this._eventsCount === 0)
+            this._events = objectCreate(null);
+          else
+            delete events[type];
+        }
+        return this;
+      }
+
+      // emit removeListener for all listeners on all events
+      if (arguments.length === 0) {
+        var keys = objectKeys(events);
+        var key;
+        for (i = 0; i < keys.length; ++i) {
+          key = keys[i];
+          if (key === 'removeListener') continue;
+          this.removeAllListeners(key);
+        }
+        this.removeAllListeners('removeListener');
+        this._events = objectCreate(null);
+        this._eventsCount = 0;
+        return this;
+      }
+
+      listeners = events[type];
+
+      if (typeof listeners === 'function') {
+        this.removeListener(type, listeners);
+      } else if (listeners) {
+        // LIFO order
+        for (i = listeners.length - 1; i >= 0; i--) {
+          this.removeListener(type, listeners[i]);
+        }
+      }
+
+      return this;
+    };
+
+function _listeners(target, type, unwrap) {
+  var events = target._events;
+
+  if (!events)
+    return [];
+
+  var evlistener = events[type];
+  if (!evlistener)
+    return [];
+
+  if (typeof evlistener === 'function')
+    return unwrap ? [evlistener.listener || evlistener] : [evlistener];
+
+  return unwrap ? unwrapListeners(evlistener) : arrayClone(evlistener, evlistener.length);
+}
+
+EventEmitter.prototype.listeners = function listeners(type) {
+  return _listeners(this, type, true);
+};
+
+EventEmitter.prototype.rawListeners = function rawListeners(type) {
+  return _listeners(this, type, false);
+};
+
+EventEmitter.listenerCount = function(emitter, type) {
+  if (typeof emitter.listenerCount === 'function') {
+    return emitter.listenerCount(type);
+  } else {
+    return listenerCount.call(emitter, type);
+  }
+};
+
+EventEmitter.prototype.listenerCount = listenerCount;
+function listenerCount(type) {
+  var events = this._events;
+
+  if (events) {
+    var evlistener = events[type];
+
+    if (typeof evlistener === 'function') {
+      return 1;
+    } else if (evlistener) {
+      return evlistener.length;
+    }
+  }
+
+  return 0;
+}
+
+EventEmitter.prototype.eventNames = function eventNames() {
+  return this._eventsCount > 0 ? Reflect.ownKeys(this._events) : [];
+};
+
+// About 1.5x faster than the two-arg version of Array#splice().
+function spliceOne(list, index) {
+  for (var i = index, k = i + 1, n = list.length; k < n; i += 1, k += 1)
+    list[i] = list[k];
+  list.pop();
+}
+
+function arrayClone(arr, n) {
+  var copy = new Array(n);
+  for (var i = 0; i < n; ++i)
+    copy[i] = arr[i];
+  return copy;
+}
+
+function unwrapListeners(arr) {
+  var ret = new Array(arr.length);
+  for (var i = 0; i < ret.length; ++i) {
+    ret[i] = arr[i].listener || arr[i];
+  }
+  return ret;
+}
+
+function objectCreatePolyfill(proto) {
+  var F = function() {};
+  F.prototype = proto;
+  return new F;
+}
+function objectKeysPolyfill(obj) {
+  var keys = [];
+  for (var k in obj) if (Object.prototype.hasOwnProperty.call(obj, k)) {
+    keys.push(k);
+  }
+  return k;
+}
+function functionBindPolyfill(context) {
+  var fn = this;
+  return function () {
+    return fn.apply(context, arguments);
+  };
+}
+
+},{}],18:[function(require,module,exports){
+// shim for using process in browser
+var process = module.exports = {};
+
+// cached from whatever global is present so that test runners that stub it
+// don't break things.  But we need to wrap it in a try catch in case it is
+// wrapped in strict mode code which doesn't define any globals.  It's inside a
+// function because try/catches deoptimize in certain engines.
+
+var cachedSetTimeout;
+var cachedClearTimeout;
+
+function defaultSetTimout() {
+    throw new Error('setTimeout has not been defined');
+}
+function defaultClearTimeout () {
+    throw new Error('clearTimeout has not been defined');
+}
+(function () {
+    try {
+        if (typeof setTimeout === 'function') {
+            cachedSetTimeout = setTimeout;
+        } else {
+            cachedSetTimeout = defaultSetTimout;
+        }
+    } catch (e) {
+        cachedSetTimeout = defaultSetTimout;
+    }
+    try {
+        if (typeof clearTimeout === 'function') {
+            cachedClearTimeout = clearTimeout;
+        } else {
+            cachedClearTimeout = defaultClearTimeout;
+        }
+    } catch (e) {
+        cachedClearTimeout = defaultClearTimeout;
+    }
+} ())
+function runTimeout(fun) {
+    if (cachedSetTimeout === setTimeout) {
+        //normal enviroments in sane situations
+        return setTimeout(fun, 0);
+    }
+    // if setTimeout wasn't available but was latter defined
+    if ((cachedSetTimeout === defaultSetTimout || !cachedSetTimeout) && setTimeout) {
+        cachedSetTimeout = setTimeout;
+        return setTimeout(fun, 0);
+    }
+    try {
+        // when when somebody has screwed with setTimeout but no I.E. maddness
+        return cachedSetTimeout(fun, 0);
+    } catch(e){
+        try {
+            // When we are in I.E. but the script has been evaled so I.E. doesn't trust the global object when called normally
+            return cachedSetTimeout.call(null, fun, 0);
+        } catch(e){
+            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error
+            return cachedSetTimeout.call(this, fun, 0);
+        }
+    }
+
+
+}
+function runClearTimeout(marker) {
+    if (cachedClearTimeout === clearTimeout) {
+        //normal enviroments in sane situations
+        return clearTimeout(marker);
+    }
+    // if clearTimeout wasn't available but was latter defined
+    if ((cachedClearTimeout === defaultClearTimeout || !cachedClearTimeout) && clearTimeout) {
+        cachedClearTimeout = clearTimeout;
+        return clearTimeout(marker);
+    }
+    try {
+        // when when somebody has screwed with setTimeout but no I.E. maddness
+        return cachedClearTimeout(marker);
+    } catch (e){
+        try {
+            // When we are in I.E. but the script has been evaled so I.E. doesn't  trust the global object when called normally
+            return cachedClearTimeout.call(null, marker);
+        } catch (e){
+            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error.
+            // Some versions of I.E. have different rules for clearTimeout vs setTimeout
+            return cachedClearTimeout.call(this, marker);
+        }
+    }
+
+
+
+}
+var queue = [];
+var draining = false;
+var currentQueue;
+var queueIndex = -1;
+
+function cleanUpNextTick() {
+    if (!draining || !currentQueue) {
+        return;
+    }
+    draining = false;
+    if (currentQueue.length) {
+        queue = currentQueue.concat(queue);
+    } else {
+        queueIndex = -1;
+    }
+    if (queue.length) {
+        drainQueue();
+    }
+}
+
+function drainQueue() {
+    if (draining) {
+        return;
+    }
+    var timeout = runTimeout(cleanUpNextTick);
+    draining = true;
+
+    var len = queue.length;
+    while(len) {
+        currentQueue = queue;
+        queue = [];
+        while (++queueIndex < len) {
+            if (currentQueue) {
+                currentQueue[queueIndex].run();
+            }
+        }
+        queueIndex = -1;
+        len = queue.length;
+    }
+    currentQueue = null;
+    draining = false;
+    runClearTimeout(timeout);
+}
+
+process.nextTick = function (fun) {
+    var args = new Array(arguments.length - 1);
+    if (arguments.length > 1) {
+        for (var i = 1; i < arguments.length; i++) {
+            args[i - 1] = arguments[i];
+        }
+    }
+    queue.push(new Item(fun, args));
+    if (queue.length === 1 && !draining) {
+        runTimeout(drainQueue);
+    }
+};
+
+// v8 likes predictible objects
+function Item(fun, array) {
+    this.fun = fun;
+    this.array = array;
+}
+Item.prototype.run = function () {
+    this.fun.apply(null, this.array);
+};
+process.title = 'browser';
+process.browser = true;
+process.env = {};
+process.argv = [];
+process.version = ''; // empty string to avoid regexp issues
+process.versions = {};
+
+function noop() {}
+
+process.on = noop;
+process.addListener = noop;
+process.once = noop;
+process.off = noop;
+process.removeListener = noop;
+process.removeAllListeners = noop;
+process.emit = noop;
+process.prependListener = noop;
+process.prependOnceListener = noop;
+
+process.listeners = function (name) { return [] }
+
+process.binding = function (name) {
+    throw new Error('process.binding is not supported');
+};
+
+process.cwd = function () { return '/' };
+process.chdir = function (dir) {
+    throw new Error('process.chdir is not supported');
+};
+process.umask = function() { return 0; };
+
+},{}],19:[function(require,module,exports){
+(function (setImmediate,clearImmediate){
+var nextTick = require('process/browser.js').nextTick;
+var apply = Function.prototype.apply;
+var slice = Array.prototype.slice;
+var immediateIds = {};
+var nextImmediateId = 0;
+
+// DOM APIs, for completeness
+
+exports.setTimeout = function() {
+  return new Timeout(apply.call(setTimeout, window, arguments), clearTimeout);
+};
+exports.setInterval = function() {
+  return new Timeout(apply.call(setInterval, window, arguments), clearInterval);
+};
+exports.clearTimeout =
+exports.clearInterval = function(timeout) { timeout.close(); };
+
+function Timeout(id, clearFn) {
+  this._id = id;
+  this._clearFn = clearFn;
+}
+Timeout.prototype.unref = Timeout.prototype.ref = function() {};
+Timeout.prototype.close = function() {
+  this._clearFn.call(window, this._id);
+};
+
+// Does not start the time, just sets up the members needed.
+exports.enroll = function(item, msecs) {
+  clearTimeout(item._idleTimeoutId);
+  item._idleTimeout = msecs;
+};
+
+exports.unenroll = function(item) {
+  clearTimeout(item._idleTimeoutId);
+  item._idleTimeout = -1;
+};
+
+exports._unrefActive = exports.active = function(item) {
+  clearTimeout(item._idleTimeoutId);
+
+  var msecs = item._idleTimeout;
+  if (msecs >= 0) {
+    item._idleTimeoutId = setTimeout(function onTimeout() {
+      if (item._onTimeout)
+        item._onTimeout();
+    }, msecs);
+  }
+};
+
+// That's not how node.js implements it but the exposed api is the same.
+exports.setImmediate = typeof setImmediate === "function" ? setImmediate : function(fn) {
+  var id = nextImmediateId++;
+  var args = arguments.length < 2 ? false : slice.call(arguments, 1);
+
+  immediateIds[id] = true;
+
+  nextTick(function onNextTick() {
+    if (immediateIds[id]) {
+      // fn.call() is faster so we optimize for the common use-case
+      // @see http://jsperf.com/call-apply-segu
+      if (args) {
+        fn.apply(null, args);
+      } else {
+        fn.call(null);
+      }
+      // Prevent ids from leaking
+      exports.clearImmediate(id);
+    }
+  });
+
+  return id;
+};
+
+exports.clearImmediate = typeof clearImmediate === "function" ? clearImmediate : function(id) {
+  delete immediateIds[id];
+};
+}).call(this,require("timers").setImmediate,require("timers").clearImmediate)
+},{"process/browser.js":18,"timers":19}]},{},[13])(13)
 });
 
 	});

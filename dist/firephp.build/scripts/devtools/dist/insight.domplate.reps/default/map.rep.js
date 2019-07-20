@@ -75,10 +75,10 @@ function impl(domplate) {
       var row = domplate.util.getAncestorByClass(event.target, "value");
 
       if (row.expandable) {
-        this.toggleRow(row);
+        if (this.toggleRow(row)) {
+          event.stopPropagation();
+        }
       }
-
-      event.stopPropagation();
     },
     isCollapsible: function isCollapsible(node) {
       return node.type == "reference" || node.type == "dictionary" || node.type == "map" || node.type == "array";
@@ -102,7 +102,24 @@ function impl(domplate) {
 
       return rep[type];
     },
+    _isTagExpandable: function _isTagExpandable(tag) {
+      while (true) {
+        if (!tag.parentNode) {
+          return true;
+        }
+
+        if (tag.getAttribute("allowTagExpand") === "false") {
+          return false;
+        }
+
+        tag = tag.parentNode;
+      }
+    },
     toggleRow: function toggleRow(row) {
+      if (!this._isTagExpandable(row)) {
+        return false;
+      }
+
       var node = null;
 
       if (domplate.util.hasClass(row, "expanded")) {
@@ -119,6 +136,8 @@ function impl(domplate) {
         }, row);
         domplate.util.setClass(row, "expanded");
       }
+
+      return true;
     },
     mapIterator: function mapIterator(context, node, type) {
       var pairs = [];
@@ -211,7 +230,7 @@ var __escape__ = context.__escape__;
 var __if__ = context.__if__;
 var __loop__ = context.__loop__;
 var __link__ = context.__link__;
-return (function (__code__, __context__, __in__, __out__) {  with (this) {  with (__in__) {    __code__.push("","<span", " __dbid=\"","7430c9addac51d05c50c9b47edbb09af75f44314", "\"", " __dtid=\"","insight.domplate.reps/default/map", "\"", " class=\"","map", " ", "\"",">","<span",">",__escape__(VAR_label),"(","</span>");__out__.push(node);    __loop__.apply(this, [mapIterator(context,node,CONST_Normal), __out__, function(pair, __out__) {    __code__.push("","<div", " class=\"","pair", " ", "\"",">");__link__(pair.key.tag, __code__, __out__, {"node":pair.key.node,"context":context});    __code__.push("","<span", " class=\"","delimiter", " ", "\"",">","=>","</span>","<span", " class=\"","value", " ", "\"",">");__out__.push(onClick,pair.value.node,context,pair.value.expandable);__link__(pair.value.tag, __code__, __out__, {"node":pair.value.node,"context":context});    __code__.push("","</span>");__if__.apply(this, [pair.more, __out__, function(__out__) {    __code__.push("","<span", " class=\"","separator", " ", "\"",">",",","</span>");}]);    __code__.push("","</div>");    }]);    __code__.push("","<span",">",")","</span>","</span>");  }}})
+return (function (__code__, __context__, __in__, __out__) {  with (this) {  with (__in__) {    __code__.push("","<span", " __dbid=\"","3dd180ce224195ebd5ae4041dd5384730e8c6534", "\"", " __dtid=\"","insight.domplate.reps/default/map", "\"", " class=\"","map", " ", "\"",">","<span",">",__escape__(VAR_label),"(","</span>");__out__.push(node);    __loop__.apply(this, [mapIterator(context,node,CONST_Normal), __out__, function(pair, __out__) {    __code__.push("","<div", " class=\"","pair", " ", "\"",">");__link__(pair.key.tag, __code__, __out__, {"node":pair.key.node,"context":context});    __code__.push("","<span", " class=\"","delimiter", " ", "\"",">","=>","</span>","<span", " class=\"","value", " ", "\"",">");__out__.push(onClick,pair.value.node,context,pair.value.expandable);__link__(pair.value.tag, __code__, __out__, {"node":pair.value.node,"context":context});    __code__.push("","</span>");__if__.apply(this, [pair.more, __out__, function(__out__) {    __code__.push("","<span", " class=\"","separator", " ", "\"",">",",","</span>");}]);    __code__.push("","</div>");    }]);    __code__.push("","<span",">",")","</span>","</span>");  }}})
 }
 ,
 "shortTag":function (context) {
@@ -220,7 +239,7 @@ var __escape__ = context.__escape__;
 var __if__ = context.__if__;
 var __loop__ = context.__loop__;
 var __link__ = context.__link__;
-return (function (__code__, __context__, __in__, __out__) {  with (this) {  with (__in__) {    __code__.push("","<span", " __dbid=\"","7430c9addac51d05c50c9b47edbb09af75f44314", "\"", " __dtid=\"","insight.domplate.reps/default/map", "\"", " class=\"","map", " ", "\"",">","<span",">",__escape__(VAR_label),"(","</span>");__out__.push(node);    __loop__.apply(this, [mapIterator(context,node,CONST_Short), __out__, function(pair, __out__) {    __code__.push("","<span", " class=\"","pair", " ", "\"",">");__link__(pair.key.tag, __code__, __out__, {"node":pair.key.node,"context":context});    __code__.push("","<span", " class=\"","delimiter", " ", "\"",">","=>","</span>","<span", " class=\"","value", " ", "\"",">");__out__.push(onClick,pair.value.node,context,pair.value.expandable);__link__(pair.value.tag, __code__, __out__, {"node":pair.value.node,"context":context});    __code__.push("","</span>");__if__.apply(this, [pair.more, __out__, function(__out__) {    __code__.push("","<span", " class=\"","separator", " ", "\"",">",",","</span>");}]);    __code__.push("","</span>");    }]);    __code__.push("","<span",">",")","</span>","</span>");  }}})
+return (function (__code__, __context__, __in__, __out__) {  with (this) {  with (__in__) {    __code__.push("","<span", " __dbid=\"","3dd180ce224195ebd5ae4041dd5384730e8c6534", "\"", " __dtid=\"","insight.domplate.reps/default/map", "\"", " class=\"","map", " ", "\"",">","<span",">",__escape__(VAR_label),"(","</span>");__out__.push(node);    __loop__.apply(this, [mapIterator(context,node,CONST_Short), __out__, function(pair, __out__) {    __code__.push("","<span", " class=\"","pair", " ", "\"",">");__link__(pair.key.tag, __code__, __out__, {"node":pair.key.node,"context":context});    __code__.push("","<span", " class=\"","delimiter", " ", "\"",">","=>","</span>","<span", " class=\"","value", " ", "\"",">");__out__.push(onClick,pair.value.node,context,pair.value.expandable);__link__(pair.value.tag, __code__, __out__, {"node":pair.value.node,"context":context});    __code__.push("","</span>");__if__.apply(this, [pair.more, __out__, function(__out__) {    __code__.push("","<span", " class=\"","separator", " ", "\"",">",",","</span>");}]);    __code__.push("","</span>");    }]);    __code__.push("","<span",">",")","</span>","</span>");  }}})
 }
 ,
 "collapsedTag":function (context) {
@@ -229,7 +248,7 @@ var __escape__ = context.__escape__;
 var __if__ = context.__if__;
 var __loop__ = context.__loop__;
 var __link__ = context.__link__;
-return (function (__code__, __context__, __in__, __out__) {  with (this) {  with (__in__) {    __code__.push("","<span", " __dbid=\"","7430c9addac51d05c50c9b47edbb09af75f44314", "\"", " __dtid=\"","insight.domplate.reps/default/map", "\"", " class=\"","map", " ", "\"",">","<span",">",__escape__(VAR_label),"(","</span>","<span", " class=\"","collapsed", " ", "\"",">","... ",__escape__(getItemCount(node))," ...","</span>","<span",">",")","</span>","</span>");  }}})
+return (function (__code__, __context__, __in__, __out__) {  with (this) {  with (__in__) {    __code__.push("","<span", " __dbid=\"","3dd180ce224195ebd5ae4041dd5384730e8c6534", "\"", " __dtid=\"","insight.domplate.reps/default/map", "\"", " class=\"","map", " ", "\"",">","<span",">",__escape__(VAR_label),"(","</span>","<span", " class=\"","collapsed", " ", "\"",">","... ",__escape__(getItemCount(node))," ...","</span>","<span",">",")","</span>","</span>");  }}})
 }
 ,
 "moreTag":function (context) {
@@ -238,10 +257,10 @@ var __escape__ = context.__escape__;
 var __if__ = context.__if__;
 var __loop__ = context.__loop__;
 var __link__ = context.__link__;
-return (function (__code__, __context__, __in__, __out__) {  with (this) {  with (__in__) {    __code__.push("","<span", " __dbid=\"","7430c9addac51d05c50c9b47edbb09af75f44314", "\"", " __dtid=\"","insight.domplate.reps/default/map", "\"",">"," ... ","</span>");  }}})
+return (function (__code__, __context__, __in__, __out__) {  with (this) {  with (__in__) {    __code__.push("","<span", " __dbid=\"","3dd180ce224195ebd5ae4041dd5384730e8c6534", "\"", " __dtid=\"","insight.domplate.reps/default/map", "\"",">"," ... ","</span>");  }}})
 }
 };
-  rep.__dbid = "7430c9addac51d05c50c9b47edbb09af75f44314";
+  rep.__dbid = "3dd180ce224195ebd5ae4041dd5384730e8c6534";
   rep.__dtid = "insight.domplate.reps/default/map";
   var res = domplate.domplate(rep);
   var injectedCss = false;

@@ -174,7 +174,6 @@ function makeExports(exports) {
       }
 
       return new Promise(function (resolve, reject) {
-        console.log("Load rep:", uri);
         exports.PINF.sandbox(uri, resolve, reject);
       });
     };
@@ -221,7 +220,6 @@ function makeExports(exports) {
       if (allCss.length > 0) {
         var style = WINDOW.document.createElement('style');
         style.innerHTML = allCss.join("\n");
-        console.log("Inject <style>:", style.innerHTML);
         WINDOW.document.body.appendChild(style);
       }
 

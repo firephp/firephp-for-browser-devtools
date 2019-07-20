@@ -257,7 +257,7 @@ var __escape__ = context.__escape__;
 var __if__ = context.__if__;
 var __loop__ = context.__loop__;
 var __link__ = context.__link__;
-return (function (__code__, __context__, __in__, __out__) {  with (this) {  with (__in__) {    __code__.push("","<div", " __dbid=\"","02ce81bf834058ce5150d7be4d01e547baa84a2c", "\"", " __dtid=\"","insight.domplate.reps/default/trace", "\"", " class=\"","structures-trace", " ", "\"",">","<table", " cellpadding=\"","3", "\"", " cellspacing=\"","0", "\"",">","<tbody",">","<tr",">","<th", " class=\"","header-file", " ", "\"",">","File","</th>","<th", " class=\"","header-line", " ", "\"",">","Line","</th>","<th", " class=\"","header-inst", " ", "\"",">","Instruction","</th>","</tr>");__out__.push(node);    __loop__.apply(this, [getCallList(node), __out__, function(frame, __out__) {    __code__.push("","<tr",">","<td", " class=\"","cell-file", " ", "\"",">",__escape__(frame.file),"</td>","<td", " class=\"","cell-line", " ", "\"",">",__escape__(frame.line),"</td>","<td", " class=\"","cell-inst", " ", "\"",">","<div",">",__escape__(getFrameLabel(frame)),"(");__out__.push(frame.node,onFileClick,onFileClick);    __loop__.apply(this, [argIterator(context,frame), __out__, function(arg, __out__) {    __code__.push("","<div", " class=\"","arg", " ", "\"",">");__out__.push(onArgClick,arg.node);__link__(arg.tag, __code__, __out__, {"node":arg.node,"context":context});__if__.apply(this, [arg.more, __out__, function(__out__) {    __code__.push("","<span", " class=\"","separator", " ", "\"",">",",","</span>");}]);    __code__.push("","</div>");    }]);    __code__.push("",")","</div>","</td>","</tr>");    }]);    __code__.push("","</tbody>","</table>","</div>");  }}})
+return (function (__code__, __context__, __in__, __out__) {  with (this) {  with (__in__) {    __code__.push("","<div", " __dbid=\"","900280dccb9220e71264efb50a24debff867f7f3", "\"", " __dtid=\"","insight.domplate.reps/php/exception", "\"", " class=\"","structures-trace", " ", "\"",">","<table", " cellpadding=\"","3", "\"", " cellspacing=\"","0", "\"",">","<tbody",">","<tr",">","<th", " class=\"","header-file", " ", "\"",">","File","</th>","<th", " class=\"","header-line", " ", "\"",">","Line","</th>","<th", " class=\"","header-inst", " ", "\"",">","Instruction","</th>","</tr>");__out__.push(node);    __loop__.apply(this, [getCallList(node), __out__, function(frame, __out__) {    __code__.push("","<tr",">","<td", " class=\"","cell-file", " ", "\"",">",__escape__(frame.file),"</td>","<td", " class=\"","cell-line", " ", "\"",">",__escape__(frame.line),"</td>","<td", " class=\"","cell-inst", " ", "\"",">","<div",">",__escape__(getFrameLabel(frame)),"(");__out__.push(frame.node,onFileClick,onFileClick);    __loop__.apply(this, [argIterator(context,frame), __out__, function(arg, __out__) {    __code__.push("","<div", " class=\"","arg", " ", "\"",">");__out__.push(onArgClick,arg.node);__link__(arg.tag, __code__, __out__, {"node":arg.node,"context":context});__if__.apply(this, [arg.more, __out__, function(__out__) {    __code__.push("","<span", " class=\"","separator", " ", "\"",">",",","</span>");}]);    __code__.push("","</div>");    }]);    __code__.push("",")","</div>","</td>","</tr>");    }]);    __code__.push("","</tbody>","</table>","</div>");  }}})
 }
 ,
 "shortTag":function (context) {
@@ -266,18 +266,18 @@ var __escape__ = context.__escape__;
 var __if__ = context.__if__;
 var __loop__ = context.__loop__;
 var __link__ = context.__link__;
-return (function (__code__, __context__, __in__, __out__) {  with (this) {  with (__in__) {    __code__.push("","<span", " __dbid=\"","02ce81bf834058ce5150d7be4d01e547baa84a2c", "\"", " __dtid=\"","insight.domplate.reps/default/trace", "\"", " class=\"","structures-trace", " ", "\"",">");__out__.push(node);__link__(getCaptionTag(context,node), __code__, __out__, {"node":getCaptionNode(node)});    __code__.push("","</span>");  }}})
+return (function (__code__, __context__, __in__, __out__) {  with (this) {  with (__in__) {    __code__.push("","<span", " __dbid=\"","900280dccb9220e71264efb50a24debff867f7f3", "\"", " __dtid=\"","insight.domplate.reps/php/exception", "\"", " class=\"","structures-trace", " ", "\"",">");__out__.push(node);__link__(getCaptionTag(context,node), __code__, __out__, {"node":getCaptionNode(node)});    __code__.push("","</span>");  }}})
 }
 };
-  rep.__dbid = "02ce81bf834058ce5150d7be4d01e547baa84a2c";
-  rep.__dtid = "insight.domplate.reps/default/trace";
+  rep.__dbid = "900280dccb9220e71264efb50a24debff867f7f3";
+  rep.__dtid = "insight.domplate.reps/php/exception";
   var res = domplate.domplate(rep);
   var injectedCss = false;
 
   rep.__ensureCssInjected = function () {
     if (injectedCss) return;
     injectedCss = true;
-    domplate.loadStyle("default/trace.rep.css", options.cssBaseUrl || undefined);
+    domplate.loadStyle("php/exception.rep.css", options.cssBaseUrl || undefined);
   };
 
   Object.keys(rep).forEach(function (tagName) {

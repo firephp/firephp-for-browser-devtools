@@ -1,15 +1,18 @@
 
 
-    DIV[data-is="tag_bff60aec9a3d3cd252bc7b3cc77977d426eba95e"] .manage-panel {
+    DIV[data-is="tag_68068d8206e632473e37fecf77cfc12ada300e47"] .manage-panel {
         padding: 10px;
+        padding-left: 20px;
+        padding-right: 20px;
+        background-color: white;
     }
 
-    DIV[data-is="tag_bff60aec9a3d3cd252bc7b3cc77977d426eba95e"] .manage-panel > P {
+    DIV[data-is="tag_68068d8206e632473e37fecf77cfc12ada300e47"] .manage-panel > P {
         padding-left: 10px;
         padding-right: 10px;
     }
 
-    DIV[data-is="tag_bff60aec9a3d3cd252bc7b3cc77977d426eba95e"] LI {
+    DIV[data-is="tag_68068d8206e632473e37fecf77cfc12ada300e47"] LI {
         margin-top: 5px;
     }
         
