@@ -60,23 +60,24 @@ Preview
 Provenance
 ==========
 
-Original Source Logic under [Mozilla Public License 2.0](https://opensource.org/licenses/MPL-2.0) by [Christoph Dorn](http://christophdorn.com) since 2007.
+Copyright 2016 [Christoph Dorn](http://christophdorn.com).
+Licensed under the [Open Software License 3.0](https://opensource.org/licenses/OSL-3.0).
 
 ```
-Mozilla Public License 2.0
+Open Software License 3.0
 
 You are free to:
-    Commercial Use, Modify, Distribute, Sublicense, Place Warranty, Use Patent Claims
+    Use Commercially, Distribute, Modify, Use Patents, Use Privately
 
 Under the following terms:
-    Include Copyright, Include License, Disclose Source, Include Original
+    Disclose source, License and copyright notice, Network use is distribution, Same license
 
 You cannot:
-    Use Trademark, Hold Liable
+    Use trademark, Hold liable, Claim warranty
 ```
 
 > Well-crafted Contributions are Welcome.
 
 **INTENDED USE:** The *Logic and Code contained within* forms a **Developer Tool** and is intended to operate as part of a *Web Software Development Toolchain* on which a *Production System* operates indirectly. It is **NOT INTENDED FOR USE IN HIGH-LOAD ENVIRONMENTS** as there is *little focus on Runtime Optimization* in order to *maximize API Utility, Compatibility and Flexibility*.
 
-If you *need more* than what is contained within, study the Code, understand the Logic, and build your *Own Implementation* that is *API Compatible*. Share it with others who follow the same *Logic* and *API Contract* specified within. This Community of Users will likely want to use Your Work in their own *Software Development Toolchains*.
+If you *need more* than what is contained within, study the Code, understand the Logic, and build your *Own Implementation* that is *API Compatible*. Share it with others who follow the same *Logic* and *API Contract* specified within. This Community of Users may want to use Your Work in their own *Software Development Toolchains*.
