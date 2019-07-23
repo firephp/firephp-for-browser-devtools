@@ -130,13 +130,23 @@ function do_run {
                         /\sFirePHP\/([\.|\d]*)\s?/.test(req.headers["user-agent"])
                     ) {
 
+                        function wrap (message) {
+                            return message.length + '|' + message + '|';
+                        }
+
                         res.writeHead(200, {
                             'X-Wf-Protocol-1': 'http://meta.wildfirehq.org/Protocol/JsonStream/0.2',
                             'X-Wf-1-Plugin-1': 'http://meta.firephp.org/Wildfire/Plugin/FirePHP/Library-FirePHPCore/0.0.0master1106021548',
                             'X-Wf-1-Structure-1': 'http://meta.firephp.org/Wildfire/Structure/FirePHP/FirebugConsole/0.1',
-                            'X-Wf-1-1-1-1': '63|[{"Type":"LOG","File":"/path/to/file","Line":10},"Hello World"]|',
-                            'X-Wf-1-Index': '1'
+
+                            // @see https://github.com/firephp/firephp/issues/16
+                            'X-Wf-1-1-1-1': wrap('[{"Type":"LOG","File":"/path/to/file","Line":10},"Hello World"]'),
+                            'X-Wf-1-1-1-2': wrap('[{"Type":"INFO","File":"\/christoph\/projects\/gi0.FireConsole.org\/rep.js\/examples\/03-FirePHPCore\/index.php","Line":75},"\\u0427\\u0442\\u043e-\\u0442\\u043e"]'),
+                            'X-Wf-1-1-1-3': wrap('[{"Type":"INFO","File":"\/christoph\/projects\/gi0.FireConsole.org\/rep.js\/examples\/03-FirePHPCore\/index.php","Line":76},"Od\\u00f3metro"]'),
+
+                            'X-Wf-1-Index': '3'
                         });
+
 
                         res.end("FirePHP Core formatted messages sent in HTTP response headers.");
                     } else {

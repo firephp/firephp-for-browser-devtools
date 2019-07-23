@@ -59,16 +59,30 @@ Provenance
 ==========
 
 Copyright 2016 [Christoph Dorn](http://christophdorn.com).
-Licensed under the [Open Software License 3.0](https://opensource.org/licenses/OSL-3.0).
+Licensed under the [Open Software License (OSL 3.0)](https://opensource.org/licenses/OSL-3.0).
+Contributions must be licensed under the [Academic Free License (AFL 3.0)](https://opensource.org/licenses/AFL-3.0).
+Learn about the OSL & AFL Licenses [here](http://rosenlaw.com/OSL3.0-explained.htm).
 
 ```
-Open Software License 3.0
+Open Software License (OSL) 3.0
 
 You are free to:
     Use Commercially, Distribute, Modify, Use Patents, Use Privately
 
 Under the following terms:
     Disclose source, License and copyright notice, Network use is distribution, Same license
+
+You cannot:
+    Use trademark, Hold liable, Claim warranty
+```
+```
+Academic Free License (AFL) 3.0
+
+You are free to:
+    Use Commercially, Distribute, Modify, Use Patents, Use Privately
+
+Under the following terms:
+    License and copyright notice
 
 You cannot:
     Use trademark, Hold liable, Claim warranty

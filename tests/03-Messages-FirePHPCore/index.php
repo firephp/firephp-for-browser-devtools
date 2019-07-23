@@ -34,6 +34,22 @@ if ($_SERVER["HTTP_CACHE_CONTROL"] == "max-age=0") {
         $firephp->groupEnd();
     $firephp->groupEnd();
 
+
+    // @see https://github.com/firephp/firephp-for-firefox-devtools/issues/40
+    class Foo {
+        function bar () {}
+    }
+    $foo = new Foo();
+    $firephp->warn($foo->bar(),'shows up in panel');
+    $firephp->warn($foo,'is not displayed in panel');
+    $firephp->warn($foo->bar(),'is now also not displayed in panel');
+
+
+    // @see https://github.com/firephp/firephp/issues/16
+    $firephp->info("Что-то");
+    $firephp->info("Odómetro");
+
+
     $firephp->fb($arr,'RequestHeaders',FirePHP::DUMP);
 
     echo("FirePHP formatted messages sent in HTTP response headers.");
