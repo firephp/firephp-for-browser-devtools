@@ -6347,13 +6347,15 @@ exports.main = function (JSONREP, node) {
 },{"./decoders/FirebugConsole-0.1":100,"./encoders/BrowserApi-0.1":101,"eventemitter2":2,"insight.domplate.reps":126,"lodash/merge":96,"wildfire-for-js/lib/wildfire":113}],100:[function(require,module,exports){
 "use strict";
 
+function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
 
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
 
-var VERBOSE = false;
+var VERBOSE = true;
 
 var ENCODER = require("insight-for-js/lib/encoder/default");
 
@@ -6409,6 +6411,7 @@ var Decoder = function () {
             node.value.body = dataNode.origin.value.map(function (row) {
               return row.value;
             });
+            node.instances = dataNode.instances;
           } else if (meta["renderer"] === "http://registry.pinf.org/cadorn.org/renderers/packages/insight/0:structures/trace") {
               node.meta = {
                 "lang": "default",
@@ -6463,15 +6466,26 @@ var Decoder = function () {
                     })
                   };
                 });
-              } else {
-                dataNode = encoder.encode(data, {
-                  "lang": "php"
-                }, {
-                  "jsonEncode": false
-                });
-                node.meta = dataNode.origin.meta;
-                node.value = dataNode.origin.value;
-              }
+              } else if (data && _typeof(data) === "object" && typeof data.__className === "string") {
+                  dataNode = encoder.encode(data, {
+                    "lang": "php"
+                  }, {
+                    "jsonEncode": false
+                  });
+                  node.meta = dataNode.origin.meta;
+                  node.type = dataNode.origin.type;
+                  node.value = dataNode.origin.value;
+                  node.instances = dataNode.instances;
+                } else {
+                  dataNode = encoder.encode(data, {
+                    "lang": "php"
+                  }, {
+                    "jsonEncode": false
+                  });
+                  node.meta = dataNode.origin.meta;
+                  node.value = dataNode.origin.value;
+                  node.instances = dataNode.instances;
+                }
         }
 
         ['priority', 'label', 'file', 'line', 'target', 'group', 'group.start', 'group.end', 'group.title', 'group.expand'].forEach(function (name) {
@@ -12005,7 +12019,7 @@ Encoder.prototype.encodeObject = function(meta, object, objectDepth, arrayDepth,
     }
     
     var self = this,
-        ret = {"type": "dictionary", "dictionary": {}};
+        ret = {"type": "dictionary", "value": {}};
 
     // HACK: This should be done via an option
     // FirePHPCore compatibility: we have an object if a class name is present
@@ -12050,13 +12064,13 @@ Encoder.prototype.encodeObject = function(meta, object, objectDepth, arrayDepth,
                 if(parts.length==2 && parts[1]=="static") {
                     val["lang.static"] = 1;
                 }
-                ret["dictionary"][name] = val;
+                ret["value"][name] = val;
             } else {
-                ret["dictionary"][item[0]] = self.encodeVariable(meta, item[1], objectDepth + 1, 1, overallDepth + 1);
+                ret["value"][item[0]] = self.encodeVariable(meta, item[1], objectDepth + 1, 1, overallDepth + 1);
             }
         } catch(e) {
             console.warn(e);
-            ret["dictionary"]["__oops__"] = {"notice": "Error encoding member (" + e + ")"};
+            ret["value"]["__oops__"] = {"notice": "Error encoding member (" + e + ")"};
         }
     });
 
@@ -12098,6 +12112,22 @@ function Renderer (options) {
                     throw err;
                 }
             }
+        }
+
+        self.forNode = function (rootNode) {
+            const context = Object.create(self);
+
+            context.getInstanceNode = function (node) {
+                if (
+                    !rootNode.instances ||
+                    !rootNode.instances[node.value]
+                ) {
+                    console.error("node", node);
+                    throw new Error("Object instance for reference '" + node.value + "' not found 'instances'!");
+                }
+                return rootNode.instances[node.value];
+            }
+            return context;
         }
     }
 
@@ -12238,6 +12268,12 @@ function Renderer (options) {
                     if (node.value.instance) {
                         traverse(node.value.instance);
                     } else
+                    if (
+                        node.instances &&
+                        typeof node.value === "number"
+                    ) {
+                        traverse(node.instances[node.value]);
+                    } else
                     if (typeof node.getInstance === 'function') {
                         traverse(node.getInstance());
                     }
@@ -12312,7 +12348,7 @@ function Renderer (options) {
                 }
 
                 wrapperRep[options.tagName || 'tag'].replace({
-                    context: context,
+                    context: context.forNode(node),
                     node: node
                 }, el);
 
@@ -12322,7 +12358,7 @@ function Renderer (options) {
             var rep = context.repForNode(node);
 
             rep[options.tagName || 'tag'].replace({
-                context: context,
+                context: context.forNode(node),
                 node: node
             }, el);
         });

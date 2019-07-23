@@ -21,7 +21,7 @@ function impl(domplate) {
       "class": "integer"
     }, "$node|getValue"),
     getValue: function getValue(node) {
-      return this._addCommas(node.value);
+      return node.value;
     },
     _addCommas: function _addCommas(nStr) {
       nStr += '';
@@ -70,7 +70,7 @@ var __escape__ = context.__escape__;
 var __if__ = context.__if__;
 var __loop__ = context.__loop__;
 var __link__ = context.__link__;
-return (function (__code__, __context__, __in__, __out__) {  with (this) {  with (__in__) {    __code__.push("","<span", " __dbid=\"","9406ebbefc2c40c290abc4d508f50073080f46fa", "\"", " __dtid=\"","insight.domplate.reps/php/integer", "\"", " class=\"","integer", " ", "\"",">",__escape__(getValue(node)),"</span>");  }}})
+return (function (__code__, __context__, __in__, __out__) {  with (this) {  with (__in__) {    __code__.push("","<span", " __dbid=\"","5ed341c51e0e5ac9d3dc49339a6e69b8d999d256", "\"", " __dtid=\"","insight.domplate.reps/php/integer", "\"", " class=\"","integer", " ", "\"",">",__escape__(getValue(node)),"</span>");  }}})
 }
 ,
 "shortTag":function (context) {
@@ -79,10 +79,10 @@ var __escape__ = context.__escape__;
 var __if__ = context.__if__;
 var __loop__ = context.__loop__;
 var __link__ = context.__link__;
-return (function (__code__, __context__, __in__, __out__) {  with (this) {  with (__in__) {    __code__.push("","<span", " __dbid=\"","9406ebbefc2c40c290abc4d508f50073080f46fa", "\"", " __dtid=\"","insight.domplate.reps/php/integer", "\"", " class=\"","integer", " ", "\"",">",__escape__(getValue(node)),"</span>");  }}})
+return (function (__code__, __context__, __in__, __out__) {  with (this) {  with (__in__) {    __code__.push("","<span", " __dbid=\"","5ed341c51e0e5ac9d3dc49339a6e69b8d999d256", "\"", " __dtid=\"","insight.domplate.reps/php/integer", "\"", " class=\"","integer", " ", "\"",">",__escape__(getValue(node)),"</span>");  }}})
 }
 };
-  rep.__dbid = "9406ebbefc2c40c290abc4d508f50073080f46fa";
+  rep.__dbid = "5ed341c51e0e5ac9d3dc49339a6e69b8d999d256";
   rep.__dtid = "insight.domplate.reps/php/integer";
   var res = domplate.domplate(rep);
   var injectedCss = false;

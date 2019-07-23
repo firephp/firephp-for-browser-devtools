@@ -1,0 +1,92 @@
+
+SPAN.dictionary[__dbid="fc2f04314c99af4367ff734e927c773cb9b1251b"] > SPAN {
+    color: #9C9C9C;
+}
+
+SPAN.dictionary[__dbid="fc2f04314c99af4367ff734e927c773cb9b1251b"] > SPAN.collapsed {
+    color: #0000FF;
+    font-weight: normal;
+    padding-left: 5px;
+    padding-right: 5px;
+}
+
+SPAN.dictionary[__dbid="fc2f04314c99af4367ff734e927c773cb9b1251b"] > SPAN.summary {
+    color: #0000FF;
+    font-weight: normal;
+    padding-left: 5px;
+    padding-right: 5px;
+}
+
+SPAN.dictionary[__dbid="fc2f04314c99af4367ff734e927c773cb9b1251b"] > SPAN.member {
+    color: #9C9C9C;
+}
+
+SPAN.dictionary[__dbid="fc2f04314c99af4367ff734e927c773cb9b1251b"] > DIV.member {
+    display: block;
+    padding-left: 20px;
+}
+SPAN.dictionary[__dbid="fc2f04314c99af4367ff734e927c773cb9b1251b"] > DIV.member.expandable {
+    background-image: url(images/twisty-closed.png);
+    background-repeat: no-repeat;
+    background-position: 6px 2px;
+    cursor: pointer;
+}
+SPAN.dictionary[__dbid="fc2f04314c99af4367ff734e927c773cb9b1251b"] > DIV.member.expandable.expanded {
+    background-image: url(images/twisty-open.png);
+}
+
+SPAN.dictionary[__dbid="fc2f04314c99af4367ff734e927c773cb9b1251b"] > .member > SPAN.name {
+    color: #E59D07;
+    font-weight: normal;
+}
+
+SPAN.dictionary[__dbid="fc2f04314c99af4367ff734e927c773cb9b1251b"] > .member > SPAN.value {
+    font-weight: normal;
+}
+
+SPAN.dictionary[__dbid="fc2f04314c99af4367ff734e927c773cb9b1251b"] > .member > SPAN.delimiter, SPAN.dictionary > .member > SPAN.separator, SPAN.dictionary > .member SPAN.more {
+    color: #9C9C9C;
+    padding-left: 2px;
+    padding-right: 2px;
+}        
+
+
+SPAN.dictionary[__dbid="fc2f04314c99af4367ff734e927c773cb9b1251b"] > SPAN {
+    color: brown;
+    font-weight: bold;
+}
+SPAN.dictionary[__dbid="fc2f04314c99af4367ff734e927c773cb9b1251b"] > DIV.member {
+    display: block;
+    padding-left: 20px;
+}
+SPAN.dictionary[__dbid="fc2f04314c99af4367ff734e927c773cb9b1251b"] > .member > SPAN.name {
+    color: black;
+    padding-left: 12px;
+}
+SPAN.dictionary[__dbid="fc2f04314c99af4367ff734e927c773cb9b1251b"] > .member > SPAN.name[decorator=private-static] {
+  background: url(images/object-member-visibility-sprite.png) no-repeat -4px -2px;
+}
+SPAN.dictionary[__dbid="fc2f04314c99af4367ff734e927c773cb9b1251b"] > .member > SPAN.name[decorator=protected-static] {
+  background: url(images/object-member-visibility-sprite.png) no-repeat -4px -18px;
+}
+SPAN.dictionary[__dbid="fc2f04314c99af4367ff734e927c773cb9b1251b"] > .member > SPAN.name[decorator=public-static] {
+  background: url(images/object-member-visibility-sprite.png) no-repeat -4px -34px;
+}
+SPAN.dictionary[__dbid="fc2f04314c99af4367ff734e927c773cb9b1251b"] > .member > SPAN.name[decorator=undeclared-static] {
+  background: url(images/object-member-visibility-sprite.png) no-repeat -4px -50px;
+}
+SPAN.dictionary[__dbid="fc2f04314c99af4367ff734e927c773cb9b1251b"] > .member > SPAN.name[decorator=private] {
+  background: url(images/object-member-visibility-sprite.png) no-repeat -4px -66px;
+}
+SPAN.dictionary[__dbid="fc2f04314c99af4367ff734e927c773cb9b1251b"] > .member > SPAN.name[decorator=protected] {
+  background: url(images/object-member-visibility-sprite.png) no-repeat -4px -82px;
+}
+SPAN.dictionary[__dbid="fc2f04314c99af4367ff734e927c773cb9b1251b"] > .member > SPAN.name[decorator=public] {
+  background: url(images/object-member-visibility-sprite.png) no-repeat -4px -98px;
+}
+SPAN.dictionary[__dbid="fc2f04314c99af4367ff734e927c773cb9b1251b"] > .member > SPAN.name[decorator=undeclared] {
+  background: url(images/object-member-visibility-sprite.png) no-repeat -4px -114px;
+}
+SPAN.dictionary[__dbid="fc2f04314c99af4367ff734e927c773cb9b1251b"] > .member > SPAN.delimiter, SPAN.dictionary > .member > SPAN.separator, SPAN.dictionary > .member SPAN.more {
+    color: brown;
+}
