@@ -226,6 +226,6 @@ elif [ "$ARGS_1" == "sign" ]; then
         exit 0
     fi
 
-    MOZILLA_ADDONS_CHANNE="listed" do_sign
+    MOZILLA_ADDONS_CHANNEL="listed" do_sign
     #do_extract
 fi
