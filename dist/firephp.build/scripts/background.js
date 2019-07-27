@@ -3230,7 +3230,7 @@ exports.B_TRANSCODE = function(bytes, offset, length, sourceCharset, targetChars
 };
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":31}],19:[function(require,module,exports){
+},{"buffer":34}],19:[function(require,module,exports){
 
 // -- kriskowal Kris Kowal Copyright (C) 2009-2010 MIT License
 
@@ -5882,7 +5882,7 @@ exports.title = function (value, delimiter) {
 }();
 
 }).call(this,require('_process'))
-},{"_process":33}],23:[function(require,module,exports){
+},{"_process":36}],23:[function(require,module,exports){
 (function (setImmediate){
 "use strict";
 
@@ -5925,6 +5925,12 @@ function broadcastForContext(context, message) {
 
 WILDFIRE.on("message.firephp", function (message) {
   if (WILDFIRE.VERBOSE) console.log("[background] WILDFIRE.on -| message.firephp (message):", message);
+  console.log("BROADCAST MESSAGE", {
+    sender: message.sender,
+    receiver: message.receiver,
+    meta: message.meta,
+    data: message.data
+  });
   broadcastForContext(message.context, {
     message: {
       sender: message.sender,
@@ -6057,7 +6063,7 @@ WILDFIRE.on("destroy", function () {
   BROWSER.tabs.onRemoved.removeListener(tabs_onRemoved);
 });
 }).call(this,require("timers").setImmediate)
-},{"./wildfire":29,"timers":34}],24:[function(require,module,exports){
+},{"./wildfire":29,"timers":37}],24:[function(require,module,exports){
 "use strict";
 
 exports.for = function (API) {
@@ -6326,6 +6332,13 @@ var REQUEST_OBSERVER = require("./adapters/http-request-observer").for(API);
 
 var RESPONSE_OBSERVER = require("./adapters/http-response-observer").for(API);
 
+var ENCODER = require("insight-for-js/lib/encoder/default");
+
+var encoder = ENCODER.Encoder();
+encoder.setOption("maxObjectDepth", 1000);
+encoder.setOption("maxArrayDepth", 1000);
+encoder.setOption("maxOverallDepth", 1000);
+
 var SETTINGS = require("./settings");
 
 var forceEnabled = false;
@@ -6334,8 +6347,64 @@ API.forcedEnable = function (oo) {
   forceEnabled = oo;
 };
 
-API.on.chromeLoggerMessage = function (message) {
-  API.emit("message.chromelogger", message);
+API.on.chromeLoggerMessage = function (message, context) {
+  try {
+    var i, ic, j, jc;
+
+    var _loop = function () {
+      var log = {};
+
+      for (j = 0, jc = message.columns.length; j < jc; j++) {
+        log[message.columns[j]] = message.rows[i][j];
+      }
+
+      var meta = {
+        "msg.preprocessor": "FirePHPCoreCompatibility",
+        "lang.id": "registry.pinf.org/cadorn.org/github/renderers/packages/php/master",
+        "priority": log.type
+      };
+
+      if (log.backtrace) {
+        var m = log.backtrace.match(/^([^:]+?)(\s*:\s*(\d+))?$/);
+
+        if (m) {
+          meta.file = m[1];
+
+          if (m[3] !== '') {
+            meta.line = parseInt(m[3]);
+          }
+        }
+      }
+
+      if (log.log.length === 1) {
+        log.log = log.log[0];
+      }
+
+      var dataNode = encoder.encode(log.log, {
+        "lang": "php"
+      }, {
+        "jsonEncode": false
+      });
+      var node = dataNode.origin;
+      Object.keys(meta).forEach(function (name) {
+        node.meta[name] = meta[name];
+      });
+      var msg = {
+        "context": context,
+        "sender": "https://github.com/ccampbell/chromelogger",
+        "receiver": "https://gi0.FireConsole.org/rep.js/InsightTree/0.1",
+        "meta": "{}",
+        "data": node
+      };
+      API.emit("message.firephp", msg);
+    };
+
+    for (i = 0, ic = message.rows.length; i < ic; i++) {
+      _loop();
+    }
+  } catch (err) {
+    console.error("Error formatting chromelogger message:", err);
+  }
 };
 
 API.on.insightMessage = function (message) {
@@ -6452,27 +6521,442 @@ API.on("http.response", function (response) {
       try {
         var message = decodeURIComponent(escape(atob(header.value)));
         message = JSON.parse(message);
-        API.on.chromeLoggerMessage(message);
+        API.on.chromeLoggerMessage(message, response.request.context);
       } catch (err) {
         console.error("header", header);
         console.error("Error processing message:", err);
       }
     });
-  } else {
-    httpHeaderChannel.parseReceived(response.headers, {
-      "id": response.request.id,
-      "url": response.request.url,
-      "hostname": response.request.hostname,
-      "context": response.request.context,
-      "port": response.request.port,
-      "method": response.request.method,
-      "status": response.status,
-      "contentType": response.contentType,
-      "requestHeaders": response.request.headers
-    });
   }
+
+  httpHeaderChannel.parseReceived(response.headers, {
+    "id": response.request.id,
+    "url": response.request.url,
+    "hostname": response.request.hostname,
+    "context": response.request.context,
+    "port": response.request.port,
+    "method": response.request.method,
+    "status": response.status,
+    "contentType": response.contentType,
+    "requestHeaders": response.request.headers
+  });
 });
-},{"./adapters/http-request-observer":24,"./adapters/http-response-observer":25,"./receivers/firephp":26,"./receivers/insight":27,"./settings":28,"eventemitter2":22,"wildfire-for-js":12}],30:[function(require,module,exports){
+},{"./adapters/http-request-observer":24,"./adapters/http-response-observer":25,"./receivers/firephp":26,"./receivers/insight":27,"./settings":28,"eventemitter2":22,"insight-for-js/lib/encoder/default":30,"wildfire-for-js":12}],30:[function(require,module,exports){
+
+var UTIL = require("fp-modules-for-nodejs/lib/util");
+var JSON = require("fp-modules-for-nodejs/lib/json");
+
+var Encoder = exports.Encoder = function() {
+    if (!(this instanceof exports.Encoder))
+        return new exports.Encoder();
+    this.options = {
+        "maxObjectDepth": 4,
+        "maxArrayDepth": 4,
+        "maxOverallDepth": 6,
+        "includeLanguageMeta": true
+    };
+}
+
+Encoder.prototype.setOption = function(name, value) {
+    this.options[name] = value;
+}
+
+Encoder.prototype.setOrigin = function(variable) {
+    this.origin = variable;
+    // reset some variables
+    this.instances = [];
+    return true;
+}
+
+Encoder.prototype.encode = function(data, meta, options) {
+
+    options = options || {};
+
+    if(typeof data != "undefined") {
+        this.setOrigin(data);
+    }
+
+    // TODO: Use meta["fc.encoder.options"] to control encoding
+
+    var graph = {};
+    
+    try {
+        if(typeof this.origin != "undefined") {
+            graph["origin"] = this.encodeVariable(meta, this.origin);
+        }
+    } catch(err) {
+        console.warn("Error encoding variable", err.stack);
+        throw err;
+    }
+
+    if(UTIL.len(this.instances)>0) {
+        graph["instances"] = [];
+        this.instances.forEach(function(instance) {
+            graph["instances"].push(instance[1]);
+        });
+    }
+
+    if(UTIL.has(options, "jsonEncode") && !options.jsonEncode) {
+        return graph;
+    }
+
+    try {
+        return JSON.encode(graph);
+    } catch(e) {
+        console.warn("Error jsonifying object graph" + e);
+        throw e;
+    }
+    return null;
+}
+
+function setMeta (node, name, value) {
+    node.meta = node.meta || {};
+    node.meta[name] = value;
+}
+
+function completeWithMeta (meta, node) {
+    node.meta = node.meta || {};
+    Object.keys(meta).forEach(function (name) {
+        if (typeof node.meta[name] === 'undefined') {
+            node.meta[name] = meta[name];
+        }
+    });
+    return node;
+}
+
+Encoder.prototype.encodeVariable = function(meta, variable, objectDepth, arrayDepth, overallDepth) {
+    objectDepth = objectDepth || 1;
+    arrayDepth = arrayDepth || 1;
+    overallDepth = overallDepth || 1;
+    
+    if(variable===null) {
+        var ret = {"type": "constant", "value": "null"};
+        if(this.options["includeLanguageMeta"]) {
+            setMeta(ret, "lang.type", "null");
+        }
+        ret = completeWithMeta(meta, ret);
+        return ret;
+    } else
+    if(variable===true || variable===false) {
+        var ret = {"type": "constant", "value": (variable===true)?"true":"false"};
+        if(this.options["includeLanguageMeta"]) {
+            setMeta(ret, "lang.type", "boolean");
+        }
+        ret = completeWithMeta(meta, ret);
+        return ret;
+    }
+
+    var type = typeof variable;
+    if(type=="undefined") {
+        var ret = {"type": "constant", "value": "undefined"};
+        if(this.options["includeLanguageMeta"]) {
+            setMeta(ret, "lang.type", "undefined");
+        }
+        completeWithMeta(meta, ret);
+        return ret;
+    } else
+    if(type=="number") {
+        if(Math.round(variable)==variable) {
+            var ret = {"type": "string", "value": ""+variable};
+            if(this.options["includeLanguageMeta"]) {
+                setMeta(ret, "lang.type", "integer");
+            }
+            completeWithMeta(meta, ret);
+            return ret;
+        } else {
+            var ret = {"type": "string", "value": ""+variable};
+            if(this.options["includeLanguageMeta"]) {
+                setMeta(ret, "lang.type", "float");
+            }
+            completeWithMeta(meta, ret);
+            return ret;
+        }
+    } else
+    if(type=="string") {
+        // HACK: This should be done via an option
+        // FirePHPCore compatibility: Detect resource string
+        if(variable=="** Excluded by Filter **") {
+            var ret = {"type": "string", "value": variable};
+            setMeta(ret, "encoder.notice", "Excluded by Filter");
+            setMeta(ret, "encoder.trimmed", true);
+            if(this.options["includeLanguageMeta"]) {
+                setMeta(ret, "lang.type", "string");
+            }
+            completeWithMeta(meta, ret);
+            return ret;
+        } else
+        if(variable.match(/^\*\*\sRecursion\s\([^\(]*\)\s\*\*$/)) {
+            var ret = {"type": "string", "value": variable};
+            setMeta(ret, "encoder.notice", "Recursion");
+            setMeta(ret, "encoder.trimmed", true);
+            if(this.options["includeLanguageMeta"]) {
+                setMeta(ret, "lang.type", "string");
+            }
+            completeWithMeta(meta, ret);
+            return ret;
+        } else
+        if(variable.match(/^\*\*\sResource\sid\s#\d*\s\*\*$/)) {
+            var ret = {"type": "string", "value": variable.substring(3, variable.length-3)};
+            if(this.options["includeLanguageMeta"]) {
+                setMeta(ret, "lang.type", "resource");
+            }
+            completeWithMeta(meta, ret);
+            return ret;
+        } else {
+            var ret = {"type": "string", "value": variable};
+            if(this.options["includeLanguageMeta"]) {
+                setMeta(ret, "lang.type", "string");
+            }
+            completeWithMeta(meta, ret);
+            return ret;
+        }
+    }
+
+    if (variable && variable.__no_serialize === true) {
+        var ret = {"type": "string", "value": "Object"};
+        setMeta(ret, "encoder.notice", "Excluded by __no_serialize");
+        setMeta(ret, "encoder.trimmed", true);
+        completeWithMeta(meta, ret);
+        return ret;
+    }
+
+    if(type=="function") {
+        var ret = {"type": "string", "string": ""+variable};
+        if(this.options["includeLanguageMeta"]) {
+            setMeta(ret, "lang.type", "function");
+        }
+        completeWithMeta(meta, ret);
+        return ret;
+    } else
+    if(type=="object") {
+
+        try {
+            if(UTIL.isArrayLike(variable)) {
+                var ret = {
+                    "type": "array",
+                    "value": this.encodeArray(meta, variable, objectDepth, arrayDepth, overallDepth)
+                };
+                if(this.options["includeLanguageMeta"]) {
+                    setMeta(ret, "lang.type", "array");
+                }
+                ret = completeWithMeta(meta, ret);
+                return ret;
+            }
+        } catch (err) {
+// TODO: Find a better way to encode variables that cause security exceptions when accessed etc...
+            var ret = {"type": "string", "string": "Cannot serialize"};
+            setMeta(ret, "encoder.notice", "Cannot serialize");
+            setMeta(ret, "encoder.trimmed", true);
+            completeWithMeta(meta, ret);
+            return ret;
+        }
+        // HACK: This should be done via an option
+        // FirePHPCore compatibility: we only have an object if a class name is present
+
+        if(typeof variable["__className"] != "undefined"  ) {
+            var ret = {
+                "type": "reference",
+                "value": this.encodeInstance(meta, variable, objectDepth, arrayDepth, overallDepth)
+            };
+            completeWithMeta(meta, ret);
+            return ret;
+        } else {
+            var ret;
+            if (/^\[Exception\.\.\.\s/.test(variable)) {
+                ret = {
+                    "type": "map",
+                    "value": this.encodeException(meta, variable, objectDepth, arrayDepth, overallDepth)
+                };
+            } else {
+                ret = {
+                    "type": "map",
+                    "value": this.encodeAssociativeArray(meta, variable, objectDepth, arrayDepth, overallDepth)
+                };
+            }
+            if(this.options["includeLanguageMeta"]) {
+                setMeta(ret, "lang.type", "map");
+            }
+            completeWithMeta(meta, ret);
+            return ret;
+        }
+    }
+
+    var ret = {"type": "string", "value": "Variable with type '" + type + "' unknown: "+variable};
+    if(this.options["includeLanguageMeta"]) {
+        setMeta(ret, "lang.type", "unknown");
+    }
+    completeWithMeta(meta, ret);
+    return ret;
+//    return "["+(typeof variable)+"]["+variable+"]";    
+}
+
+Encoder.prototype.encodeArray = function(meta, variable, objectDepth, arrayDepth, overallDepth) {
+    objectDepth = objectDepth || 1;
+    arrayDepth = arrayDepth || 1;
+    overallDepth = overallDepth || 1;
+    if(arrayDepth > this.options["maxArrayDepth"]) {
+        return {"notice": "Max Array Depth (" + this.options["maxArrayDepth"] + ")"};
+    } else
+    if(overallDepth > this.options["maxOverallDepth"]) {
+        return {"notice": "Max Overall Depth (" + this.options["maxOverallDepth"] + ")"};
+    }
+    var self = this,
+        items = [];
+    UTIL.forEach(variable, function(item) {
+        items.push(self.encodeVariable(meta, item, 1, arrayDepth + 1, overallDepth + 1));
+    });
+    return items;
+}
+
+
+Encoder.prototype.encodeAssociativeArray = function(meta, variable, objectDepth, arrayDepth, overallDepth) {
+    objectDepth = objectDepth || 1;
+    arrayDepth = arrayDepth || 1;
+    overallDepth = overallDepth || 1;
+    if(arrayDepth > this.options["maxArrayDepth"]) {
+        return {"notice": "Max Array Depth (" + this.options["maxArrayDepth"] + ")"};
+    } else
+    if(overallDepth > this.options["maxOverallDepth"]) {
+        return {"notice": "Max Overall Depth (" + this.options["maxOverallDepth"] + ")"};
+    }
+    var self = this,
+        items = [];
+    for (var key in variable) {
+
+        // HACK: This should be done via an option
+        // FirePHPCore compatibility: numeric (integer) strings as keys in associative arrays get converted to integers
+        // http://www.php.net/manual/en/language.types.array.php
+        if(isNumber(key) && Math.round(key)==key) {
+            key = parseInt(key);
+        }
+        
+        items.push([
+            self.encodeVariable(meta, key, 1, arrayDepth + 1, overallDepth + 1),
+            self.encodeVariable(meta, variable[key], 1, arrayDepth + 1, overallDepth + 1)
+        ]);
+    }
+    return items;
+}
+
+
+Encoder.prototype.encodeException = function(meta, variable, objectDepth, arrayDepth, overallDepth) {
+    var self = this,
+        items = [];
+    items.push([
+        self.encodeVariable(meta, "message", 1, arrayDepth + 1, overallDepth + 1),
+        self.encodeVariable(meta, (""+variable), 1, arrayDepth + 1, overallDepth + 1)
+    ]);
+    return items;
+}
+
+// http://stackoverflow.com/questions/18082/validate-numbers-in-javascript-isnumeric
+function isNumber(n) {
+  return !isNaN(parseFloat(n)) && isFinite(n);
+}
+
+
+
+Encoder.prototype.getInstanceId = function(object) {
+    for( var i=0 ; i<this.instances.length ; i++ ) {
+        if(this.instances[i][0]===object) {
+            return i;
+        }
+    }
+    return null;
+}
+
+Encoder.prototype.encodeInstance = function(meta, object, objectDepth, arrayDepth, overallDepth) {
+    objectDepth = objectDepth || 1;
+    arrayDepth = arrayDepth || 1;
+    overallDepth = overallDepth || 1;
+    var id = this.getInstanceId(object);
+    if(id!=null) {
+        return id;
+    }
+    this.instances.push([
+        object,
+        this.encodeObject(meta, object, objectDepth, arrayDepth, overallDepth)
+    ]);
+    return UTIL.len(this.instances)-1;
+}
+
+Encoder.prototype.encodeObject = function(meta, object, objectDepth, arrayDepth, overallDepth) {
+    objectDepth = objectDepth || 1;
+    arrayDepth = arrayDepth || 1;
+    overallDepth = overallDepth || 1;
+
+    if(arrayDepth > this.options["maxObjectDepth"]) {
+        return {"notice": "Max Object Depth (" + this.options["maxObjectDepth"] + ")"};
+    } else
+    if(overallDepth > this.options["maxOverallDepth"]) {
+        return {"notice": "Max Overall Depth (" + this.options["maxOverallDepth"] + ")"};
+    }
+    
+    var self = this,
+        ret = {"type": "dictionary", "value": {}};
+
+    // HACK: This should be done via an option
+    // FirePHPCore compatibility: we have an object if a class name is present
+    var isPHPClass = false;
+    if(typeof object["__className"] != "undefined") {
+        isPHPClass = true;
+        setMeta(ret, "lang.class", object["__className"]);
+        delete(object["__className"]);
+        if(this.options["includeLanguageMeta"]) {
+            setMeta(ret, "lang.type", "object");
+        }
+    }
+
+    // HACK: This should be done via an option
+    // FirePHPCore compatibility: we have an exception if a class name is present
+    if(typeof object["__isException"] != "undefined" && object["__isException"]) {
+        setMeta(ret, "lang.type", "exception");
+    }
+
+    UTIL.forEach(object, function(item) {
+        try {
+            if(item[0]=="__fc_tpl_id") {
+                ret['fc.tpl.id'] = item[1];
+                return;
+            }
+            if(isPHPClass) {
+                var val = self.encodeVariable(meta, item[1], objectDepth + 1, 1, overallDepth + 1),
+                    parts = item[0].split(":"),
+                    name = parts[parts.length-1];
+                if(parts[0]=="public") {
+                    val["lang.visibility"] = "public";
+                } else
+                if(parts[0]=="protected") {
+                    val["lang.visibility"] = "protected";
+                } else
+                if(parts[0]=="private") {
+                    val["lang.visibility"] = "private";
+                } else
+                if(parts[0]=="undeclared") {
+                    val["lang.undeclared"] = 1;
+                }
+                if(parts.length==2 && parts[1]=="static") {
+                    val["lang.static"] = 1;
+                }
+                ret["value"][name] = val;
+            } else {
+                ret["value"][item[0]] = self.encodeVariable(meta, item[1], objectDepth + 1, 1, overallDepth + 1);
+            }
+        } catch(e) {
+            console.warn(e);
+            ret["value"]["__oops__"] = {"notice": "Error encoding member (" + e + ")"};
+        }
+    });
+
+    completeWithMeta(meta, ret);
+
+    return ret;
+}
+},{"fp-modules-for-nodejs/lib/json":31,"fp-modules-for-nodejs/lib/util":32}],31:[function(require,module,exports){
+arguments[4][15][0].apply(exports,arguments)
+},{"dup":15}],32:[function(require,module,exports){
+arguments[4][21][0].apply(exports,arguments)
+},{"dup":21}],33:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -6625,7 +7109,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],31:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 /*!
  * The buffer module from node.js, for the browser.
  *
@@ -8404,7 +8888,7 @@ function numberIsNaN (obj) {
   return obj !== obj // eslint-disable-line no-self-compare
 }
 
-},{"base64-js":30,"ieee754":32}],32:[function(require,module,exports){
+},{"base64-js":33,"ieee754":35}],35:[function(require,module,exports){
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
   var eLen = (nBytes * 8) - mLen - 1
@@ -8490,7 +8974,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],33:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -8676,7 +9160,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],34:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 (function (setImmediate,clearImmediate){
 var nextTick = require('process/browser.js').nextTick;
 var apply = Function.prototype.apply;
@@ -8755,7 +9239,7 @@ exports.clearImmediate = typeof clearImmediate === "function" ? clearImmediate :
   delete immediateIds[id];
 };
 }).call(this,require("timers").setImmediate,require("timers").clearImmediate)
-},{"process/browser.js":33,"timers":34}]},{},[23])(23)
+},{"process/browser.js":36,"timers":37}]},{},[23])(23)
 });
 
 	});

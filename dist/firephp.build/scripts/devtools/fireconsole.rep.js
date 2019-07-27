@@ -6280,18 +6280,19 @@ var PublicAPI = function () {
           this.fireconsole.appendMessage(decoder.formatMessage(message));
         } else if (message.receiver === "http://meta.firephp.org/Wildfire/Structure/FirePHP/Dump/0.1") {
           this.fireconsole.appendMessage(decoder.formatMessage(message));
+        } else if (message.receiver === "https://gi0.FireConsole.org/rep.js/InsightTree/0.1") {
+          message.data["#"] = "InsightTree";
+          this.fireconsole.appendMessage(message.data);
         } else {
           throw new Error("Receiver for ID '".concat(message.receiver, "' not implemented!"));
         }
+      } else {
+        if (!Array.isArray(message)) {
+          message = [message];
+        }
 
-        return;
+        this.fireconsole.parseReceivedPostMessage(message);
       }
-
-      if (!Array.isArray(message)) {
-        message = [message];
-      }
-
-      this.fireconsole.parseReceivedPostMessage(message);
     }
   }]);
 
@@ -6331,7 +6332,7 @@ exports.main = function (JSONREP, node) {
     return JSONREP.makeRep('<div></div>', {
       css: {
         ".@": "github.com~0ink~codeblock/codeblock:Codeblock",
-        "_code": "{\"_cssid\":\"03b5aa4bff54967226c7471f1dec899141d57197\",\"repUri\":\"fireconsole\"}",
+        "_code": "{\"_cssid\":\"3ec12b5678e224c6d23261a8fd83618fce968e3f\",\"repUri\":\"fireconsole\"}",
         "_format": "json",
         "_args": [],
         "_compiled": false

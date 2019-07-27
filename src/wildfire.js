@@ -12,6 +12,16 @@ API.WILDFIRE = require("wildfire-for-js");
 const REQUEST_OBSERVER = require("./adapters/http-request-observer").for(API);
 const RESPONSE_OBSERVER = require("./adapters/http-response-observer").for(API);
 
+
+const ENCODER = require("insight-for-js/lib/encoder/default");
+
+
+var encoder = ENCODER.Encoder();
+encoder.setOption("maxObjectDepth", 1000);
+encoder.setOption("maxArrayDepth", 1000);
+encoder.setOption("maxOverallDepth", 1000);
+
+
 const SETTINGS = require("./settings");
 
 
@@ -21,11 +31,52 @@ API.forcedEnable = function (oo) {
 }
 
 
-API.on.chromeLoggerMessage = function (message) {
-    
-//    console.log("Chrome Logger LOG MESSAGE ::", message);
-
-    API.emit("message.chromelogger", message);
+API.on.chromeLoggerMessage = function (message, context) {
+    try {
+        let i,ic,j,jc;
+        for (i=0,ic=message.rows.length ; i<ic ; i++) {
+            let log = {};
+            for (j=0,jc=message.columns.length ; j<jc ; j++) {
+                log[message.columns[j]] = message.rows[i][j];        
+            }
+            const meta = {
+                "msg.preprocessor": "FirePHPCoreCompatibility",
+                "lang.id" : "registry.pinf.org/cadorn.org/github/renderers/packages/php/master",
+                "priority": log.type
+            };
+            if (log.backtrace) {
+                let m = log.backtrace.match(/^([^:]+?)(\s*:\s*(\d+))?$/);
+                if (m) {
+                    meta.file = m[1];
+                    if (m[3] !== '') {
+                        meta.line = parseInt(m[3]);
+                    }
+                }
+            }
+            if (log.log.length === 1) {
+                log.log = log.log[0];
+            }
+            let dataNode = encoder.encode(log.log, {
+                "lang": "php"
+            }, {
+                "jsonEncode": false
+            });
+            let node = dataNode.origin;
+            Object.keys(meta).forEach(function (name) {
+                node.meta[name] = meta[name];
+            });
+            let msg = {
+                "context": context,
+                "sender": "https://github.com/ccampbell/chromelogger",
+                "receiver": "https://gi0.FireConsole.org/rep.js/InsightTree/0.1",
+                "meta": "{}",
+                "data": node
+            };
+            API.emit("message.firephp", msg);
+        }
+    } catch (err) {
+        console.error("Error formatting chromelogger message:", err);
+    }
 }
     
 API.on.insightMessage = function (message) {
@@ -251,31 +302,30 @@ API.on("http.response", function (response) {
     if (chromeLoggerMessage.length > 0) {
         chromeLoggerMessage.forEach(function (header) {
             try {
-
                 // @see https://craig.is/writing/chrome-logger/techspecs
                 var message = decodeURIComponent(escape(atob(header.value)));
                 message = JSON.parse(message);
 
-                API.on.chromeLoggerMessage(message);
+                API.on.chromeLoggerMessage(message, response.request.context);
             } catch (err) {
                 console.error("header", header);
                 console.error("Error processing message:", err);
             }
         });
-    } else {
+    }
+
     //dump("RESPONSE IN EXTENSION2", response);
     //console.log("RESPONSE IN EXTENSION4", response);
-        httpHeaderChannel.parseReceived(response.headers, {
-            "id": response.request.id,
-            "url": response.request.url,
-            "hostname": response.request.hostname,
-            "context": response.request.context,
-            "port": response.request.port,
-            "method": response.request.method,
-            "status": response.status,
-            "contentType": response.contentType,
-            "requestHeaders": response.request.headers
-        });
-    }
+    httpHeaderChannel.parseReceived(response.headers, {
+        "id": response.request.id,
+        "url": response.request.url,
+        "hostname": response.request.hostname,
+        "context": response.request.context,
+        "port": response.request.port,
+        "method": response.request.method,
+        "status": response.status,
+        "contentType": response.contentType,
+        "requestHeaders": response.request.headers
+    });
 
 });
