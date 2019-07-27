@@ -577,7 +577,7 @@ exports.main = function (JSONREP, node, options) {
               this.on('update', this.set);
               this.on('mount', this.set);
             });
-            riot.tag2('tag_7b588bb83bdf7dd93650f35bf11d7351deddc2d0', '<div> <button if="{enabled === false}" onclick="{triggerEnable}" class="enable">Enable</button> <button if="{enabled === true}" onclick="{triggerDisable}" class="disable">Disable</button> </div>', '', '', function (opts) {
+            riot.tag2('tag_cf45835c71c0dd8630eb3ea533f009b5ef1ac806', '<div> <button if="{enabled === false}" onclick="{triggerEnable}" class="enable">Enable</button> <button if="{enabled === true}" onclick="{triggerDisable}" class="disable">Disable</button> </div>', '', '', function (opts) {
               var COMPONENT = require("./component");
 
               var tag = this;
@@ -612,7 +612,11 @@ exports.main = function (JSONREP, node, options) {
               tag.triggerEnable = function (event) {
                 comp.setSetting("enabled", true).then(function () {
                   tag.update();
-                  comp.reloadBrowser();
+                  return comp.getGlobalSetting("reloadOnEnable").then(function (enabled) {
+                    if (enabled) {
+                      comp.reloadBrowser();
+                    }
+                  });
                 });
               };
 
@@ -622,7 +626,7 @@ exports.main = function (JSONREP, node, options) {
                 });
               };
             });
-            riot.mount(el, 'tag_7b588bb83bdf7dd93650f35bf11d7351deddc2d0', context);
+            riot.mount(el, 'tag_cf45835c71c0dd8630eb3ea533f009b5ef1ac806', context);
           }
         }
       };
@@ -748,6 +752,52 @@ exports.for = function (ctx) {
 
       var obj = {};
       obj["domain[" + hostname + "]." + name] = value;
+      return ctx.browser.storage.local.set(obj).then(broadcastCurrentContext);
+    }).catch(function (err) {
+      console.error(err);
+      throw err;
+    });
+  };
+
+  events.getGlobalSetting = function (name) {
+    if (typeof ctx.browser === "undefined") {
+      return Promise.resolve(null);
+    }
+
+    var defaultValue;
+
+    if (name === "reloadOnEnable") {
+      defaultValue = true;
+    }
+
+    return ctx.browser.storage.local.get(name).then(function (value) {
+      if (typeof value[name] === "undefined") {
+        if (typeof defaultValue !== "undefined") {
+          return defaultValue;
+        }
+
+        return null;
+      }
+
+      return value[name];
+    }).catch(function (err) {
+      console.error(err);
+      throw err;
+    });
+  };
+
+  events.setGlobalSetting = function (name, value) {
+    if (typeof ctx.browser === "undefined") {
+      return Promise.resolve(null);
+    }
+
+    return events.getGlobalSetting(name).then(function (existingValue) {
+      if (value === existingValue) {
+        return;
+      }
+
+      var obj = {};
+      obj[name] = value;
       return ctx.browser.storage.local.set(obj).then(broadcastCurrentContext);
     }).catch(function (err) {
       console.error(err);

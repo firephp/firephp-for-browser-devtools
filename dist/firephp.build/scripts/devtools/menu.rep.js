@@ -727,6 +727,52 @@ exports.for = function (ctx) {
     });
   };
 
+  events.getGlobalSetting = function (name) {
+    if (typeof ctx.browser === "undefined") {
+      return Promise.resolve(null);
+    }
+
+    var defaultValue;
+
+    if (name === "reloadOnEnable") {
+      defaultValue = true;
+    }
+
+    return ctx.browser.storage.local.get(name).then(function (value) {
+      if (typeof value[name] === "undefined") {
+        if (typeof defaultValue !== "undefined") {
+          return defaultValue;
+        }
+
+        return null;
+      }
+
+      return value[name];
+    }).catch(function (err) {
+      console.error(err);
+      throw err;
+    });
+  };
+
+  events.setGlobalSetting = function (name, value) {
+    if (typeof ctx.browser === "undefined") {
+      return Promise.resolve(null);
+    }
+
+    return events.getGlobalSetting(name).then(function (existingValue) {
+      if (value === existingValue) {
+        return;
+      }
+
+      var obj = {};
+      obj[name] = value;
+      return ctx.browser.storage.local.set(obj).then(broadcastCurrentContext);
+    }).catch(function (err) {
+      console.error(err);
+      throw err;
+    });
+  };
+
   events.isConfigured = function () {
     return events.getSetting("enableUserAgentHeader").then(function (enableUserAgentHeader) {
       return events.getSetting("enableFirePHPHeader").then(function (enableFirePHPHeader) {

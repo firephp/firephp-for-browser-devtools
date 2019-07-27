@@ -564,11 +564,10 @@ exports.main = function (JSONREP, node, options) {
                 this.on('update', this.set);
                 this.on('mount', this.set);
               });
-              riot.tag2('tag_68068d8206e632473e37fecf77cfc12ada300e47', '<div class="manage-panel"> <h2>Settings for: {hostname}</h2> <raw html="{settingsCode}"></raw> </div>', '', '', function (opts) {
+              riot.tag2('tag_73ac0509dcf03de8d4a0a031d92586c39e0117e0', '<div class="manage-panel"> <raw html="{settingsCode}"></raw> </div>', '', '', function (opts) {
                 var COMPONENT = require("./component");
 
                 var tag = this;
-                tag.hostname = "";
                 tag.settingsCode = opts.config.settingsCode;
                 var comp = COMPONENT.for({
                   browser: browser
@@ -591,7 +590,7 @@ exports.main = function (JSONREP, node, options) {
                   }, 0);
                 });
               });
-              riot.mount(el, 'tag_68068d8206e632473e37fecf77cfc12ada300e47', context);
+              riot.mount(el, 'tag_73ac0509dcf03de8d4a0a031d92586c39e0117e0', context);
             }
           }
         };
@@ -718,6 +717,52 @@ exports.for = function (ctx) {
 
       var obj = {};
       obj["domain[" + hostname + "]." + name] = value;
+      return ctx.browser.storage.local.set(obj).then(broadcastCurrentContext);
+    }).catch(function (err) {
+      console.error(err);
+      throw err;
+    });
+  };
+
+  events.getGlobalSetting = function (name) {
+    if (typeof ctx.browser === "undefined") {
+      return Promise.resolve(null);
+    }
+
+    var defaultValue;
+
+    if (name === "reloadOnEnable") {
+      defaultValue = true;
+    }
+
+    return ctx.browser.storage.local.get(name).then(function (value) {
+      if (typeof value[name] === "undefined") {
+        if (typeof defaultValue !== "undefined") {
+          return defaultValue;
+        }
+
+        return null;
+      }
+
+      return value[name];
+    }).catch(function (err) {
+      console.error(err);
+      throw err;
+    });
+  };
+
+  events.setGlobalSetting = function (name, value) {
+    if (typeof ctx.browser === "undefined") {
+      return Promise.resolve(null);
+    }
+
+    return events.getGlobalSetting(name).then(function (existingValue) {
+      if (value === existingValue) {
+        return;
+      }
+
+      var obj = {};
+      obj[name] = value;
       return ctx.browser.storage.local.set(obj).then(broadcastCurrentContext);
     }).catch(function (err) {
       console.error(err);

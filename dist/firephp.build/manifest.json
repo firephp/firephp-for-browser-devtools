@@ -2,7 +2,7 @@
     "manifest_version": 2,
     "description": "(NOTE: This is a PREVIEW build for branch: refactor) Log from PHP to a devtools panel.",
     "name": "FirePHP (branch: refactor)",
-    "version": "1.1.0pre_1564210622",
+    "version": "1.1.0pre_1564212712",
     "applications": {
         "gecko": {
             "id": "FirePHPExtension-Build_branch_refactor@firephp.org",

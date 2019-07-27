@@ -5925,12 +5925,6 @@ function broadcastForContext(context, message) {
 
 WILDFIRE.on("message.firephp", function (message) {
   if (WILDFIRE.VERBOSE) console.log("[background] WILDFIRE.on -| message.firephp (message):", message);
-  console.log("BROADCAST MESSAGE", {
-    sender: message.sender,
-    receiver: message.receiver,
-    meta: message.meta,
-    data: message.data
-  });
   broadcastForContext(message.context, {
     message: {
       sender: message.sender,

@@ -562,13 +562,14 @@ exports.main = function (JSONREP, node, options) {
               this.on('update', this.set);
               this.on('mount', this.set);
             });
-            riot.tag2('tag_afad688286463ad1b03adcd92d80681c12742cdf', '<div> <table> <tr> <td width="75%"> <div class="settings"> <ul> <li> <h2><a href="https://github.com/firephp/firephp-core" target="_blank">FirePHPCore</a></h2> <p>Only one type of request header needs to be sent.</p> <ul> <li><input type="checkbox" name="enableUserAgentHeader" onchange="{syncCheckbox}"> Enable <b>UserAgent Request Header</b> - Modifies the <i>User-Agent</i> request header by appending <i>FirePHP/0.5</i>.</li> <li><input type="checkbox" name="enableFirePHPHeader" onchange="{syncCheckbox}"> Enable <b>FirePHP Request Header</b> - Adds a <i>X-FirePHP-Version: 0.4</i> request header.</li> </ul> </li> <li> <h2><a href="https://github.com/ccampbell/chromelogger" target="_blank">Chrome Logger</a></h2> <ul> <li><input type="checkbox" name="enableChromeLoggerData" onchange="{syncCheckbox}"> Render <i>X-ChromeLogger-Data</i> response headers to the console.</li> </ul> </li> </ul> </div> </td> <td width="25%"> <div class="info"> <h2>How to get setup</h2> <ol> <li>Choose an integration method.</li> <li>Integrate the server library into your project.</li> <li>Check the relevant box.</li> <li><b>Close</b> the <i>Settings</i> and <b>Enable</b> the tool.</li> </ol> <p><i>FirePHP is <a target="_blank" href="https://github.com/firephp/firephp-for-firefox-devtools">Open Source with code on Github</a></i></p> <p><a target="_blank" href="https://github.com/firephp/firephp-for-firefox-devtools/issues">Report an Issue or Suggest a Feature</a></p> </div> </td> </tr> </table> </div>', '', '', function (opts) {
+            riot.tag2('tag_29e0e1d0d925c5214f49eb4ab07d71a5ebb0aaa1', '<div> <table> <tr> <td width="75%"> <h2>Global Settings</h2> <ul> <li><input type="checkbox" name="reloadOnEnable" scope="global" onchange="{syncCheckbox}"> Reload page on <b>Enable</b></li> </ul> <h2>Settings for: {hostname}</h2> <div class="settings"> <ul> <li> <h2><a href="https://github.com/firephp/firephp-core" target="_blank">FirePHPCore</a></h2> <p>Only one type of request header needs to be sent.</p> <ul> <li><input type="checkbox" name="enableUserAgentHeader" onchange="{syncCheckbox}"> Enable <b>UserAgent Request Header</b> - Modifies the <i>User-Agent</i> request header by appending <i>FirePHP/0.5</i>.</li> <li><input type="checkbox" name="enableFirePHPHeader" onchange="{syncCheckbox}"> Enable <b>FirePHP Request Header</b> - Adds a <i>X-FirePHP-Version: 0.4</i> request header.</li> </ul> </li> <li> <h2><a href="https://github.com/ccampbell/chromelogger" target="_blank">Chrome Logger</a></h2> <ul> <li><input type="checkbox" name="enableChromeLoggerData" onchange="{syncCheckbox}"> Render <i>X-ChromeLogger-Data</i> response headers to the console.</li> </ul> </li> </ul> </div> </td> <td width="25%"> <div class="info"> <h2>How to get setup</h2> <ol> <li>Choose an integration method.</li> <li>Integrate the server library into your project.</li> <li>Check the relevant box.</li> <li><b>Close</b> the <i>Settings</i> and <b>Enable</b> the tool.</li> </ol> <p><i>FirePHP is <a target="_blank" href="https://github.com/firephp/firephp-for-firefox-devtools">Open Source with code on Github</a></i></p> <p><a target="_blank" href="https://github.com/firephp/firephp-for-firefox-devtools/issues">Report an Issue or Suggest a Feature</a></p> </div> </td> </tr> </table> </div>', '', '', function (opts) {
               var COMPONENT = require("./component");
 
               var tag = this;
               var comp = COMPONENT.for({
                 browser: browser
               });
+              tag.hostname = "";
               comp.on("changed.context", function (context) {
                 comp.contextChangeAcknowledged();
 
@@ -576,6 +577,13 @@ exports.main = function (JSONREP, node, options) {
                   comp.setSetting('enabled', opts.config.node._util.enabled);
                 }
 
+                if (context) {
+                  tag.hostname = context.hostname;
+                } else {
+                  tag.hostname = "";
+                }
+
+                tag.update();
                 sync();
               });
               comp.on("changed.setting", function () {
@@ -585,19 +593,32 @@ exports.main = function (JSONREP, node, options) {
               function sync() {
                 $('INPUT[type="checkbox"]', tag.root).each(function () {
                   var el = $(this);
-                  comp.getSetting(el.attr("name")).then(function (enabled) {
-                    el.get(0).checked = !!enabled;
-                  });
+
+                  if (el.attr("scope") === "global") {
+                    comp.getGlobalSetting(el.attr("name")).then(function (enabled) {
+                      el.get(0).checked = !!enabled;
+                    });
+                  } else {
+                    comp.getSetting(el.attr("name")).then(function (enabled) {
+                      el.get(0).checked = !!enabled;
+                    });
+                  }
                 });
               }
 
               tag.syncCheckbox = function (event) {
-                comp.setSetting(event.target.getAttribute("name"), event.target.checked).then(function () {
-                  sync();
-                });
+                if (event.target.getAttribute("scope") === "global") {
+                  comp.setGlobalSetting(event.target.getAttribute("name"), event.target.checked).then(function () {
+                    sync();
+                  });
+                } else {
+                  comp.setSetting(event.target.getAttribute("name"), event.target.checked).then(function () {
+                    sync();
+                  });
+                }
               };
             });
-            riot.mount(el, 'tag_afad688286463ad1b03adcd92d80681c12742cdf', context);
+            riot.mount(el, 'tag_29e0e1d0d925c5214f49eb4ab07d71a5ebb0aaa1', context);
           }
         }
       };
@@ -723,6 +744,52 @@ exports.for = function (ctx) {
 
       var obj = {};
       obj["domain[" + hostname + "]." + name] = value;
+      return ctx.browser.storage.local.set(obj).then(broadcastCurrentContext);
+    }).catch(function (err) {
+      console.error(err);
+      throw err;
+    });
+  };
+
+  events.getGlobalSetting = function (name) {
+    if (typeof ctx.browser === "undefined") {
+      return Promise.resolve(null);
+    }
+
+    var defaultValue;
+
+    if (name === "reloadOnEnable") {
+      defaultValue = true;
+    }
+
+    return ctx.browser.storage.local.get(name).then(function (value) {
+      if (typeof value[name] === "undefined") {
+        if (typeof defaultValue !== "undefined") {
+          return defaultValue;
+        }
+
+        return null;
+      }
+
+      return value[name];
+    }).catch(function (err) {
+      console.error(err);
+      throw err;
+    });
+  };
+
+  events.setGlobalSetting = function (name, value) {
+    if (typeof ctx.browser === "undefined") {
+      return Promise.resolve(null);
+    }
+
+    return events.getGlobalSetting(name).then(function (existingValue) {
+      if (value === existingValue) {
+        return;
+      }
+
+      var obj = {};
+      obj[name] = value;
       return ctx.browser.storage.local.set(obj).then(broadcastCurrentContext);
     }).catch(function (err) {
       console.error(err);
