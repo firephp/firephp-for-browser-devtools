@@ -6,11 +6,20 @@ exports.main = function (JSONREP, node, options) {
             "node": node
         },
         "code": (riotjs:makeRep () >>>
-
+        
             <div>
                 <table>
                     <tr>
                         <td width="75%">
+
+                            <h2>Global Settings</h2>
+
+                            <ul>
+                                <li><input type="checkbox" name="reloadOnEnable" scope="global" onchange={syncCheckbox}/> Reload page on <b>Enable</b></li>
+                            </ul>
+            
+                            <h2>Settings for: { hostname }</h2>
+
                             <div class="settings">
                                 <ul>
                                     <li>
@@ -53,7 +62,7 @@ exports.main = function (JSONREP, node, options) {
                     vertical-align: top;
                 }
 
-                :scope DIV TABLE TD DIV.settings > UL {
+                :scope DIV UL {
                     list-style-type: none;
                     margin: 0px;
                     padding: 0px;
@@ -115,6 +124,8 @@ exports.main = function (JSONREP, node, options) {
                     browser: browser
                 });
 
+                tag.hostname = "";                    
+
                 comp.on("changed.context", function (context) {
                     comp.contextChangeAcknowledged();
 
@@ -125,6 +136,14 @@ exports.main = function (JSONREP, node, options) {
                     ) {
                         comp.setSetting('enabled', opts.config.node._util.enabled);
                     }
+
+                    if (context) {
+                        tag.hostname = context.hostname;
+                    } else {
+                        tag.hostname = "";
+                    }
+
+                    tag.update();
 
                     sync();
                 });
@@ -138,18 +157,32 @@ exports.main = function (JSONREP, node, options) {
                 function sync () {
                     $('INPUT[type="checkbox"]', tag.root).each(function () {
                         var el = $(this);
-                        comp.getSetting(el.attr("name")).then(function (enabled) {
-                            el.get(0).checked = !!enabled;
-                        });
+
+                        if (el.attr("scope") === "global") {
+                            comp.getGlobalSetting(el.attr("name")).then(function (enabled) {
+                                el.get(0).checked = !!enabled;
+                            });
+                        } else {
+                            comp.getSetting(el.attr("name")).then(function (enabled) {
+                                el.get(0).checked = !!enabled;
+                            });
+                        }
                     });
 //                    tag.update();
                 }
 
                 tag.syncCheckbox = function (event) {
-                    comp.setSetting(event.target.getAttribute("name"), event.target.checked).then(function () {
-                        //tag.update();
-                        sync();
-                    });
+                    if (event.target.getAttribute("scope") === "global") {
+                        comp.setGlobalSetting(event.target.getAttribute("name"), event.target.checked).then(function () {
+                            //tag.update();
+                            sync();
+                        });
+                    } else {
+                        comp.setSetting(event.target.getAttribute("name"), event.target.checked).then(function () {
+                            //tag.update();
+                            sync();
+                        });
+                    }
                 }
 
             </script>

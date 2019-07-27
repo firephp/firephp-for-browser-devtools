@@ -12,8 +12,6 @@ exports.main = function (JSONREP, node, options) {
 
                 <div class="manage-panel">
                 
-                    <h2>Settings for: { hostname }</h2>
-
                     <raw html="{settingsCode}"/>
 
                 </div>
@@ -43,7 +41,6 @@ exports.main = function (JSONREP, node, options) {
 
                     const tag = this;
 
-                    tag.hostname = "";                    
                     tag.settingsCode = opts.config.settingsCode;
 
                     const comp = COMPONENT.for({

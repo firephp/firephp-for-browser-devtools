@@ -102,7 +102,12 @@ exports.main = function (JSONREP, node, options) {
                         true
                     ).then(function () {
                         tag.update();
-                        comp.reloadBrowser();
+
+                        return comp.getGlobalSetting("reloadOnEnable").then(function (enabled) {
+                            if (enabled) {
+                                comp.reloadBrowser();
+                            }
+                        });
                     });
                 }
 
