@@ -4,7 +4,7 @@
 #export BO_ALLOW_DOWNLOADS=1
 #export BO_ALLOW_INSTALLS=1
 
-export BO_SYSTEM_CACHE_DIR="$(node --eval 'process.stdout.write(require("bash.origin.workspace").node_modules);')"
+#export BO_SYSTEM_CACHE_DIR="$(node --eval 'process.stdout.write(require("bash.origin.workspace").node_modules);')"
 
 
 depend {
@@ -39,7 +39,7 @@ function do_run {
                 "webRequestBlocking",            
                 "<all_urls>"
             ],
-            "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self'; img-src 'self'",
+            "content_security_policy": "script-src 'self'; style-src 'self'; object-src 'self'; img-src 'self'",
             "background": {
                 "scripts": [
                     {
@@ -47,7 +47,14 @@ function do_run {
                             "@it.pinf.org.browserify#s1": {
                                 "src": "$__DIRNAME__/src/background.js",
                                 "prime": true,
-                                "format": "pinf"
+                                "format": "pinf",
+                                "babel": {
+                                    "presets": {
+                                        "@babel/preset-env": {
+                                            "targets": "last 1 Firefox versions"
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -56,11 +63,12 @@ function do_run {
             "devtools": {
                 "panels": [
                     {
-                        "devtools.js": {
+                        "devtools/index.js": {
                             "label": "FirePHP",
                             "icon": "$__DIRNAME__/src/skin/Logo.png",
                             "code": {
                                 "@github.com~jsonrep~jsonrep#s1": {
+                                    "externalizeCss": true,
                                     "page": {
                                         "@layout": {
                                             "console": {
@@ -90,12 +98,20 @@ function do_run {
                                     "reps": {
                                         "layout": "$__DIRNAME__/src/layout.rep.js",
                                         "menu": "$__DIRNAME__/src/menu.rep.js",
+                                        "summary": "$__DIRNAME__/src/summary.rep.js",
                                         "settings": "$__DIRNAME__/src/settings.rep.js",
                                         "manage": "$__DIRNAME__/src/manage.rep.js",
                                         "inspector": "$__DIRNAME__/src/inspector.rep.js",
-                                        "fireconsole": "$__DIRNAME__/node_modules/fireconsole.rep.js/dist/fireconsole.rep.js",
+                                        "fireconsole": "fireconsole.rep.js/dist/fireconsole.rep.js",
                                         "console": "$__DIRNAME__/src/console.rep.js",
                                         "enabler": "$__DIRNAME__/src/enabler.rep.js"
+                                    },
+                                    "babel": {
+                                        "presets": {
+                                            "@babel/preset-env": {
+                                                "targets": "last 1 Firefox versions"
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -114,13 +130,23 @@ function do_run {
                         /\sFirePHP\/([\.|\d]*)\s?/.test(req.headers["user-agent"])
                     ) {
 
+                        function wrap (message) {
+                            return message.length + '|' + message + '|';
+                        }
+
                         res.writeHead(200, {
                             'X-Wf-Protocol-1': 'http://meta.wildfirehq.org/Protocol/JsonStream/0.2',
                             'X-Wf-1-Plugin-1': 'http://meta.firephp.org/Wildfire/Plugin/FirePHP/Library-FirePHPCore/0.0.0master1106021548',
                             'X-Wf-1-Structure-1': 'http://meta.firephp.org/Wildfire/Structure/FirePHP/FirebugConsole/0.1',
-                            'X-Wf-1-1-1-1': '63|[{"Type":"LOG","File":"/path/to/file","Line":10},"Hello World"]|',
-                            'X-Wf-1-Index': '1'
+
+                            // @see https://github.com/firephp/firephp/issues/16
+                            'X-Wf-1-1-1-1': wrap('[{"Type":"LOG","File":"/path/to/file","Line":10},"Hello World"]'),
+                            'X-Wf-1-1-1-2': wrap('[{"Type":"INFO","File":"\/christoph\/projects\/gi0.FireConsole.org\/rep.js\/examples\/03-FirePHPCore\/index.php","Line":75},"\\u0427\\u0442\\u043e-\\u0442\\u043e"]'),
+                            'X-Wf-1-1-1-3': wrap('[{"Type":"INFO","File":"\/christoph\/projects\/gi0.FireConsole.org\/rep.js\/examples\/03-FirePHPCore\/index.php","Line":76},"Od\\u00f3metro"]'),
+
+                            'X-Wf-1-Index': '3'
                         });
+
 
                         res.end("FirePHP Core formatted messages sent in HTTP response headers.");
                     } else {
@@ -138,9 +164,6 @@ function do_run {
             "^/tests": {
                 "@it.pinf.org.mochajs#s1": {}
             }
-        },
-        "files": {
-            "/dist/resources/insight.renderers.default/*": "$__DIRNAME__/node_modules/fireconsole.rep.js/dist/resources/insight.renderers.default"
         }
     } "$@"
 

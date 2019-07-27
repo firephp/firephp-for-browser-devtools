@@ -1,0 +1,28 @@
+
+
+    DIV[data-is="tag_cf45835c71c0dd8630eb3ea533f009b5ef1ac806"] BUTTON {
+        width: 100%;
+        height: 20px;
+        font-weight: bold;
+        cursor: pointer;
+        background-color: white;
+        padding: 3px;
+        height: auto;
+    }
+
+    DIV[data-is="tag_cf45835c71c0dd8630eb3ea533f009b5ef1ac806"] BUTTON.enable {
+        color: #000000;
+        border-top: 2px solid #ff5151;
+        border-bottom: 2px solid #ff5151;
+        border-left: 10px solid #ff5151;
+        border-right: 10px solid #ff5151;
+    }
+
+    DIV[data-is="tag_cf45835c71c0dd8630eb3ea533f009b5ef1ac806"] BUTTON.disable {
+        color: #000000;
+        border-top: 2px solid #05c600;
+        border-bottom: 2px solid #05c600;
+        border-left: 10px solid #05c600;
+        border-right: 10px solid #05c600;
+    }
+    

@@ -2,9 +2,7 @@
 const BROWSER = browser;
 const WILDFIRE = exports.WILDFIRE = require("./wildfire");
 
-WILDFIRE.VERBOSE = true;
-
-const ENABLE_PAGE_BRIDGE = false;
+WILDFIRE.VERBOSE = false;
 
 
 WILDFIRE.once("error", function (err) {
@@ -12,65 +10,42 @@ WILDFIRE.once("error", function (err) {
 });
 
 
+async function initCurrentContext () {
+    if (currentContext) {
+        // Already initialized
+        return;
+    }
+
+    const tabDetails = (await BROWSER.tabs.query({
+        currentWindow: true,
+        active: true
+    }))[0];
+
+    if (tabDetails.url) {
+        setCurrentContextFromDetails({
+            tabId: tabDetails.id,
+            url: tabDetails.url
+        }, true);
+    }
+}
+
+// Initialize
+setImmediate(initCurrentContext);
+
+
+
 // TODO: Emit destroy when unloaded to proactively cleanup. Do we need to do that?
 //WILDFIRE.emit("destroy");
 
 
-var windowIdByFrameId = {};
-
 function broadcastForContext (context, message) {
-    if (context) {
-        if (
-            context.url &&
-            !context.hostname
-        ) {
-            context.hostname = context.url.replace(/^[^:]+:\/\/([^:\/]+)(:\d+)?\/.*?$/, "$1");
-        }
-        if (
-            typeof context.windowId === "undefined" &&
-            typeof context.frameId !== "undefined" &&
-            typeof windowIdByFrameId["" + context.frameId] !== "undefined"
-        ) {
-            context.windowId = windowIdByFrameId["" + context.frameId];
-        }
-        message.context = context;
-    }
+    message.context = context;
     message.to = "message-listener";
-    //console.log("SEND RT MESSAGE", message, JSON.stringify(message.context));
-
-
-    if (ENABLE_PAGE_BRIDGE) {
-        var tabId = (
-            message.tabId ||
-            (
-                context &&
-                context.tabId
-            )
-        );
-        if (tabId) {
-            BROWSER.tabs.sendMessage(tabId, message).catch(function (err) {
-                if (WILDFIRE.VERBOSE) console.log("WARNING", err);
-            });
-        }
-    }
-
 
     return BROWSER.runtime.sendMessage(message).catch(function (err) {
         if (WILDFIRE.VERBOSE) console.log("WARNING", err);
     });
 }
-
-
-WILDFIRE.on("response", function (response) {
-
-    if (WILDFIRE.VERBOSE) console.log("[background] WILDFIRE.on -| response (response):", response);
-
-    broadcastForContext(response.context, {
-        // TODO: Pass along specific properties
-        response: {}
-    });
-});
-
 
 WILDFIRE.on("message.firephp", function (message) {
     
@@ -87,19 +62,76 @@ WILDFIRE.on("message.firephp", function (message) {
 });
 
 
-var currentContext = null;
-var broadcastCurrentContext = false;
+let currentContext = null;
+//let broadcastCurrentContext = false;
 
+let lastDetailsForTabId = {};
 
-function webRequest_onBeforeSendHeaders (message) {
+function setCurrentContextFromDetails (details, clearIfNew) {
+    if (!details) {
+        if (currentContext) {
+            currentContext = null;
+            broadcastForContext(currentContext, {
+                event: "currentContext"
+            });
+        }
+    } else {
+        let newCtx = {
+            url: details.url,
+            tabId: details.tabId
+        };
+        newCtx.pageUid = JSON.stringify(newCtx);
+        newCtx.hostname = details.url.replace(/^[^:]+:\/\/([^:\/]+)(:\d+)?\/.*?$/, "$1");
+        if (
+            newCtx !== currentContext &&
+            (
+                !newCtx ||
+                !currentContext ||
+                newCtx.pageUid !== currentContext.pageUid
+            )
+        ) {
+
+//console.log("NEW CONTEXT", newCtx, details);
+
+            currentContext = newCtx;
+            lastDetailsForTabId[currentContext.tabId] = details;
+
+            broadcastForContext(currentContext, {
+                event: "currentContext"
+            });
+        } else {
+            broadcastForContext(currentContext, {
+                event: "currentContext"
+            });
+        }
+
+        if (clearIfNew) {
+//console.log("SEND PREPARE DUE TO NEW CONTEXT", details);
+            broadcastForContext(currentContext, {
+                event: "prepare"
+            });
+        }
+    }
+}
+
+async function runtime_onMessage (message) {
 
     if (WILDFIRE.VERBOSE) console.log("[background] BROWSER.runtime -| onMessage (message):", message);
 
     if (message.to === "broadcast") {
         if (message.event === "currentContext") {
+            if (!currentContext) {
+                await initCurrentContext();
+            }
             broadcastForContext(currentContext, message);
         } else {
-            broadcastForContext(message.context || null, message);
+            if (
+                !message.context &&
+                !currentContext
+            ) {
+                await initCurrentContext();
+            }
+            broadcastForContext(message.context || currentContext || null, message);
         }
     } else
     if (message.to === "background") {
@@ -110,30 +142,24 @@ function webRequest_onBeforeSendHeaders (message) {
         }
     }
 }
-BROWSER.runtime.onMessage.addListener(webRequest_onBeforeSendHeaders);
+BROWSER.runtime.onMessage.addListener(runtime_onMessage);
 WILDFIRE.on("destroy", function () {
-    BROWSER.runtime.onMessage.removeListener(webRequest_onBeforeSendHeaders);
+    BROWSER.runtime.onMessage.removeListener(runtime_onMessage);
 });
 
 
-function webNavigation_onBeforeNavigate (details) {
 
-    if (!broadcastCurrentContext) {
+function webNavigation_onBeforeNavigate (details) {
+    if (WILDFIRE.VERBOSE) console.log("[background] BROWSER.webNavigation -| onBeforeNavigate (details):", details);
+
+    // We only care about the page frame event.
+    if (details.parentFrameId !== -1) {
         return;
     }
 
-    if (WILDFIRE.VERBOSE) console.log("[background] BROWSER.webNavigation -| onBeforeNavigate (details):", details);
-    
-    currentContext = {
-        windowId: details.windowId,
-        frameId: details.frameId,
-        tabId: details.tabId,
-        url: details.url
-    };
+//console.log("ON BEFORE NAVIGATE", details);
 
-    broadcastForContext(currentContext, {
-        event: "currentContext"
-    });
+    setCurrentContextFromDetails(details);
 }
 BROWSER.webNavigation.onBeforeNavigate.addListener(webNavigation_onBeforeNavigate, {
     url: [
@@ -145,57 +171,43 @@ WILDFIRE.on("destroy", function () {
 });
 
 
+function webRequest_onBeforeRequest (details) {
+    if (WILDFIRE.VERBOSE) console.log("[background] BROWSER.webRequest -| onBeforeRequest (details):", details);
 
-function webNavigation_onDOMContentLoaded (details) {
-
-    if (!broadcastCurrentContext) {
-        return;        
+    // We only care about the page frame event.
+    if (
+        typeof details.documentUrl !== "undefined" ||
+        details.parentFrameId !== -1
+    ) {
+        return;
     }
-    
-    if (WILDFIRE.VERBOSE) console.log("[background] BROWSER.webNavigation -| onDOMContentLoaded (details):", details);
 
+//console.log("ON BEFORE REQUEST", details);
+
+    setCurrentContextFromDetails(details, true);
+}
+BROWSER.webRequest.onBeforeRequest.addListener(webRequest_onBeforeRequest, {
+    urls: [
+        "<all_urls>"
+    ]
+});
+WILDFIRE.on("destroy", function () {
+    BROWSER.webRequest.onBeforeRequest.removeListener(webRequest_onBeforeRequest);
+});
+
+
+/*
+function webNavigation_onCommitted (details) {
+    if (WILDFIRE.VERBOSE) console.log("[background] BROWSER.webNavigation -| onCommitted (details):", details);
+
+    // We only care about the page frame event.
     if (details.parentFrameId !== -1) {
         return;
     }
 
-    currentContext = {
-        windowId: details.windowId,
-        frameId: details.frameId,
-        tabId: details.tabId,
-        url: details.url
-    };
-    
-    broadcastForContext(currentContext, {
-        event: "currentContext"
-    });
-}
-BROWSER.webNavigation.onDOMContentLoaded.addListener(webNavigation_onDOMContentLoaded, {
-    url: [
-        {}
-    ]
-});
-WILDFIRE.on("destroy", function () {
-    BROWSER.webNavigation.onDOMContentLoaded.removeListener(webNavigation_onDOMContentLoaded);
-});
+console.log("ON COMITTED", details);
 
-
-
-function webNavigation_onCommitted (details) {
-
-    if (WILDFIRE.VERBOSE) console.log("[background] BROWSER.webNavigation -| onCommitted (details):", details);
-    
-    broadcastCurrentContext = true;
-    
-    currentContext = {
-        windowId: details.windowId,
-        frameId: details.frameId,
-        tabId: details.tabId,        
-        url: details.url
-    };
-    
-    broadcastForContext(currentContext, {
-        event: "currentContext"
-    });
+    setCurrentContextFromDetails(details, true);
 }
 BROWSER.webNavigation.onCommitted.addListener(webNavigation_onCommitted, {
     url: [
@@ -205,46 +217,33 @@ BROWSER.webNavigation.onCommitted.addListener(webNavigation_onCommitted, {
 WILDFIRE.on("destroy", function () {
     BROWSER.webNavigation.onCommitted.removeListener(webNavigation_onCommitted);
 });
+*/
 
 
+
+/*
 function tabs_onActivated (details) {
-
-    if (!broadcastCurrentContext) {
-        return;        
-    }
-
     if (WILDFIRE.VERBOSE) console.log("[background] BROWSER.tabs -| onActivated (details):", details);
-    
-    BROWSER.tabs.get(details.tabId).then(function (tab) {
 
-        currentContext = {
-            windowId: details.windowId,
-            tabId: details.tabId,
-            url: tab.url
-        };
-        
-        return broadcastForContext(currentContext, {
-            event: "currentContext"
-        });
-    }).catch(function (err) {
-        if (WILDFIRE.VERBOSE) console.error(err);
-    });
+console.log("TABS on ACTIVATE", details);
+
+    setCurrentContextFromDetails(lastDetailsForTabId[details.tabId] || null);
 }
 BROWSER.tabs.onActivated.addListener(tabs_onActivated);
 WILDFIRE.on("destroy", function () {
     BROWSER.tabs.onActivated.removeListener(tabs_onActivated);
 });
+*/
 
 
 function tabs_onRemoved (tabId) {
-
     if (WILDFIRE.VERBOSE) console.log("[background] BROWSER.tabs -| onRemoved (tabId):", tabId);
     
     if (
         currentContext &&
         currentContext.tabId == tabId
     ) {
-        currentContext = null;
+        setCurrentContextFromDetails(null);
     }
 
     return broadcastForContext({
@@ -257,3 +256,72 @@ BROWSER.tabs.onRemoved.addListener(tabs_onRemoved);
 WILDFIRE.on("destroy", function () {
     BROWSER.tabs.onRemoved.removeListener(tabs_onRemoved);
 });
+
+
+
+/*
+function webNavigation_onBeforeNavigate (details) {
+
+    if (!broadcastCurrentContext) {
+        return;
+    }
+
+    if (WILDFIRE.VERBOSE) console.log("[background] BROWSER.webNavigation -| onBeforeNavigate (details):", details);
+
+    // We only care about the page frame event.
+    if (details.parentFrameId !== -1) {
+        return;
+    }
+
+console.log("ON BEFORE NAVIGATE", details);
+
+    setCurrentContextFromDetails(details);
+
+    // broadcastForContext(currentContext, {
+    //     event: "currentContext"
+    // });
+    // if (details.frameId === 0) {
+    //     broadcastForContext(currentContext, {
+    //         event: "prepare"
+    //     });
+    // }
+}
+BROWSER.webNavigation.onBeforeNavigate.addListener(webNavigation_onBeforeNavigate, {
+    url: [
+        {}
+    ]
+});
+WILDFIRE.on("destroy", function () {
+    BROWSER.webNavigation.onBeforeNavigate.removeListener(webNavigation_onBeforeNavigate);
+});
+
+function webNavigation_onDOMContentLoaded (details) {
+
+    if (!broadcastCurrentContext) {
+        return;        
+    }
+    
+    if (WILDFIRE.VERBOSE) console.log("[background] BROWSER.webNavigation -| onDOMContentLoaded (details):", details);
+
+    // We only care about the page frame event.
+    if (details.parentFrameId !== -1) {
+        return;
+    }
+    
+console.log("ON DOM CONTENT LOADED");
+
+    setCurrentContextFromDetails(details);
+
+//    broadcastForContext(currentContext, {
+//        event: "currentContext"
+//    });
+}
+BROWSER.webNavigation.onDOMContentLoaded.addListener(webNavigation_onDOMContentLoaded, {
+    url: [
+        {}
+    ]
+});
+WILDFIRE.on("destroy", function () {
+    BROWSER.webNavigation.onDOMContentLoaded.removeListener(webNavigation_onDOMContentLoaded);
+});
+*/

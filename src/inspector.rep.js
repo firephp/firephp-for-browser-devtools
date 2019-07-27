@@ -1,5 +1,5 @@
 
-exports.main = function (JSONREP, node) {
+exports.main = function (JSONREP, node, options) {
 
 
     return JSONREP.makeRep(
@@ -33,13 +33,87 @@ exports.main = function (JSONREP, node) {
             on: {
                 mount: function (el) {
 
-                    var currentContext = null;
+                    const COMPONENT = require("./component");
+    
+                    const comp = COMPONENT.for({
+                        browser: browser
+                    });
+
+                    comp.on("setting.enabled", function (enabled) {
+                        if (!enabled) {
+                            clearContent();
+                        }
+                    });
+
+                    comp.on("changed.context", function (context) {
+                        comp.contextChangeAcknowledged();
+
+                        clearContent();
+                    });
                     
-                    function makeKeyForContext (context) {
-                        return context.tabId + ":" + (context.url || "");
+                    comp.on("message", function (message) {
+                        try {
+                            if (message.event === "clear") {
+                                clearContent();
+                            } else
+                            if (message.event === "destroyContext") {
+                                if (
+                                    comp.currentContext &&
+                                    comp.currentContext.tabId == message.context.tabId
+                                ) {
+                                    clearContent();
+                                }
+                            }
+                        } catch (err) {
+                            console.error(err);
+                            throw err;
+                        }
+                    });
+
+                    function clearContent () {
+                        var panelEl = el.querySelector('.viewer');
+                        panelEl.style.display = "none";
+                        el.querySelector(".close").style.display = "none";
+                    }
+
+                    function showMessage (message) {
+                        var panelEl = el.querySelector('.viewer');
+                        window.FC.renderMessageInto(panelEl, message);
+                        panelEl.style.display = "";
+                        el.querySelector(".close").style.display = "inline-block";
+                    }
+
+                    el.querySelector(".close").addEventListener("click", clearContent, false);
+
+
+                    window.FC.on("inspectMessage", function (info) {
+                        delete info.node.meta.wrapper;
+                        showMessage(info.node);
+                    });
+
+                    window.FC.on("inspectNode", function (info) {
+                        showMessage(info.node);
+                    });
+                        
+                    window.FC.on("inspectFile", function (info) {
+                        showMessage({
+                            type: "string",
+                            value: "Viewing of files is not yet implemented."
+                        });
+                    });
+
+
+
+
+/*                    
+                    function makeKeyForCurrentContext () {
+                        return comp.currentContext.id.replace(/["\{\}]/g, '_');//tabId + ":" + (context.url || "");
                     }
 
                     function getPanel () {
+                        if (!currentContext) {
+                            return;
+                        }
                         var key = makeKeyForContext(currentContext);
                         var panelEl = el.querySelector('.viewer > DIV[context="' + key + '"]');
                         if (!panelEl) {
@@ -65,16 +139,19 @@ exports.main = function (JSONREP, node) {
                     }
 
                     function showPanel () {
+
                         if (!currentContext) {
                             return;
                         }
                         var key = makeKeyForContext(currentContext);
+
                         var panelEl = el.querySelector('.viewer > DIV[context="' + key + '"]');
+
                         if (!panelEl) {
                             return;
                         }
                         panelEl.style.display = "";
-                        el.querySelector(".close").style.display = "inline-block";                        
+                        el.querySelector(".close").style.display = "inline-block";
                     }
 
                     function destroyPanel () {
@@ -87,7 +164,6 @@ exports.main = function (JSONREP, node) {
                             return;
                         }
                         panelEl.parentNode.removeChild(panelEl);
-                        currentContext = null;
                         el.querySelector(".close").style.display = "none";
                     }
 
@@ -96,12 +172,20 @@ exports.main = function (JSONREP, node) {
 
                         hidePanel();
 
-                        currentContext = info.message.context;
+                        if (info.message.context) {
+                            currentContext = info.message.context;
+                        }
 
 //console.log("INSPECT MESSAGE!!", info.message);
 
-                        window.FC.renderMessageInto(getPanel(), info.message);
+                        const panel = getPanel();
 
+                        if (!panel) return;
+
+                        delete info.message.meta.wrapper;
+
+                        window.FC.renderMessageInto(panel, info.message);
+                        
                         showPanel();
                     });
 
@@ -109,60 +193,41 @@ exports.main = function (JSONREP, node) {
 
                         hidePanel();
 
-                        currentContext = info.message.context;
+                        if (info.message.context) {
+                            currentContext = info.message.context;
+                        }
                         
                         currentContext = {
                             tabId: browser.devtools.inspectedWindow.tabId
                         };
+
+                        const panel = getPanel();
+
+                        if (!panel) return;
                         
-                        window.FC.renderMessageInto(getPanel(), info.message);
+                        window.FC.renderMessageInto(panel, info.message);
                         
                         showPanel();
                     });
                         
                     window.FC.on("inspectFile", function (info) {
 
-                        console.log("EVENT:inspectFile", info);
+                        const panel = getPanel();
+
+                        if (!panel) return;
+
+                        window.FC.renderMessageInto(panel, {
+                            type: "string",
+                            value: "Viewing of files is not yet implemented."
+                        });
                     });
 
                     el.querySelector(".close").addEventListener("click", destroyPanel, false);
-
-                    browser.runtime.onMessage.addListener(function (message) {
-
-                        if (
-                            message.context &&
-                            message.context.tabId != browser.devtools.inspectedWindow.tabId
-                        ) {
-                            return;
-                        }
-
-                        if (message.to === "message-listener") {
-                
-                            if (message.event === "currentContext") {
-
-//console.log("CONTEXT IN INSPECTOR", message.context, currentContext);
-
-                                hidePanel();
-                                currentContext = message.context;
-                                showPanel();
-                            } else
-                            if (message.event === "destroyContext") {
-
-                                if (
-                                    currentContext &&
-                                    currentContext.tabId == message.context.tabId
-                                ) {
-                                    destroyPanel();
-                                }
-                            } else
-                            if (message.event === "clear") {
-                                destroyPanel();
-                            }
-                        }
-                    });                    
+*/
                 }
             }
-        }
+        },
+        options
     );
 };
         

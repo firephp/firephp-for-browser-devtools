@@ -1,0 +1,16 @@
+
+
+    DIV[data-is="tag_4827980e290cf3d76ed38b24636074971dcb86ac"] .menu {
+        padding: 5px;
+        padding-left: 10px;
+        padding-right: 10px;
+        white-space: nowrap;
+    }
+
+    DIV[data-is="tag_4827980e290cf3d76ed38b24636074971dcb86ac"] .menu > BUTTON {
+        cursor: pointer;
+        width: auto;
+        padding-left: 1px;
+        padding-right: 1px;
+    }
+    

@@ -27,11 +27,15 @@ if ($_GET['context'] === 'iframe') {
 } else
 if ($_GET['context'] === 'img') {
 
+    header('Content-Type: image/jpeg');
+
     $firephp->fb('Hello from img');
 
 } else
 if ($_GET['context'] === 'iframe-img') {
 
+    header('Content-Type: image/jpeg');
+    
     $firephp->fb('Hello from iframe-img');
         
 } else {
@@ -42,5 +46,6 @@ if ($_GET['context'] === 'iframe-img') {
     echo('<iframe src="?context=iframe"></iframe>');
     echo('<img src="?context=img"></img>');
     
-    echo("FirePHP formatted messages sent in HTTP response headers.");
+    echo('<p>FirePHP formatted messages sent in HTTP response headers.</p>');
+    echo('<p><a href="http://firephp.org/">firephp.org</p>');
 }

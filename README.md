@@ -1,24 +1,16 @@
+**Status: DEV - Commands will currently not run for you!**
+
 ![FirePHP Logo](https://rawgit.com/firephp/firephp-for-firefox-devtools/master/src/skin/Logo.png "FirePHP Logo")
 
 FirePHP for Firefox Developer Tools
 ===================================
 
-  * **Project discussion: [gitter.im/firephp/firephp.org](https://gitter.im/firephp/firephp.org)**
-
 This project holds the [FirePHP Tool](http://firephp.org) in the form of a [Mozilla Web Extension](https://developer.mozilla.org/en-US/Add-ons/WebExtensions) which is compatible with the latest *Multiprocess Firefox Browser*.
 
-> FirePHP is a logging system that can display PHP variables in a browser as an application is navigated. All communication is out of band to the application which means the logging data will not interfere with the normal functioning of the application.
+> Log from PHP to Browser Developer Tools via HTTP Response Headers.
 
-On the **server** you need one of the following **PHP libraries**:
+For a list of supported server libraries see [http://firephp.org](http://firephp.org).
 
-  * [FirePHPCore](https://github.com/firephp/firephp-core) - Simple
-    * Limited data all sent via *HTTP headers*
-    * No enable security
-    * One file only
-  * [FirePHP 1.0](https://github.com/firephp/firephp) - Advanced (**NOT YET IMPLEMENTED**)
-    * *NOTE: Not all features provided by this library are implemented in the extension at this time.*
-    * Data sent via *HTTP headers* and *secondary AJAX requests* to support logging in volume
-    * Many features including enable security
 
 Install
 -------
@@ -60,23 +52,38 @@ Preview
 Provenance
 ==========
 
-Original Source Logic under [Mozilla Public License 2.0](https://opensource.org/licenses/MPL-2.0) by [Christoph Dorn](http://christophdorn.com) since 2007.
+Copyright 2016 [Christoph Dorn](http://christophdorn.com).
+Licensed under the [Open Software License (OSL 3.0)](https://opensource.org/licenses/OSL-3.0).
+Contributions must be licensed under the [Academic Free License (AFL 3.0)](https://opensource.org/licenses/AFL-3.0).
+Learn about the OSL & AFL Licenses [here](http://rosenlaw.com/OSL3.0-explained.htm).
 
 ```
-Mozilla Public License 2.0
+Open Software License (OSL) 3.0
 
 You are free to:
-    Commercial Use, Modify, Distribute, Sublicense, Place Warranty, Use Patent Claims
+    Use Commercially, Distribute, Modify, Use Patents, Use Privately
 
 Under the following terms:
-    Include Copyright, Include License, Disclose Source, Include Original
+    Disclose source, License and copyright notice, Network use is distribution, Same license
 
 You cannot:
-    Use Trademark, Hold Liable
+    Use trademark, Hold liable, Claim warranty
+```
+```
+Academic Free License (AFL) 3.0
+
+You are free to:
+    Use Commercially, Distribute, Modify, Use Patents, Use Privately
+
+Under the following terms:
+    License and copyright notice
+
+You cannot:
+    Use trademark, Hold liable, Claim warranty
 ```
 
 > Well-crafted Contributions are Welcome.
 
 **INTENDED USE:** The *Logic and Code contained within* forms a **Developer Tool** and is intended to operate as part of a *Web Software Development Toolchain* on which a *Production System* operates indirectly. It is **NOT INTENDED FOR USE IN HIGH-LOAD ENVIRONMENTS** as there is *little focus on Runtime Optimization* in order to *maximize API Utility, Compatibility and Flexibility*.
 
-If you *need more* than what is contained within, study the Code, understand the Logic, and build your *Own Implementation* that is *API Compatible*. Share it with others who follow the same *Logic* and *API Contract* specified within. This Community of Users will likely want to use Your Work in their own *Software Development Toolchains*.
+If you *need more* than what is contained within, study the Code, understand the Logic, and build your *Own Implementation* that is *API Compatible*. Share it with others who follow the same *Logic* and *API Contract* specified within. This Community of Users may want to use Your Work in their own *Software Development Toolchains*.

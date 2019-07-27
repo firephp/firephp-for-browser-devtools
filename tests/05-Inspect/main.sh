@@ -28,7 +28,7 @@ CALL_webext run {
             "webRequestBlocking",            
             "<all_urls>"
         ],
-        "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self'; img-src 'self'",
+        "content_security_policy": "script-src 'self'; style-src 'self'; object-src 'self'; img-src 'self'",
         "background": {
             "scripts": [
                 {
@@ -50,9 +50,14 @@ CALL_webext run {
                         "icon": "$__DIRNAME__/../../src/skin/Logo.png",
                         "code": {
                             "@github.com~jsonrep~jsonrep#s1": {
+                                "externalizeCss": true,
                                 "page": {
                                     "@panels": {
-                                        "@settings": {},
+                                        "@settings": {
+                                            "_util": {
+                                                "enabled": true
+                                            }
+                                        },
                                         "@inspector": {},
                                         "@console": {
                                             "@fireconsole": {
@@ -64,7 +69,7 @@ CALL_webext run {
                                     "panels": "$__DIRNAME__/../../src/panels.rep.js",
                                     "settings": "$__DIRNAME__/../../src/settings.rep.js",
                                     "inspector": "$__DIRNAME__/../../src/inspector.rep.js",
-                                    "fireconsole": "$__DIRNAME__/../../node_modules/fireconsole.rep.js/dist/fireconsole.rep.js",
+                                    "fireconsole": "fireconsole.rep.js/dist/fireconsole.rep.js",
                                     "console": "$__DIRNAME__/../../src/console.rep.js"
                                 }
                             }
@@ -79,9 +84,6 @@ CALL_webext run {
             "@it.pinf.org.mochajs#s1": {}
         }
     },
-    "files": {
-        "/dist/resources/insight.renderers.default/*": "$__DIRNAME__/../../node_modules/fireconsole.rep.js/dist/resources/insight.renderers.default"
-    },    
     "expect": {
         "exit": true,
         "conditions": [
