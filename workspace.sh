@@ -217,15 +217,18 @@ elif [ "$ARGS_1" == "sign" ]; then
         export BO_TEST_FLAG_DEV=1
     fi
 
-    if [ "$ARGS_OPT_skip_build" != "true" ]; then
-        do_run "--build-only"
-    fi
+    # unlisted mode
+    do_sign
+
+    #do_extract
+
+elif [ "$ARGS_1" == "publish" ]; then
 
     if [ "$ARGS_OPT_dev" == "true" ]; then
-        echo "Not signing. Exiting due to --dev"
-        exit 0
+        export BO_TEST_FLAG_DEV=1
     fi
 
     MOZILLA_ADDONS_CHANNEL="listed" do_sign
+
     #do_extract
 fi
