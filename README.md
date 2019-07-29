@@ -5,7 +5,7 @@
 FirePHP for Firefox Developer Tools
 ===================================
 
-This project holds the [FirePHP Tool](http://firephp.org) in the form of a [Mozilla Web Extension](https://developer.mozilla.org/en-US/Add-ons/WebExtensions) which is compatible with the latest *Multiprocess Firefox Browser*.
+This project holds the [FirePHP Tool](http://firephp.org) in the form of a [Mozilla Web Extension](https://developer.mozilla.org/en-US/Add-ons/WebExtensions) which is compatible with the latest *Multiprocess Firefox Browser (&gt;= 56.0.2)*.
 
 > Log from PHP to Browser Developer Tools via HTTP Response Headers.
 
