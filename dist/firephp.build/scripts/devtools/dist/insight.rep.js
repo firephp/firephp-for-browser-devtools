@@ -2518,7 +2518,6 @@ exports.generateFromMessage = function(message, format)
         throw new Error("NYI");
 
     if(meta["msg.preprocessor"] && meta["msg.preprocessor"]=="FirePHPCoreCompatibility") {
-;debugger;
         var parts = convertFirePHPCoreData(meta, data);
         if (typeof message.setMeta == "function")
             message.setMeta(JSON.encode(parts[0]));
