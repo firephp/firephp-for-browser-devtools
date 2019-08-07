@@ -6332,7 +6332,7 @@ exports.main = function (JSONREP, node) {
     return JSONREP.makeRep('<div></div>', {
       css: {
         ".@": "github.com~0ink~codeblock/codeblock:Codeblock",
-        "_code": "{\"_cssid\":\"3ec12b5678e224c6d23261a8fd83618fce968e3f\",\"repUri\":\"fireconsole\"}",
+        "_code": "{\"_cssid\":\"71e851a61fa880aafcc2b86479d6153e22f7af9c\",\"repUri\":\"fireconsole\"}",
         "_format": "json",
         "_args": [],
         "_compiled": false
@@ -6356,7 +6356,7 @@ function _defineProperties(target, props) { for (var i = 0; i < props.length; i+
 
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
 
-var VERBOSE = true;
+var VERBOSE = false;
 
 var ENCODER = require("insight-for-js/lib/encoder/default");
 
@@ -7943,6 +7943,7 @@ protocols["http://meta.wildfirehq.org/Protocol/JsonStream/0.2"] = function(uri) 
                 if(!messages[receiver]) {
                     messages[receiver] = [];
                 }
+
 
                 var meta = {
                         "msg.preprocessor": "FirePHPCoreCompatibility",

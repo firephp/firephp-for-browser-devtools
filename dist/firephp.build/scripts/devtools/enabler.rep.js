@@ -551,8 +551,6 @@ exports.main = function (JSONREP, node, options) {
                 return;
               }
 
-              console.log("[jsonrep][riot] Inject cssText:", cssText);
-
               if (window.document.createStyleSheet) {
                 var sheet = window.document.createStyleSheet();
                 sheet.cssText = cssText;

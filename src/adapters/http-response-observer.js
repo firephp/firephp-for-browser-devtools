@@ -25,8 +25,8 @@ exports.for = function (API) {
         }
 
 //console.log("pageUrlByFrameId :::", pageUrlByFrameId);
-        
-console.log("Make pageUrl", pageUrl, "from response", response);
+
+//console.log("Make pageUrl", pageUrl, "from response", response);
 
         API.emit("http.response", {
             "request": {

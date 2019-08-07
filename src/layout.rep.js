@@ -1,8 +1,6 @@
 
 const WINDOW = window;
 
-WINDOW.$ = require("./lib/jquery3.min");
-
 
 /*
 // TODO: This should not be needed once `inspector` issue is fixed.
@@ -233,7 +231,7 @@ exports.main = function (JSONREP, node, options) {
                                 view = "uninitialized";                            
                             }
 
-console.log("VIEW DETAIS", view, "configured", configured, "enabled", enabled);
+//console.log("VIEW DETAIS", view, "configured", configured, "enabled", enabled);
 
                             var toggles = {
                                 ui: false,

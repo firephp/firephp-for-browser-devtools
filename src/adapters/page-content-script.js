@@ -11,4 +11,4 @@ BROWSER.runtime.onMessage.addListener(function (request) {
 });
 
 
-console.log("CONTENT PANEL LOADED");
+//console.log("CONTENT PANEL LOADED");

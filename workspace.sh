@@ -69,6 +69,13 @@ function do_run {
                             "code": {
                                 "@github.com~jsonrep~jsonrep#s1": {
                                     "externalizeCss": true,
+                                    "include": {
+                                        "jquery": false,
+                                        "regenerator-runtime": false,
+                                        "riot.csp.js": true,
+                                        "riot.js": false,
+                                        "riot.min.js": false
+                                    },
                                     "page": {
                                         "@layout": {
                                             "console": {
@@ -164,7 +171,24 @@ function do_run {
             "^/tests": {
                 "@it.pinf.org.mochajs#s1": {}
             }
-        }
+        },
+        "postbuild": (javascript (LIB) >>>
+        
+            return async function () {
+                // Remove files that we do not need.
+                await Promise.all([
+                    'domplate-eval.browser.js',
+                    'domplate.browser.js',
+                    'pinf-loader-core.browser.js',
+                    'babel-regenerator-runtime.js'
+                ].map(async function (filename) {
+                    const paths = LIB.GLOB.sync('**/' + filename);
+                    await Promise.all(paths.map(async function (path) {
+                        await LIB.FS_EXTRA.removeSync(path);
+                    }));
+                }));
+            };
+        <<<)
     } "$@"
 
 }

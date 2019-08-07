@@ -191,7 +191,7 @@ console.log("CLEAR lastRequestConsole CONSOLE!!");
 
                                 let fc = getConsoleForContext(message.context);
                                 if (!persistLogs) {
-                                    console.log("CLEAR lastRequestConsole CONSOLE!!");
+//console.log("CLEAR lastRequestConsole CONSOLE!!");
                                     fc.getAPI().clear();
                                 }
 
