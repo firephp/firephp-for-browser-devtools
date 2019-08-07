@@ -106,8 +106,6 @@
 
   // skip the following code on the server
   if (WIN) {
-console.log("Do not init style nodes");
-/*
     styleNode = ((function () {
       // create a new style element with the correct type
       var newNode = makeElement('style');
@@ -115,6 +113,7 @@ console.log("Do not init style nodes");
       var userNode = $('style[type=riot]');
 
       setAttribute(newNode, 'type', 'text/css');
+      /* istanbul ignore next */
       if (userNode) {
         if (userNode.id) { newNode.id = userNode.id; }
         userNode.parentNode.replaceChild(newNode, userNode);
@@ -123,7 +122,6 @@ console.log("Do not init style nodes");
       return newNode
     }))();
     cssTextProp = styleNode.styleSheet;
-*/
   }
 
   /**
