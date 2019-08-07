@@ -528,7 +528,7 @@ exports.main = function (JSONREP, node, options) {
     return JSONREP.makeRep('<div class="console">' + code + '</div>', {
       css: {
         ".@": "github.com~0ink~codeblock/codeblock:Codeblock",
-        "_code": "{\"_cssid\":\"eb97c7ee2b8db46f2a7c335ad7f9a9843d2a4899\",\"repUri\":\"console\"}",
+        "_code": "{\"_cssid\":\"152b675738865187a26b5f1a49372d8178d562a3\",\"repUri\":\"console\"}",
         "_format": "json",
         "_args": [],
         "_compiled": false
@@ -637,8 +637,6 @@ exports.main = function (JSONREP, node, options) {
                 var _fc = getConsoleForContext(message.context);
 
                 if (!persistLogs) {
-                  console.log("CLEAR lastRequestConsole CONSOLE!!");
-
                   _fc.getAPI().clear();
                 }
               } else if (message.event === "clear") {

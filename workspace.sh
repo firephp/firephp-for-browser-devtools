@@ -182,12 +182,9 @@ function do_run {
                     'pinf-loader-core.browser.js',
                     'babel-regenerator-runtime.js'
                 ].map(async function (filename) {
-                    const paths = LIB.GLOB.sync(`**/${filename}`);
+                    const paths = LIB.GLOB.sync('**/' + filename);
                     await Promise.all(paths.map(async function (path) {
-                        
-console.log("REMOVE", path);
-                        
-                        //await LIB.FS_EXTRA.removeSync(path);            
+                        await LIB.FS_EXTRA.removeSync(path);
                     }));
                 }));
             };

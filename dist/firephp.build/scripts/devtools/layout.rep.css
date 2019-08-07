@@ -4,55 +4,55 @@ BODY {
     overflow: hidden;
 }
 
-[_cssid="321befe612ef624dd245518a1f8f7e087946fbe4"].layout-views {
+[_cssid="a11eecd0464aca3cb6851b756d9fc3a11bb1d738"].layout-views {
     height: 100%;
 }
 
-[_cssid="321befe612ef624dd245518a1f8f7e087946fbe4"].layout-views,
-[_cssid="321befe612ef624dd245518a1f8f7e087946fbe4"].layout-views TABLE {
+[_cssid="a11eecd0464aca3cb6851b756d9fc3a11bb1d738"].layout-views,
+[_cssid="a11eecd0464aca3cb6851b756d9fc3a11bb1d738"].layout-views TABLE {
     font-family: Lucida Grande, Tahoma, sans-serif;
     font-size: 11px;
 }
 
-[_cssid="321befe612ef624dd245518a1f8f7e087946fbe4"] .layout TD {
+[_cssid="a11eecd0464aca3cb6851b756d9fc3a11bb1d738"] .layout TD {
     vertical-align: top;
 }
 
-[_cssid="321befe612ef624dd245518a1f8f7e087946fbe4"] .layout TD.menu-panel {
+[_cssid="a11eecd0464aca3cb6851b756d9fc3a11bb1d738"] .layout TD.menu-panel {
 }
 
-[_cssid="321befe612ef624dd245518a1f8f7e087946fbe4"] .layout TD.settings-panel {
+[_cssid="a11eecd0464aca3cb6851b756d9fc3a11bb1d738"] .layout TD.settings-panel {
     border-bottom: 1px solid #dcdcdc;
 }
 
-[_cssid="321befe612ef624dd245518a1f8f7e087946fbe4"] .layout TD.inspector-panel {
+[_cssid="a11eecd0464aca3cb6851b756d9fc3a11bb1d738"] .layout TD.inspector-panel {
     min-width: 200px;
     overflow: auto;
 }
 
-[_cssid="321befe612ef624dd245518a1f8f7e087946fbe4"] .manage {
+[_cssid="a11eecd0464aca3cb6851b756d9fc3a11bb1d738"] .manage {
     height: 100%;
     padding: 20px;
     background-color: #efefef;
 }
 
-[_cssid="321befe612ef624dd245518a1f8f7e087946fbe4"] .manage > .close-button {
+[_cssid="a11eecd0464aca3cb6851b756d9fc3a11bb1d738"] .manage > .close-button {
     display: none;
     cursor: pointer;
     margin-bottom: 10px;
 }
 
-[_cssid="321befe612ef624dd245518a1f8f7e087946fbe4"] .uninitialized {
+[_cssid="a11eecd0464aca3cb6851b756d9fc3a11bb1d738"] .uninitialized {
     text-align: center;
     padding-top: 50px;
     height: 100%;
 }
-[_cssid="321befe612ef624dd245518a1f8f7e087946fbe4"] .uninitialized > P {
+[_cssid="a11eecd0464aca3cb6851b756d9fc3a11bb1d738"] .uninitialized > P {
     font-weight: bold;
     font-size: 16px;
     color: #dcdcdc;
 }
-[_cssid="321befe612ef624dd245518a1f8f7e087946fbe4"] .uninitialized BUTTON {
+[_cssid="a11eecd0464aca3cb6851b756d9fc3a11bb1d738"] .uninitialized BUTTON {
     font-size: 16px;
     color: #dcdcdc;
     cursor: pointer;
