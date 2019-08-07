@@ -25,7 +25,7 @@ function do_run {
             "applications": {
                 "gecko": {
                     "id": "FirePHPExtension-Build@firephp.org",
-                    "strict_min_version": "56.0.2"
+                    "strict_min_version": "56.0"
                 }
             },
             "icons": {
