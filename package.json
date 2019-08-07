@@ -1,6 +1,6 @@
 {
     "name": "github.com~firephp~firephp-for-firefox-devtools",
-    "version": "1.2.3",
+    "version": "1.2.4",
     "__devDependencies": {
         "bash.origin.lib": "",
         "fireconsole.rep.js": "^0.0.13"
