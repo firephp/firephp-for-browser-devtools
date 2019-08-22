@@ -1,11 +1,14 @@
 **Status: DEV - Commands will currently not run for you!**
 
-![FirePHP Logo](https://rawgit.com/firephp/firephp-for-firefox-devtools/master/src/skin/Logo.png "FirePHP Logo")
+![FirePHP Logo](https://rawgit.com/firephp/firephp-for-browser-devtools/master/src/skin/Logo.png "FirePHP Logo")
 
-FirePHP for Firefox Developer Tools
+FirePHP for Browser Developer Tools
 ===================================
 
-This project holds the [FirePHP Tool](http://firephp.org) in the form of a [Mozilla Web Extension](https://developer.mozilla.org/en-US/Add-ons/WebExtensions) which is compatible with the latest *Multiprocess Firefox Browser (&gt;= 56.0.2)*.
+This project holds the [FirePHP Tool](http://firephp.org) in the form of a Browser Extension compatible with:
+
+  * Mozilla Firefox - https://developer.mozilla.org/en-US/Add-ons/WebExtensions
+  * Google Chrome - https://developer.chrome.com/extensions
 
 > Log from PHP to Browser Developer Tools via HTTP Response Headers.
 
@@ -15,16 +18,17 @@ For a list of supported server libraries see [http://firephp.org](http://firephp
 Install
 -------
 
-### AMO Listed
+### Published
 
-Install from: [addons.mozilla.org/en-US/firefox/addon/firephp](https://addons.mozilla.org/en-US/firefox/addon/firephp/)
+  * Firefox: [addons.mozilla.org/en-US/firefox/addon/firephp](https://addons.mozilla.org/en-US/firefox/addon/firephp/)
+  * Chrome: *TBD*
 
-### Unlisted
+### Local
 
 **NOTE:** These downloads do **NOT** auto-update!
 
-  1. Download latest: [dist/firephp.xpi](https://github.com/firephp/firephp-for-firefox-devtools/raw/master/dist/firephp.xpi)
-  2. Drag into Firefox
+  * Firefox: [dist/firephp.xpi](https://github.com/firephp/firephp-for-browser-devtools/raw/master/dist/firephp.xpi)
+  * Chrome: [dist/firephp.build](https://github.com/firephp/firephp-for-browser-devtools/raw/master/dist/firephp.build)
 
 ### Source
 
@@ -42,12 +46,12 @@ Build from source:
     git diff            # Optional to verify build
         # Only the `version` property in `dist/firephp.build/manifest.json` should have changed.
 
-*Load Temporary Addon* at `dist/firephp.build/` into Firefox.
+*Load Temporary Addon* at `dist/firephp.build/` into Firefox or Chrome.
 
 Preview
 -------
 
-<img src="https://rawgit.com/firephp/firephp-for-firefox-devtools/master/src/skin/CodeScreenshot.png" alt="Code" width="300"> &nbsp; <img src="https://rawgit.com/firephp/firephp-for-firefox-devtools/master/src/skin/PanelScreenshot.png" alt="Panel" width="300">
+<img src="https://rawgit.com/firephp/firephp-for-browser-devtools/master/src/skin/CodeScreenshot.png" alt="Code" width="300"> &nbsp; <img src="https://rawgit.com/firephp/firephp-for-browser-devtools/master/src/skin/PanelScreenshot.png" alt="Panel" width="300">
 
 Provenance
 ==========

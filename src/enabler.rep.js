@@ -1,11 +1,13 @@
 
+const WINDOW = window;
+
 exports.main = function (JSONREP, node, options) {    
 
     var api = {
         currentContext: null
     };
 
-    browser.runtime.onMessage.addListener(function (message) {
+    WINDOW.crossbrowser.runtime.onMessage.addListener(function (message) {
 
         if (message.to === "message-listener") {
             if (message.event === "currentContext") {
@@ -70,7 +72,7 @@ exports.main = function (JSONREP, node, options) {
                 tag.enabled = null;
 
                 const comp = COMPONENT.for({
-                    browser: browser
+                    browser: WINDOW.crossbrowser
                 });
 
                 comp.on("setting.enabled", function (enabled) {

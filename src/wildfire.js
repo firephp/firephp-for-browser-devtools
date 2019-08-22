@@ -4,8 +4,11 @@ const EVENTS = require("eventemitter2");
 
 var API = module.exports = new EVENTS();
 
+const BROWSER = (typeof browser != "undefined") ? browser : chrome;
+
+
 API.console = console;
-API.BROWSER = browser;
+API.BROWSER = BROWSER;
 API.WILDFIRE = require("wildfire-for-js");
 
 
@@ -205,43 +208,53 @@ var hostnameSettings = {};
 API.hostnameSettings = hostnameSettings;
 
 REQUEST_OBSERVER.register(function (request) {
+    // Firefox allows returning a promise since version 52
+    // @see https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/webRequest/onBeforeRequest
+    // Chrome requires a sync return
+    // @see https://developer.chrome.com/extensions/webRequest#event-onBeforeSendHeaders
+
     if (!isEnabled()) {
+
+        if (API.VERBOSE) console.log("[wildfire] REQUEST_OBSERVER handler: not enabled");
+
         return null;
     }
 
-    return SETTINGS.getDomainSettingsForRequest(request).then(function (settings) {
+    const settings = SETTINGS.getDomainSettingsForRequestSync(request);
 
-//        if (API.VERBOSE) console.log("[wildfire] request domain settings for '" + request.hostname + "':", settings);
+    if (API.VERBOSE) console.log("[wildfire] forceEnabled:", forceEnabled);
+    if (API.VERBOSE) console.log("[wildfire] request domain settings for '" + request.hostname + "':", settings);
 
-        hostnameSettings[request.hostname] = settings;
-        
-        if (
-            !forceEnabled &&
-            !settings.enabled
-        ) {
-            return {};
+    hostnameSettings[request.hostname] = settings;
+    
+    if (
+        !forceEnabled &&
+        !settings.enabled
+    ) {
+        return {};
+    }
+
+    if (
+        forceEnabled ||
+        settings.enableUserAgentHeader
+    ) {
+        if (!request.headers["User-Agent"].match(/\sFirePHP\/([\.|\d]*)\s?/)) {
+            request.headers["User-Agent"] = request.headers["User-Agent"] + " FirePHP/0.5";
         }
+    }
 
-        if (
-            forceEnabled ||
-            settings.enableUserAgentHeader
-        ) {
-            if (!request.headers["User-Agent"].match(/\sFirePHP\/([\.|\d]*)\s?/)) {
-                request.headers["User-Agent"] = request.headers["User-Agent"] + " FirePHP/0.5";
-            }
-        }
+    if (
+        forceEnabled ||
+        settings.enableFirePHPHeader
+    ) {
+        request.headers["X-FirePHP-Version"] = "0.4";
+    }
 
-        if (
-            forceEnabled ||
-            settings.enableFirePHPHeader
-        ) {
-            request.headers["X-FirePHP-Version"] = "0.4";
-        }
+    if (API.VERBOSE) console.log("[wildfire] updated request headers:", request.headers);
 
-        return {
-            requestHeaders: request.headers
-        };
-    });
+    return {
+        requestHeaders: request.headers
+    };
 
 
 /*

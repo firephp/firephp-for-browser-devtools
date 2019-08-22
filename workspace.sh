@@ -32,7 +32,7 @@ function do_run {
                 "48": "$__DIRNAME__/src/skin/Logo.png"
             },
             "permissions": [
-                "tabs",
+                "activeTab",
                 "storage",
                 "webRequest",
                 "webNavigation",
@@ -227,6 +227,11 @@ BO_parse_args "ARGS" "$@"
 if [ "$ARGS_1" == "build" ]; then
 
     do_run "--build-only"
+
+    pushd "dist/firephp.build" > /dev/null
+        rm -f ../firephp.build.zip 2> /dev/null || true
+        zip -r ../firephp.build.zip *
+    popd > /dev/null
 
     BO_cecho "Built extension can be found in: dist/firephp.build/" YELLOW BOLD
 

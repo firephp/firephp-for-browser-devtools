@@ -41,8 +41,10 @@ exports.for = function (ctx) {
     ctx.browser.runtime.onMessage.addListener(function (message) {
         try {
             if (
-                typeof ctx.browser !== "undefined" &&
-                message.context &&
+                !ctx.browser ||
+                !ctx.browser.devtools ||
+                !ctx.browser.devtools.inspectedWindow ||
+                !message.context ||
                 message.context.tabId != ctx.browser.devtools.inspectedWindow.tabId
             ) {
                 return;

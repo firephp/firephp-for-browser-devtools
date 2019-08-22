@@ -121,7 +121,7 @@ exports.main = function (JSONREP, node, options) {
 
                 const tag = this;
                 const comp = COMPONENT.for({
-                    browser: browser
+                    browser: window.crossbrowser
                 });
 
                 tag.hostname = "";                    
@@ -155,16 +155,14 @@ exports.main = function (JSONREP, node, options) {
 //                tag.on("mount", sync);
 
                 function sync () {
-                    $('INPUT[type="checkbox"]', tag.root).each(function () {
-                        var el = $(this);
-
-                        if (el.attr("scope") === "global") {
-                            comp.getGlobalSetting(el.attr("name")).then(function (enabled) {
-                                el.get(0).checked = !!enabled;
+                    tag.root.querySelectorAll('INPUT[type="checkbox"]').forEach(function (el) {
+                        if (el.getAttribute("scope") === "global") {
+                            comp.getGlobalSetting(el.getAttribute("name")).then(function (enabled) {
+                                el.checked = !!enabled;
                             });
                         } else {
-                            comp.getSetting(el.attr("name")).then(function (enabled) {
-                                el.get(0).checked = !!enabled;
+                            comp.getSetting(el.getAttribute("name")).then(function (enabled) {
+                                el.checked = !!enabled;
                             });
                         }
                     });

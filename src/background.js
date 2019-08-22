@@ -1,8 +1,10 @@
 
-const BROWSER = browser;
+const BROWSER = (typeof browser != "undefined") ? browser : chrome;
 const WILDFIRE = exports.WILDFIRE = require("./wildfire");
 
-WILDFIRE.VERBOSE = false;
+const LIB = require("./lib");
+
+WILDFIRE.VERBOSE = true;
 
 
 WILDFIRE.once("error", function (err) {
@@ -15,17 +17,23 @@ async function initCurrentContext () {
         // Already initialized
         return;
     }
+    try {
+        const searchResult = (await LIB.browser.tabs.query({
+            currentWindow: true,
+            active: true
+        }));
+        if (searchResult.length === 1) {
+            const tabDetails = searchResult[0];
 
-    const tabDetails = (await BROWSER.tabs.query({
-        currentWindow: true,
-        active: true
-    }))[0];
-
-    if (tabDetails.url) {
-        setCurrentContextFromDetails({
-            tabId: tabDetails.id,
-            url: tabDetails.url
-        }, true);
+            if (tabDetails.url) {
+                setCurrentContextFromDetails({
+                    tabId: tabDetails.id,
+                    url: tabDetails.url
+                }, true);
+            }
+        }
+    } catch (err) {
+        console.error(err.stack || err.message || err);
     }
 }
 
@@ -42,7 +50,7 @@ function broadcastForContext (context, message) {
     message.context = context;
     message.to = "message-listener";
 
-    return BROWSER.runtime.sendMessage(message).catch(function (err) {
+    return LIB.browser.runtime.sendMessage(message).catch(function (err) {
         if (WILDFIRE.VERBOSE) console.log("WARNING", err);
     });
 }
@@ -136,7 +144,7 @@ async function runtime_onMessage (message) {
     } else
     if (message.to === "background") {
         if (message.event === "reload") {
-            browser.tabs.reload(message.context.tabId, {
+            LIB.browser.tabs.reload(message.context.tabId, {
                 bypassCache: true
             });
         }
@@ -176,9 +184,15 @@ function webRequest_onBeforeRequest (details) {
 
     // We only care about the page frame event.
     if (
-        typeof details.documentUrl !== "undefined" ||
+        (
+            // Firefox
+            typeof details.documentUrl !== "undefined" ||
+            // Google Chrome
+            typeof details.initiator !== "undefined"
+        ) ||
         details.parentFrameId !== -1
     ) {
+        // These are resource or sub-frame events
         return;
     }
 

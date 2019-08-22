@@ -26,10 +26,19 @@ exports.main = function (JSONREP, node, options) {
                 :scope DIV .menu > BUTTON {
                     cursor: pointer;
                     width: auto;
-                    padding-left: 1px;
-                    padding-right: 1px;
+                    padding-left: 5px;
+                    padding-right: 5px;
+
+                    border-radius: 5px;
+                    border-color: rgb(216, 216, 216) rgb(209, 209, 209) rgb(186, 186, 186);
+                    border-style: solid;
+                    border-width: 1px;
+                    padding: 1px 5px 2px;
+                    color: rgba(0, 0, 0, 0.847);
+                    background-color: rgb(255, 255, 255);
+                    box-sizing: border-box;
                 }
-                
+
             </style>
 
             <script>
@@ -38,7 +47,7 @@ exports.main = function (JSONREP, node, options) {
                 let tag = this;
 
                 const comp = COMPONENT.for({
-                    browser: browser
+                    browser: window.crossbrowser
                 });
 
                 tag.triggerRelooad = function (event) {
@@ -54,13 +63,13 @@ exports.main = function (JSONREP, node, options) {
                 }
                 
                 tag.notifyPersistChange = function (event) {
-                    browser.storage.local.set({
+                    window.crossbrowser.storage.local.set({
                         "persist-on-navigate": event.target.checked
                     });                       
                 }
 
                 tag.on("mount", function () {
-                    browser.storage.local.get("persist-on-navigate").then(function (value) {
+                    window.crossbrowser.storage.local.get("persist-on-navigate").then(function (value) {
                         tag.root.querySelector('[name="settings.persist-on-navigate"]').checked = value["persist-on-navigate"] || false;
                     });
                 });

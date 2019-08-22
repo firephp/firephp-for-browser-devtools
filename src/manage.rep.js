@@ -44,7 +44,7 @@ exports.main = function (JSONREP, node, options) {
                     tag.settingsCode = opts.config.settingsCode;
 
                     const comp = COMPONENT.for({
-                        browser: browser
+                        browser: window.crossbrowser
                     });
 
                     comp.on("changed.context", function (context) {

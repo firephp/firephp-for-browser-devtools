@@ -1,5 +1,5 @@
 
-const BROWSER = browser;
+const BROWSER = (typeof browser != "undefined") ? browser : chrome;
 
 
 BROWSER.runtime.onMessage.addListener(function (request) {

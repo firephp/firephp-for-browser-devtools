@@ -1,4 +1,6 @@
 
+const WINDOW = window;
+
 exports.main = function (JSONREP, node, options) {
 
 
@@ -36,7 +38,7 @@ exports.main = function (JSONREP, node, options) {
                     const COMPONENT = require("./component");
     
                     const comp = COMPONENT.for({
-                        browser: browser
+                        browser: WINDOW.crossbrowser
                     });
 
                     comp.on("setting.enabled", function (enabled) {

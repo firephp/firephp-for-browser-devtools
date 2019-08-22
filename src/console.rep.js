@@ -1,5 +1,5 @@
 
-const BROWSER = (typeof browser !== "undefined" && browser) || null;
+//const BROWSER = (typeof browser != "undefined") ? browser : chrome;
 const WINDOW = window;
 
 
@@ -38,7 +38,7 @@ exports.main = function (JSONREP, node, options) {
                     const COMPONENT = require("./component");
 
                     const comp = COMPONENT.for({
-                        browser: browser
+                        browser: WINDOW.crossbrowser
                     });
 
                     comp.on("setting.enabled", function (enabled) {
@@ -187,7 +187,7 @@ console.log("CLEAR lastRequestConsole CONSOLE!!");
                             } else
                             if (message.event === "prepare") {
 
-//console.log("PREPARE CONSOLE!!!");
+console.log("PREPARE CONSOLE!!!", message.context);
 
                                 let fc = getConsoleForContext(message.context);
                                 if (!persistLogs) {
@@ -209,7 +209,7 @@ console.log("CLEAR lastRequestConsole CONSOLE!!");
 
                             } else
                             if (message.event === "clear") {
-//console.log("CLEAR CONSOLE!!!", message.context);
+console.log("CLEAR CONSOLE!!!", message.context);
 
                                 Object.keys(consoles).forEach(function (id) {
 //console.log("console id", id);                                    
@@ -221,7 +221,7 @@ console.log("CLEAR lastRequestConsole CONSOLE!!");
                                 scrollIfBottom();
                             } else
                             if (message.event === "destroyContext") {
-//console.log("DESTROY CONTEXT!!!");
+console.log("DESTROY CONTEXT!!!", message.context);
 
                                 Object.keys(consoles).forEach(function (id) {
                                     if (id == message.context.pageUid) {
@@ -245,11 +245,14 @@ console.log("CLEAR lastRequestConsole CONSOLE!!");
 
                     function syncPersistentConsole () {
 
-                        return BROWSER.storage.local.get("persist-on-navigate").then(function (value) {
+                        return WINDOW.crossbrowser.storage.local.get("persist-on-navigate").then(function (value) {
                             persistLogs = value["persist-on-navigate"];
 
                             if (persistLogs) {
-                                if (!persistentConsole) {
+                                if (
+                                    !persistentConsole &&
+                                    comp.currentContext
+                                ) {
                                     persistentConsole = getConsoleForContext(comp.currentContext);
                                 }
                             } else {
@@ -271,8 +274,8 @@ console.log("CLEAR lastRequestConsole CONSOLE!!");
                     }
                     
                     var persistLogs = false;
-                    if (BROWSER) {
-                        BROWSER.storage.onChanged.addListener(function (changes, area) {
+                    if (WINDOW.crossbrowser) {
+                        WINDOW.crossbrowser.storage.onChanged.addListener(function (changes, area) {
                             if (changes["persist-on-navigate"]) {
 
                                 syncPersistentConsole();
@@ -321,6 +324,13 @@ console.log("CLEAR lastRequestConsole CONSOLE!!");
                     function getConsoleForContext (context) {
                         if (persistentConsole) {
                             return persistentConsole;
+                        }
+                        if (
+                            !context ||
+                            typeof context.pageUid === "undefined"
+                        ) {
+                            console.error("context", context);
+                            throw new Error("'context' does not have required property 'pageUid'!");
                         }
 //                        var key = makeKeyForContext(context);
                         if (!consoles[context.pageUid]) {

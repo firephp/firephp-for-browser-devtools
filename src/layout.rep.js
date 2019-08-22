@@ -1,5 +1,6 @@
 
 const WINDOW = window;
+//const BROWSER = (typeof browser != "undefined") ? browser : chrome;
 
 
 /*
@@ -20,9 +21,9 @@ setTimeout(function () {
 
 exports.main = function (JSONREP, node, options) {
 
-    if (typeof WINDOW.browser === "undefined") {
-        WINDOW.browser = require("./adapters/page-browser-api");
-    }
+//    if (typeof WINDOW.browser === "undefined") {
+//        WINDOW.browser = require("./adapters/page-browser-api");
+//    }
 
     var panels = {};
 
@@ -66,7 +67,7 @@ exports.main = function (JSONREP, node, options) {
                             <tr>
                                 <td class="side-panel">
                                     <table class="layout" height="100%" border="0" cellpadding="0" cellspacing="0">
-                                    <tr>
+                                        <tr>
                                             <td class="menu-panel">
                                                 %%%variables.panels.menu%%%
                                             </td>
@@ -87,7 +88,12 @@ exports.main = function (JSONREP, node, options) {
                         </table>
                     </div>
                     <div class="manage" style="display: none;">
-                        <button class="close-button">Close</button>
+                        <table class="header" border="0" cellpadding="0" cellspacing="0" width="100%">
+                            <tr>
+                                <td><button class="close-button">Close</button></td>
+                                <td class="right"><div class="version" style="display: none;"></div></td>
+                            </tr>
+                        </table>
                         %%%variables.panels.manage%%%
                     </div>
                     <div class="uninitialized" style="display: none;">
@@ -134,12 +140,29 @@ exports.main = function (JSONREP, node, options) {
                     background-color: #efefef;
                 }
 
-                :scope .manage > .close-button {
-                    display: none;
-                    cursor: pointer;
+                :scope .manage TABLE.header {
                     margin-bottom: 10px;
                 }
-                
+
+                :scope .manage TABLE.header TD {
+                    height: 18px;
+                    min-height: 18px;
+                }
+
+                :scope .manage TABLE.header TD.right {
+                    text-align: right;
+                }
+
+                :scope .manage TABLE.header .close-button {
+                    display: none;
+                    cursor: pointer;
+                }
+
+                :scope .manage TABLE.header .version {
+                    display: none;
+                    color: #acacac;
+                }
+
                 :scope .uninitialized {
                     text-align: center;
                     padding-top: 50px;
@@ -154,6 +177,14 @@ exports.main = function (JSONREP, node, options) {
                     font-size: 16px;
                     color: #dcdcdc;
                     cursor: pointer;
+
+                    border-radius: 5px;
+                    border-color: rgb(216, 216, 216) rgb(209, 209, 209) rgb(186, 186, 186);
+                    border-style: solid;
+                    border-width: 1px;
+                    padding: 1px 5px 2px;
+                    background-color: rgb(255, 255, 255);
+                    box-sizing: border-box;
                 }
                     
             <<<),
@@ -165,7 +196,8 @@ exports.main = function (JSONREP, node, options) {
                     let forceManage = false;
 
                     const comp = COMPONENT.for({
-                        browser: browser
+                        browser: WINDOW.crossbrowser
+//                        browser: browser
                     });
 
                     comp.on("changed.context", function () {
@@ -186,12 +218,12 @@ exports.main = function (JSONREP, node, options) {
 
 
                     var persistLogs = false;
-                    browser.storage.onChanged.addListener(function (changes, area) {
+                    WINDOW.crossbrowser.storage.onChanged.addListener(function (changes, area) {
                         if (changes["persist-on-navigate"]) {
                             persistLogs = changes["persist-on-navigate"].newValue;
                         }
                     });
-                    browser.storage.local.get("persist-on-navigate").then(function (value) {
+                    WINDOW.crossbrowser.storage.local.get("persist-on-navigate").then(function (value) {
                         persistLogs = value["persist-on-navigate"];
                     });
 
@@ -239,20 +271,26 @@ exports.main = function (JSONREP, node, options) {
                                 uninitialized: false
                             };
 
+                            const versionEl = el.querySelector("DIV.manage TABLE.header DIV.version");
+                            versionEl.style.display = "none";
+                            versionEl.innerHTML = "v" + WINDOW.crossbrowser.runtime.getManifest().version;
+
                             if (view === "uninitialized") {
                                 toggles.uninitialized = true;
                             } else
                             if (view === "manage") {
                                 toggles.manage = true;
 
+                                versionEl.style.display = "inline-block";
+
                                 if (
                                     forceManage ||
                                     configured ||
                                     persistLogs
                                 ) {
-                                    el.querySelector("DIV.manage > BUTTON.close-button").style.display = "inline-block";
+                                    el.querySelector("DIV.manage TABLE.header BUTTON.close-button").style.display = "inline-block";
                                 } else {
-                                    el.querySelector("DIV.manage > BUTTON.close-button").style.display = "none";
+                                    el.querySelector("DIV.manage TABLE.header BUTTON.close-button").style.display = "none";
                                 }
                             } else
                             if (view === "console") {
@@ -266,12 +304,12 @@ exports.main = function (JSONREP, node, options) {
                             el.querySelector("DIV.uninitialized").style.display = toggles.uninitialized ? "block" : "none";
 
                         } catch (err) {
-                            console.error("Error during sync():", err);
+                            console.error("Error during sync():", err.message || err.stack || err);
                             throw err;
                         }
                     }
 
-                    el.querySelector("DIV.manage > BUTTON.close-button").addEventListener("click", async function () {
+                    el.querySelector("DIV.manage TABLE.header BUTTON.close-button").addEventListener("click", async function () {
                         try {
                             // Navigated to a new hostname and clicked enable without first configuring
                             // and now clicked close. So we disable again as nothing was configured.

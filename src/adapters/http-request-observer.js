@@ -5,6 +5,10 @@ exports.for = function (API) {
     var requestIndex = 0;
 
 
+    // Firefox allows returning a promise since version 52
+    // @see https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/webRequest/onBeforeRequest
+    // Chrome requires a sync return
+    // @see https://developer.chrome.com/extensions/webRequest#event-onBeforeSendHeaders
     function onRequest (request) {
 
 //console.log("MAKE REQUEST ... add headers", request);
@@ -27,25 +31,30 @@ exports.for = function (API) {
             "hostname": request.url.replace(/^https?:\/\/([^:\/]+)(:\d+)?\/.*?$/, "$1"),
             "port": request.url.replace(/^https?:\/\/[^:]+:?(\d+)?\/.*?$/, "$1") || 80,
             "method": request.method,
-            "headers": headers,
+            "headers": headers
+            /*
             setRequestHeader: function (name, value) {
+
+//console.log("SET REQUEST HEADER", "name, value", name, value);
 
                 request.requestHeaders.filter(function (header) {
                     return (header.name === name);
                 })[0].value = value;
             }
+            */
         });
 
         if (!result) {
             return {};
         }
 
-        return result.then(function (changes) {
+        const changes = result;
+        //return Promise.resolve(result).then(function (changes) {
 
-            if (!changes) {
-                return {};
-            }
-
+            //if (!changes) {
+            //    return {};
+            //}
+            
             var ret = {};
 
             if (changes.requestHeaders) {
@@ -59,8 +68,10 @@ exports.for = function (API) {
                 ret.requestHeaders = headers;
             }
 
+//console.log("onBeforeSendHeaders:", ret);
+
             return ret;    
-        });
+        //});
     }
 
 
