@@ -560,12 +560,12 @@ exports.main = function (JSONREP, node, options) {
               this.on('update', this.set);
               this.on('mount', this.set);
             });
-            riot.tag2('tag_4827980e290cf3d76ed38b24636074971dcb86ac', '<div class="menu"> <button onclick="{triggerRelooad}">Reload</button> <button onclick="{triggerClear}">Clear</button> <input type="checkbox" name="settings.persist-on-navigate" onchange="{notifyPersistChange}">Persist <button onclick="{triggerManage}">Settings</button> </div>', '', '', function (opts) {
+            riot.tag2('tag_43c5ec7c7cfaf69d925cc0ee408b216fa3ab7872', '<div class="menu"> <button onclick="{triggerRelooad}">Reload</button> <button onclick="{triggerClear}">Clear</button> <input type="checkbox" name="settings.persist-on-navigate" onchange="{notifyPersistChange}">Persist <button onclick="{triggerManage}">Settings</button> </div>', '', '', function (opts) {
               var COMPONENT = require("./component");
 
               var tag = this;
               var comp = COMPONENT.for({
-                browser: browser
+                browser: window.crossbrowser
               });
 
               tag.triggerRelooad = function (event) {
@@ -581,18 +581,18 @@ exports.main = function (JSONREP, node, options) {
               };
 
               tag.notifyPersistChange = function (event) {
-                browser.storage.local.set({
+                window.crossbrowser.storage.local.set({
                   "persist-on-navigate": event.target.checked
                 });
               };
 
               tag.on("mount", function () {
-                browser.storage.local.get("persist-on-navigate").then(function (value) {
+                window.crossbrowser.storage.local.get("persist-on-navigate").then(function (value) {
                   tag.root.querySelector('[name="settings.persist-on-navigate"]').checked = value["persist-on-navigate"] || false;
                 });
               });
             });
-            riot.mount(el, 'tag_4827980e290cf3d76ed38b24636074971dcb86ac', context);
+            riot.mount(el, 'tag_43c5ec7c7cfaf69d925cc0ee408b216fa3ab7872', context);
           }
         }
       };
@@ -633,7 +633,7 @@ exports.for = function (ctx) {
 
   ctx.browser.runtime.onMessage.addListener(function (message) {
     try {
-      if (typeof ctx.browser !== "undefined" && message.context && message.context.tabId != ctx.browser.devtools.inspectedWindow.tabId) {
+      if (!ctx.browser || !ctx.browser.devtools || !ctx.browser.devtools.inspectedWindow || !message.context || message.context.tabId != ctx.browser.devtools.inspectedWindow.tabId) {
         return;
       }
 

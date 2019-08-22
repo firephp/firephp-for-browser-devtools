@@ -1,8 +1,8 @@
 
 const WINDOW = window;
-const BROWSER = browser;
 
-BROWSER.runtime.onMessage.addListener(function (request, sender, _sendResponse) {
+
+WINDOW.crossbrowser.runtime.onMessage.addListener(function (request, sender, _sendResponse) {
 
     function sendResponse (response) {
 
@@ -10,7 +10,7 @@ BROWSER.runtime.onMessage.addListener(function (request, sender, _sendResponse) 
         response.from = request.to;
         response.id = request.id;
 
-        BROWSER.tabs.sendMessage(
+        WINDOW.crossbrowser.tabs.sendMessage(
             sender.tab.id,
             response
         ).catch(console.error);
@@ -21,10 +21,10 @@ BROWSER.runtime.onMessage.addListener(function (request, sender, _sendResponse) 
         var url = request.url;
 
         if (!/^https?:/.test(url)) {
-            url = BROWSER.runtime.getURL(url);
+            url = WINDOW.crossbrowser.runtime.getURL(url);
         }
 
-        window.fetch(url).then(function (response) {            
+        WINDOW.fetch(url).then(function (response) {            
             return response.text();
         }).then(function (text) {
 
@@ -41,7 +41,7 @@ console.log("ERROR", err);
     } else
     if (request.to === "postJSON") {
 
-        window.fetch(request.url, {
+        WINDOW.fetch(request.url, {
             method: 'post',
             headers: {
                 "Accept": "application/json; charset=utf-8",                     

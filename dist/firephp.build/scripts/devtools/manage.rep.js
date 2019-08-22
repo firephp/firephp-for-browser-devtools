@@ -562,13 +562,13 @@ exports.main = function (JSONREP, node, options) {
                 this.on('update', this.set);
                 this.on('mount', this.set);
               });
-              riot.tag2('tag_73ac0509dcf03de8d4a0a031d92586c39e0117e0', '<div class="manage-panel"> <raw html="{settingsCode}"></raw> </div>', '', '', function (opts) {
+              riot.tag2('tag_893dbbe4abbe9e63b690948ce3a85b32af3e354c', '<div class="manage-panel"> <raw html="{settingsCode}"></raw> </div>', '', '', function (opts) {
                 var COMPONENT = require("./component");
 
                 var tag = this;
                 tag.settingsCode = opts.config.settingsCode;
                 var comp = COMPONENT.for({
-                  browser: browser
+                  browser: window.crossbrowser
                 });
                 comp.on("changed.context", function (context) {
                   comp.contextChangeAcknowledged();
@@ -588,7 +588,7 @@ exports.main = function (JSONREP, node, options) {
                   }, 0);
                 });
               });
-              riot.mount(el, 'tag_73ac0509dcf03de8d4a0a031d92586c39e0117e0', context);
+              riot.mount(el, 'tag_893dbbe4abbe9e63b690948ce3a85b32af3e354c', context);
             }
           }
         };
@@ -630,7 +630,7 @@ exports.for = function (ctx) {
 
   ctx.browser.runtime.onMessage.addListener(function (message) {
     try {
-      if (typeof ctx.browser !== "undefined" && message.context && message.context.tabId != ctx.browser.devtools.inspectedWindow.tabId) {
+      if (!ctx.browser || !ctx.browser.devtools || !ctx.browser.devtools.inspectedWindow || !message.context || message.context.tabId != ctx.browser.devtools.inspectedWindow.tabId) {
         return;
       }
 

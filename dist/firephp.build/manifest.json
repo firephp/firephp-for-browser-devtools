@@ -2,7 +2,7 @@
     "manifest_version": 2,
     "description": "Log from PHP to a devtools panel.",
     "name": "FirePHP",
-    "version": "1.2.4",
+    "version": "1.3.0",
     "applications": {
         "gecko": {
             "id": "FirePHPExtension-Build@firephp.org",
@@ -13,7 +13,7 @@
         "48": "skin/__icon_48.png"
     },
     "permissions": [
-        "tabs",
+        "activeTab",
         "storage",
         "webRequest",
         "webNavigation",

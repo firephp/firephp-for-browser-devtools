@@ -1,9 +1,9 @@
 
-[_cssid="5c03bb4fa6df3130ef1807455d2983f73e89285c"].inspector {
+[_cssid="28a5003f8fc18a24ec32c4aa8527cfc59ac5db1d"].inspector {
     padding: 10px;
 }
 
-[_cssid="5c03bb4fa6df3130ef1807455d2983f73e89285c"].inspector > .close {
+[_cssid="28a5003f8fc18a24ec32c4aa8527cfc59ac5db1d"].inspector > .close {
     border: 1px solid #dcdcdc;
     font-weight: bold;
     float: right;
@@ -12,6 +12,6 @@
     line-height: 10px;
 }
 
-[_cssid="5c03bb4fa6df3130ef1807455d2983f73e89285c"].inspector > .viewer {
+[_cssid="28a5003f8fc18a24ec32c4aa8527cfc59ac5db1d"].inspector > .viewer {
     height: 100%;
 }                    

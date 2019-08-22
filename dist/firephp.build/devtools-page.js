@@ -1,5 +1,6 @@
 
 const WINDOW = window;
+const BROWSER = (typeof browser != "undefined") ? browser : chrome;
 
 const panels = new EventEmitter();
 panels.on("set", function (name, value) {
@@ -25,7 +26,7 @@ panels.on("set", function (name, value) {
 
     const url = "scripts/" + panel.filename;
 
-    browser.devtools.panels.create(
+    WINDOW.crossbrowser.devtools.panels.create(
         panel.label || undefined,
         panel.icon || undefined,
         url

@@ -794,7 +794,7 @@ _module.exports = init();
 }();
 
 }).call(this,require('_process'))
-},{"_process":36}],2:[function(require,module,exports){
+},{"_process":37}],2:[function(require,module,exports){
 
 
 var CHANNEL = require("./channel");
@@ -4017,7 +4017,7 @@ exports.B_TRANSCODE = function(bytes, offset, length, sourceCharset, targetChars
 };
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":34}],20:[function(require,module,exports){
+},{"buffer":35}],20:[function(require,module,exports){
 
 // -- kriskowal Kris Kowal Copyright (C) 2009-2010 MIT License
 
@@ -5893,11 +5893,13 @@ exports.title = function (value, delimiter) {
 (function (setImmediate){
 "use strict";
 
-var BROWSER = browser;
+var BROWSER = typeof browser != "undefined" ? browser : chrome;
 
 var WILDFIRE = exports.WILDFIRE = require("./wildfire");
 
-WILDFIRE.VERBOSE = false;
+var LIB = require("./lib");
+
+WILDFIRE.VERBOSE = true;
 WILDFIRE.once("error", function (err) {
   console.error(err);
 });
@@ -5907,16 +5909,24 @@ async function initCurrentContext() {
     return;
   }
 
-  var tabDetails = (await BROWSER.tabs.query({
-    currentWindow: true,
-    active: true
-  }))[0];
+  try {
+    var searchResult = await LIB.browser.tabs.query({
+      currentWindow: true,
+      active: true
+    });
 
-  if (tabDetails.url) {
-    setCurrentContextFromDetails({
-      tabId: tabDetails.id,
-      url: tabDetails.url
-    }, true);
+    if (searchResult.length === 1) {
+      var tabDetails = searchResult[0];
+
+      if (tabDetails.url) {
+        setCurrentContextFromDetails({
+          tabId: tabDetails.id,
+          url: tabDetails.url
+        }, true);
+      }
+    }
+  } catch (err) {
+    console.error(err.stack || err.message || err);
   }
 }
 
@@ -5925,7 +5935,7 @@ setImmediate(initCurrentContext);
 function broadcastForContext(context, message) {
   message.context = context;
   message.to = "message-listener";
-  return BROWSER.runtime.sendMessage(message).catch(function (err) {
+  return LIB.browser.runtime.sendMessage(message).catch(function (err) {
     if (WILDFIRE.VERBOSE) console.log("WARNING", err);
   });
 }
@@ -5999,7 +6009,7 @@ async function runtime_onMessage(message) {
     }
   } else if (message.to === "background") {
     if (message.event === "reload") {
-      browser.tabs.reload(message.context.tabId, {
+      LIB.browser.tabs.reload(message.context.tabId, {
         bypassCache: true
       });
     }
@@ -6031,7 +6041,7 @@ WILDFIRE.on("destroy", function () {
 function webRequest_onBeforeRequest(details) {
   if (WILDFIRE.VERBOSE) console.log("[background] BROWSER.webRequest -| onBeforeRequest (details):", details);
 
-  if (typeof details.documentUrl !== "undefined" || details.parentFrameId !== -1) {
+  if (typeof details.documentUrl !== "undefined" || typeof details.initiator !== "undefined" || details.parentFrameId !== -1) {
     return;
   }
 
@@ -6064,7 +6074,7 @@ WILDFIRE.on("destroy", function () {
   BROWSER.tabs.onRemoved.removeListener(tabs_onRemoved);
 });
 }).call(this,require("timers").setImmediate)
-},{"./wildfire":29,"timers":37}],24:[function(require,module,exports){
+},{"./lib":26,"./wildfire":30,"timers":38}],24:[function(require,module,exports){
 "use strict";
 
 exports.for = function (API) {
@@ -6087,38 +6097,28 @@ exports.for = function (API) {
       "hostname": request.url.replace(/^https?:\/\/([^:\/]+)(:\d+)?\/.*?$/, "$1"),
       "port": request.url.replace(/^https?:\/\/[^:]+:?(\d+)?\/.*?$/, "$1") || 80,
       "method": request.method,
-      "headers": headers,
-      setRequestHeader: function (name, value) {
-        request.requestHeaders.filter(function (header) {
-          return header.name === name;
-        })[0].value = value;
-      }
+      "headers": headers
     });
 
     if (!result) {
       return {};
     }
 
-    return result.then(function (changes) {
-      if (!changes) {
-        return {};
-      }
+    var changes = result;
+    var ret = {};
 
-      var ret = {};
-
-      if (changes.requestHeaders) {
-        var headers = [];
-        Object.keys(changes.requestHeaders).forEach(function (name) {
-          headers.push({
-            name: name,
-            value: changes.requestHeaders[name]
-          });
+    if (changes.requestHeaders) {
+      var headers = [];
+      Object.keys(changes.requestHeaders).forEach(function (name) {
+        headers.push({
+          name: name,
+          value: changes.requestHeaders[name]
         });
-        ret.requestHeaders = headers;
-      }
+      });
+      ret.requestHeaders = headers;
+    }
 
-      return ret;
-    });
+    return ret;
   }
 
   API.BROWSER.webRequest.onBeforeSendHeaders.addListener(onRequest, {
@@ -6194,6 +6194,10 @@ exports.for = function (API) {
 },{}],26:[function(require,module,exports){
 "use strict";
 
+exports.browser = window.crossbrowser;
+},{}],27:[function(require,module,exports){
+"use strict";
+
 exports.for = function (API) {
   var transportReceiver1 = API.WILDFIRE.Receiver();
   transportReceiver1.setId("http://meta.firephp.org/Wildfire/Structure/FirePHP/FirebugConsole/0.1");
@@ -6221,7 +6225,7 @@ exports.for = function (API) {
   API.httpHeaderChannel.addReceiver(transportReceiver2);
   return {};
 };
-},{}],27:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 "use strict";
 
 exports.for = function (API) {
@@ -6254,25 +6258,56 @@ exports.for = function (API) {
   });
   return {};
 };
-},{}],28:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 "use strict";
 
-var BROWSER = typeof browser !== "undefined" && browser || null;
-var domainSettingsCache = {};
+var LIB = require("./lib");
 
-if (BROWSER) {
-  BROWSER.storage.onChanged.addListener(function (changes, area) {
+var domainSettingsCache = {};
+var settingsByHostnameCache = {};
+
+if (LIB.browser) {
+  LIB.browser.storage.onChanged.addListener(function (changes, area) {
     for (var item of Object.keys(changes)) {
       if (!/^domain\[.+\]\..+$/.test(item)) continue;
       domainSettingsCache[item] = changes[item].newValue;
+      var m = item.match(/^domain\[([^\]]+)\]\.(.+)$/);
+
+      if (m) {
+        if (!settingsByHostnameCache[m[1]]) {
+          settingsByHostnameCache[m[1]] = {
+            "enabled": false,
+            "enableUserAgentHeader": false,
+            "enableFirePHPHeader": false,
+            "enableChromeLoggerData": false
+          };
+        }
+
+        settingsByHostnameCache[m[1]][m[2]] = changes[item].newValue;
+      }
     }
   });
 }
 
 exports.getSetting = function (name) {
   function get() {
-    if (!BROWSER) return Promise.resolve(null);
-    return BROWSER.storage.local.get(name).then(function (value) {
+    if (!LIB.browser) return Promise.resolve(null);
+    return LIB.browser.storage.local.get(name).then(function (value) {
+      var m = name.match(/^domain\[([^\]]+)\]\.(.+)$/);
+
+      if (m) {
+        if (!settingsByHostnameCache[m[1]]) {
+          settingsByHostnameCache[m[1]] = {
+            "enabled": false,
+            "enableUserAgentHeader": false,
+            "enableFirePHPHeader": false,
+            "enableChromeLoggerData": false
+          };
+        }
+
+        settingsByHostnameCache[m[1]][m[2]] = value[name] || false;
+      }
+
       return domainSettingsCache[name] = value[name];
     });
   }
@@ -6286,8 +6321,8 @@ exports.getSetting = function (name) {
 };
 
 exports.setSetting = function (name, value) {
-  if (!BROWSER) return Promise.resolve(null);
-  return BROWSER.storage.local.set(name, value);
+  if (!LIB.browser) return Promise.resolve(null);
+  return LIB.browser.storage.local.set(name, value);
 };
 
 exports.getDomainSettingsForDomain = function (domain) {
@@ -6318,14 +6353,37 @@ exports.getDomainSettingsForRequest = function (request) {
     return settings;
   });
 };
-},{}],29:[function(require,module,exports){
+
+exports.getDomainSettingsForRequestSync = function (request) {
+  if (!exports.getDomainSettingsForRequestSync._fetchedOnce) {
+    exports.getDomainSettingsForRequestSync._fetchedOnce = {};
+  }
+
+  if (!exports.getDomainSettingsForRequestSync._fetchedOnce[request.hostname]) {
+    exports.getDomainSettingsForRequestSync._fetchedOnce[request.hostname] = true;
+    exports.getDomainSettingsForRequest(request);
+  }
+
+  if (!settingsByHostnameCache[request.hostname]) {
+    settingsByHostnameCache[request.hostname] = {
+      "enabled": false,
+      "enableUserAgentHeader": false,
+      "enableFirePHPHeader": false,
+      "enableChromeLoggerData": false
+    };
+  }
+
+  return settingsByHostnameCache[request.hostname];
+};
+},{"./lib":26}],30:[function(require,module,exports){
 "use strict";
 
 var EVENTS = require("eventemitter2");
 
 var API = module.exports = new EVENTS();
+var BROWSER = typeof browser != "undefined" ? browser : chrome;
 API.console = console;
-API.BROWSER = browser;
+API.BROWSER = BROWSER;
 API.WILDFIRE = require("wildfire-for-js");
 
 var REQUEST_OBSERVER = require("./adapters/http-request-observer").for(API);
@@ -6475,30 +6533,33 @@ var hostnameSettings = {};
 API.hostnameSettings = hostnameSettings;
 REQUEST_OBSERVER.register(function (request) {
   if (!isEnabled()) {
+    if (API.VERBOSE) console.log("[wildfire] REQUEST_OBSERVER handler: not enabled");
     return null;
   }
 
-  return SETTINGS.getDomainSettingsForRequest(request).then(function (settings) {
-    hostnameSettings[request.hostname] = settings;
+  var settings = SETTINGS.getDomainSettingsForRequestSync(request);
+  if (API.VERBOSE) console.log("[wildfire] forceEnabled:", forceEnabled);
+  if (API.VERBOSE) console.log("[wildfire] request domain settings for '" + request.hostname + "':", settings);
+  hostnameSettings[request.hostname] = settings;
 
-    if (!forceEnabled && !settings.enabled) {
-      return {};
+  if (!forceEnabled && !settings.enabled) {
+    return {};
+  }
+
+  if (forceEnabled || settings.enableUserAgentHeader) {
+    if (!request.headers["User-Agent"].match(/\sFirePHP\/([\.|\d]*)\s?/)) {
+      request.headers["User-Agent"] = request.headers["User-Agent"] + " FirePHP/0.5";
     }
+  }
 
-    if (forceEnabled || settings.enableUserAgentHeader) {
-      if (!request.headers["User-Agent"].match(/\sFirePHP\/([\.|\d]*)\s?/)) {
-        request.headers["User-Agent"] = request.headers["User-Agent"] + " FirePHP/0.5";
-      }
-    }
+  if (forceEnabled || settings.enableFirePHPHeader) {
+    request.headers["X-FirePHP-Version"] = "0.4";
+  }
 
-    if (forceEnabled || settings.enableFirePHPHeader) {
-      request.headers["X-FirePHP-Version"] = "0.4";
-    }
-
-    return {
-      requestHeaders: request.headers
-    };
-  });
+  if (API.VERBOSE) console.log("[wildfire] updated request headers:", request.headers);
+  return {
+    requestHeaders: request.headers
+  };
 });
 API.on("http.response", function (response) {
   if (!isEnabled()) {
@@ -6541,7 +6602,7 @@ API.on("http.response", function (response) {
     "requestHeaders": response.request.headers
   });
 });
-},{"./adapters/http-request-observer":24,"./adapters/http-response-observer":25,"./receivers/firephp":26,"./receivers/insight":27,"./settings":28,"eventemitter2":1,"insight-for-js/lib/encoder/default":30,"wildfire-for-js":13}],30:[function(require,module,exports){
+},{"./adapters/http-request-observer":24,"./adapters/http-response-observer":25,"./receivers/firephp":27,"./receivers/insight":28,"./settings":29,"eventemitter2":1,"insight-for-js/lib/encoder/default":31,"wildfire-for-js":13}],31:[function(require,module,exports){
 
 var UTIL = require("fp-modules-for-nodejs/lib/util");
 var JSON = require("fp-modules-for-nodejs/lib/json");
@@ -6952,11 +7013,11 @@ Encoder.prototype.encodeObject = function(meta, object, objectDepth, arrayDepth,
 
     return ret;
 }
-},{"fp-modules-for-nodejs/lib/json":31,"fp-modules-for-nodejs/lib/util":32}],31:[function(require,module,exports){
+},{"fp-modules-for-nodejs/lib/json":32,"fp-modules-for-nodejs/lib/util":33}],32:[function(require,module,exports){
 arguments[4][16][0].apply(exports,arguments)
-},{"dup":16}],32:[function(require,module,exports){
+},{"dup":16}],33:[function(require,module,exports){
 arguments[4][22][0].apply(exports,arguments)
-},{"dup":22}],33:[function(require,module,exports){
+},{"dup":22}],34:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -7109,7 +7170,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],34:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 /*!
  * The buffer module from node.js, for the browser.
  *
@@ -8888,7 +8949,7 @@ function numberIsNaN (obj) {
   return obj !== obj // eslint-disable-line no-self-compare
 }
 
-},{"base64-js":33,"ieee754":35}],35:[function(require,module,exports){
+},{"base64-js":34,"ieee754":36}],36:[function(require,module,exports){
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
   var eLen = (nBytes * 8) - mLen - 1
@@ -8974,7 +9035,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],36:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -9160,7 +9221,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],37:[function(require,module,exports){
+},{}],38:[function(require,module,exports){
 (function (setImmediate,clearImmediate){
 var nextTick = require('process/browser.js').nextTick;
 var apply = Function.prototype.apply;
@@ -9239,7 +9300,7 @@ exports.clearImmediate = typeof clearImmediate === "function" ? clearImmediate :
   delete immediateIds[id];
 };
 }).call(this,require("timers").setImmediate,require("timers").clearImmediate)
-},{"process/browser.js":36,"timers":37}]},{},[23])(23)
+},{"process/browser.js":37,"timers":38}]},{},[23])(23)
 });
 
 	});

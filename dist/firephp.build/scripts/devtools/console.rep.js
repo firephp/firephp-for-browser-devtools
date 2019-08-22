@@ -520,7 +520,6 @@ module.exports = toNumber;
 },{"./isObject":8,"./isSymbol":10}],13:[function(require,module,exports){
 "use strict";
 
-var BROWSER = typeof browser !== "undefined" && browser || null;
 var WINDOW = window;
 
 exports.main = function (JSONREP, node, options) {
@@ -528,7 +527,7 @@ exports.main = function (JSONREP, node, options) {
     return JSONREP.makeRep('<div class="console">' + code + '</div>', {
       css: {
         ".@": "github.com~0ink~codeblock/codeblock:Codeblock",
-        "_code": "{\"_cssid\":\"152b675738865187a26b5f1a49372d8178d562a3\",\"repUri\":\"console\"}",
+        "_code": "{\"_cssid\":\"9051886b96d6421ced5fdf604fe05f9c22afe06c\",\"repUri\":\"console\"}",
         "_format": "json",
         "_args": [],
         "_compiled": false
@@ -538,7 +537,7 @@ exports.main = function (JSONREP, node, options) {
           var COMPONENT = require("./component");
 
           var comp = COMPONENT.for({
-            browser: browser
+            browser: WINDOW.crossbrowser
           });
           comp.on("setting.enabled", function (enabled) {
             if (!enabled) {
@@ -634,12 +633,15 @@ exports.main = function (JSONREP, node, options) {
                   scrollIfBottom();
                 });
               } else if (message.event === "prepare") {
+                console.log("PREPARE CONSOLE!!!", message.context);
+
                 var _fc = getConsoleForContext(message.context);
 
                 if (!persistLogs) {
                   _fc.getAPI().clear();
                 }
               } else if (message.event === "clear") {
+                console.log("CLEAR CONSOLE!!!", message.context);
                 Object.keys(consoles).forEach(function (id) {
                   if (id == message.context.pageUid) {
                     consoles[id].getAPI().clear();
@@ -647,6 +649,7 @@ exports.main = function (JSONREP, node, options) {
                 });
                 scrollIfBottom();
               } else if (message.event === "destroyContext") {
+                console.log("DESTROY CONTEXT!!!", message.context);
                 Object.keys(consoles).forEach(function (id) {
                   if (id == message.context.pageUid) {
                     WINDOW.FC.fireconsole.destroyConsoleForId(id.replace(/["\{\}]/g, '_'));
@@ -664,11 +667,11 @@ exports.main = function (JSONREP, node, options) {
           var persistentConsole = null;
 
           function syncPersistentConsole() {
-            return BROWSER.storage.local.get("persist-on-navigate").then(function (value) {
+            return WINDOW.crossbrowser.storage.local.get("persist-on-navigate").then(function (value) {
               persistLogs = value["persist-on-navigate"];
 
               if (persistLogs) {
-                if (!persistentConsole) {
+                if (!persistentConsole && comp.currentContext) {
                   persistentConsole = getConsoleForContext(comp.currentContext);
                 }
               } else {
@@ -691,8 +694,8 @@ exports.main = function (JSONREP, node, options) {
 
           var persistLogs = false;
 
-          if (BROWSER) {
-            BROWSER.storage.onChanged.addListener(function (changes, area) {
+          if (WINDOW.crossbrowser) {
+            WINDOW.crossbrowser.storage.onChanged.addListener(function (changes, area) {
               if (changes["persist-on-navigate"]) {
                 syncPersistentConsole();
               }
@@ -702,6 +705,11 @@ exports.main = function (JSONREP, node, options) {
           function getConsoleForContext(context) {
             if (persistentConsole) {
               return persistentConsole;
+            }
+
+            if (!context || typeof context.pageUid === "undefined") {
+              console.error("context", context);
+              throw new Error("'context' does not have required property 'pageUid'!");
             }
 
             if (!consoles[context.pageUid]) {
@@ -769,7 +777,7 @@ exports.for = function (ctx) {
 
   ctx.browser.runtime.onMessage.addListener(function (message) {
     try {
-      if (typeof ctx.browser !== "undefined" && message.context && message.context.tabId != ctx.browser.devtools.inspectedWindow.tabId) {
+      if (!ctx.browser || !ctx.browser.devtools || !ctx.browser.devtools.inspectedWindow || !message.context || message.context.tabId != ctx.browser.devtools.inspectedWindow.tabId) {
         return;
       }
 

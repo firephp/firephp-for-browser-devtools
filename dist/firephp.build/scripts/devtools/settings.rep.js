@@ -560,12 +560,12 @@ exports.main = function (JSONREP, node, options) {
               this.on('update', this.set);
               this.on('mount', this.set);
             });
-            riot.tag2('tag_29e0e1d0d925c5214f49eb4ab07d71a5ebb0aaa1', '<div> <table> <tr> <td width="75%"> <h2>Global Settings</h2> <ul> <li><input type="checkbox" name="reloadOnEnable" scope="global" onchange="{syncCheckbox}"> Reload page on <b>Enable</b></li> </ul> <h2>Settings for: {hostname}</h2> <div class="settings"> <ul> <li> <h2><a href="https://github.com/firephp/firephp-core" target="_blank">FirePHPCore</a></h2> <p>Only one type of request header needs to be sent.</p> <ul> <li><input type="checkbox" name="enableUserAgentHeader" onchange="{syncCheckbox}"> Enable <b>UserAgent Request Header</b> - Modifies the <i>User-Agent</i> request header by appending <i>FirePHP/0.5</i>.</li> <li><input type="checkbox" name="enableFirePHPHeader" onchange="{syncCheckbox}"> Enable <b>FirePHP Request Header</b> - Adds a <i>X-FirePHP-Version: 0.4</i> request header.</li> </ul> </li> <li> <h2><a href="https://github.com/ccampbell/chromelogger" target="_blank">Chrome Logger</a></h2> <ul> <li><input type="checkbox" name="enableChromeLoggerData" onchange="{syncCheckbox}"> Render <i>X-ChromeLogger-Data</i> response headers to the console.</li> </ul> </li> </ul> </div> </td> <td width="25%"> <div class="info"> <h2>How to get setup</h2> <ol> <li>Choose an integration method.</li> <li>Integrate the server library into your project.</li> <li>Check the relevant box.</li> <li><b>Close</b> the <i>Settings</i> and <b>Enable</b> the tool.</li> </ol> <p><i>FirePHP is <a target="_blank" href="https://github.com/firephp/firephp-for-firefox-devtools">Open Source with code on Github</a></i></p> <p><a target="_blank" href="https://github.com/firephp/firephp-for-firefox-devtools/issues">Report an Issue or Suggest a Feature</a></p> </div> </td> </tr> </table> </div>', '', '', function (opts) {
+            riot.tag2('tag_43a760ed7a01836899073d10ea4fe6b68958a287', '<div> <table> <tr> <td width="75%"> <h2>Global Settings</h2> <ul> <li><input type="checkbox" name="reloadOnEnable" scope="global" onchange="{syncCheckbox}"> Reload page on <b>Enable</b></li> </ul> <h2>Settings for: {hostname}</h2> <div class="settings"> <ul> <li> <h2><a href="https://github.com/firephp/firephp-core" target="_blank">FirePHPCore</a></h2> <p>Only one type of request header needs to be sent.</p> <ul> <li><input type="checkbox" name="enableUserAgentHeader" onchange="{syncCheckbox}"> Enable <b>UserAgent Request Header</b> - Modifies the <i>User-Agent</i> request header by appending <i>FirePHP/0.5</i>.</li> <li><input type="checkbox" name="enableFirePHPHeader" onchange="{syncCheckbox}"> Enable <b>FirePHP Request Header</b> - Adds a <i>X-FirePHP-Version: 0.4</i> request header.</li> </ul> </li> <li> <h2><a href="https://github.com/ccampbell/chromelogger" target="_blank">Chrome Logger</a></h2> <ul> <li><input type="checkbox" name="enableChromeLoggerData" onchange="{syncCheckbox}"> Render <i>X-ChromeLogger-Data</i> response headers to the console.</li> </ul> </li> </ul> </div> </td> <td width="25%"> <div class="info"> <h2>How to get setup</h2> <ol> <li>Choose an integration method.</li> <li>Integrate the server library into your project.</li> <li>Check the relevant box.</li> <li><b>Close</b> the <i>Settings</i> and <b>Enable</b> the tool.</li> </ol> <p><i>FirePHP is <a target="_blank" href="https://github.com/firephp/firephp-for-firefox-devtools">Open Source with code on Github</a></i></p> <p><a target="_blank" href="https://github.com/firephp/firephp-for-firefox-devtools/issues">Report an Issue or Suggest a Feature</a></p> </div> </td> </tr> </table> </div>', '', '', function (opts) {
               var COMPONENT = require("./component");
 
               var tag = this;
               var comp = COMPONENT.for({
-                browser: browser
+                browser: window.crossbrowser
               });
               tag.hostname = "";
               comp.on("changed.context", function (context) {
@@ -589,16 +589,14 @@ exports.main = function (JSONREP, node, options) {
               });
 
               function sync() {
-                $('INPUT[type="checkbox"]', tag.root).each(function () {
-                  var el = $(this);
-
-                  if (el.attr("scope") === "global") {
-                    comp.getGlobalSetting(el.attr("name")).then(function (enabled) {
-                      el.get(0).checked = !!enabled;
+                tag.root.querySelectorAll('INPUT[type="checkbox"]').forEach(function (el) {
+                  if (el.getAttribute("scope") === "global") {
+                    comp.getGlobalSetting(el.getAttribute("name")).then(function (enabled) {
+                      el.checked = !!enabled;
                     });
                   } else {
-                    comp.getSetting(el.attr("name")).then(function (enabled) {
-                      el.get(0).checked = !!enabled;
+                    comp.getSetting(el.getAttribute("name")).then(function (enabled) {
+                      el.checked = !!enabled;
                     });
                   }
                 });
@@ -616,7 +614,7 @@ exports.main = function (JSONREP, node, options) {
                 }
               };
             });
-            riot.mount(el, 'tag_29e0e1d0d925c5214f49eb4ab07d71a5ebb0aaa1', context);
+            riot.mount(el, 'tag_43a760ed7a01836899073d10ea4fe6b68958a287', context);
           }
         }
       };
@@ -657,7 +655,7 @@ exports.for = function (ctx) {
 
   ctx.browser.runtime.onMessage.addListener(function (message) {
     try {
-      if (typeof ctx.browser !== "undefined" && message.context && message.context.tabId != ctx.browser.devtools.inspectedWindow.tabId) {
+      if (!ctx.browser || !ctx.browser.devtools || !ctx.browser.devtools.inspectedWindow || !message.context || message.context.tabId != ctx.browser.devtools.inspectedWindow.tabId) {
         return;
       }
 

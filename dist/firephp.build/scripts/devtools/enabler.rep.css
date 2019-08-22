@@ -1,6 +1,6 @@
 
 
-    DIV[data-is="tag_cf45835c71c0dd8630eb3ea533f009b5ef1ac806"] BUTTON {
+    DIV[data-is="tag_d0ea6bf319102fa8d3ab8032fb6c98d7c86ce04b"] BUTTON {
         width: 100%;
         height: 20px;
         font-weight: bold;
@@ -10,7 +10,7 @@
         height: auto;
     }
 
-    DIV[data-is="tag_cf45835c71c0dd8630eb3ea533f009b5ef1ac806"] BUTTON.enable {
+    DIV[data-is="tag_d0ea6bf319102fa8d3ab8032fb6c98d7c86ce04b"] BUTTON.enable {
         color: #000000;
         border-top: 2px solid #ff5151;
         border-bottom: 2px solid #ff5151;
@@ -18,7 +18,7 @@
         border-right: 10px solid #ff5151;
     }
 
-    DIV[data-is="tag_cf45835c71c0dd8630eb3ea533f009b5ef1ac806"] BUTTON.disable {
+    DIV[data-is="tag_d0ea6bf319102fa8d3ab8032fb6c98d7c86ce04b"] BUTTON.disable {
         color: #000000;
         border-top: 2px solid #05c600;
         border-bottom: 2px solid #05c600;

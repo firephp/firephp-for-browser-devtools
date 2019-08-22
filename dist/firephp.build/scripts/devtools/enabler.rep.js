@@ -520,11 +520,13 @@ module.exports = toNumber;
 },{"./isObject":8,"./isSymbol":10}],13:[function(require,module,exports){
 "use strict";
 
+var WINDOW = window;
+
 exports.main = function (JSONREP, node, options) {
   var api = {
     currentContext: null
   };
-  browser.runtime.onMessage.addListener(function (message) {
+  WINDOW.crossbrowser.runtime.onMessage.addListener(function (message) {
     if (message.to === "message-listener") {
       if (message.event === "currentContext") {
         api.currentContext = message.context;
@@ -575,13 +577,13 @@ exports.main = function (JSONREP, node, options) {
               this.on('update', this.set);
               this.on('mount', this.set);
             });
-            riot.tag2('tag_cf45835c71c0dd8630eb3ea533f009b5ef1ac806', '<div> <button if="{enabled === false}" onclick="{triggerEnable}" class="enable">Enable</button> <button if="{enabled === true}" onclick="{triggerDisable}" class="disable">Disable</button> </div>', '', '', function (opts) {
+            riot.tag2('tag_d0ea6bf319102fa8d3ab8032fb6c98d7c86ce04b', '<div> <button if="{enabled === false}" onclick="{triggerEnable}" class="enable">Enable</button> <button if="{enabled === true}" onclick="{triggerDisable}" class="disable">Disable</button> </div>', '', '', function (opts) {
               var COMPONENT = require("./component");
 
               var tag = this;
               tag.enabled = null;
               var comp = COMPONENT.for({
-                browser: browser
+                browser: WINDOW.crossbrowser
               });
               comp.on("setting.enabled", function (enabled) {
                 tag.enabled = !!enabled;
@@ -624,7 +626,7 @@ exports.main = function (JSONREP, node, options) {
                 });
               };
             });
-            riot.mount(el, 'tag_cf45835c71c0dd8630eb3ea533f009b5ef1ac806', context);
+            riot.mount(el, 'tag_d0ea6bf319102fa8d3ab8032fb6c98d7c86ce04b', context);
           }
         }
       };
@@ -665,7 +667,7 @@ exports.for = function (ctx) {
 
   ctx.browser.runtime.onMessage.addListener(function (message) {
     try {
-      if (typeof ctx.browser !== "undefined" && message.context && message.context.tabId != ctx.browser.devtools.inspectedWindow.tabId) {
+      if (!ctx.browser || !ctx.browser.devtools || !ctx.browser.devtools.inspectedWindow || !message.context || message.context.tabId != ctx.browser.devtools.inspectedWindow.tabId) {
         return;
       }
 

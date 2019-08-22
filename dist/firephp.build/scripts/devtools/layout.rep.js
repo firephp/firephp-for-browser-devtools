@@ -523,10 +523,6 @@ module.exports = toNumber;
 var WINDOW = window;
 
 exports.main = function (JSONREP, node, options) {
-  if (typeof WINDOW.browser === "undefined") {
-    WINDOW.browser = require("./adapters/page-browser-api");
-  }
-
   var panels = {};
   return Promise.all(Object.keys(node).map(function (name) {
     if (typeof node[name] === "string") {
@@ -554,14 +550,14 @@ exports.main = function (JSONREP, node, options) {
       },
       html: {
         ".@": "github.com~0ink~codeblock/codeblock:Codeblock",
-        "_code": "<div class=\"layout-views\">\\n    <div class=\"ui\" style=\"display: none;\">\\n        <table class=\"layout\" height=\"100%\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\">\\n            <tr>\\n                <td class=\"console-panel\" width=\"100%\" height=\"100%\" rowspan=\"2\">\\n                    %%%variables.panels.console%%%\\n                </td>\\n            </tr>\\n            <tr>\\n                <td class=\"side-panel\">\\n                    <table class=\"layout\" height=\"100%\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\">\\n                    <tr>\\n                            <td class=\"menu-panel\">\\n                                %%%variables.panels.menu%%%\\n                            </td>\\n                        </tr>\\n                        <tr>\\n                            <td class=\"settings-panel\">\\n                                %%%variables.panels.settings%%%\\n                            </td>\\n                        </tr>\\n                        <tr>\\n                            <td class=\"inspector-panel\" height=\"100%\">\\n                                %%%variables.panels.inspector%%%\\n                            </td>\\n                        </tr>\\n                    </table>\\n                </td>\\n            </tr>\\n        </table>\\n    </div>\\n    <div class=\"manage\" style=\"display: none;\">\\n        <button class=\"close-button\">Close</button>\\n        %%%variables.panels.manage%%%\\n    </div>\\n    <div class=\"uninitialized\" style=\"display: none;\">\\n        <p><button action=\"reload\">Reload</button> to initialize FirePHP</p>\\n    </div>\\n</div>",
+        "_code": "<div class=\"layout-views\">\\n    <div class=\"ui\" style=\"display: none;\">\\n        <table class=\"layout\" height=\"100%\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\">\\n            <tr>\\n                <td class=\"console-panel\" width=\"100%\" height=\"100%\" rowspan=\"2\">\\n                    %%%variables.panels.console%%%\\n                </td>\\n            </tr>\\n            <tr>\\n                <td class=\"side-panel\">\\n                    <table class=\"layout\" height=\"100%\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\">\\n                        <tr>\\n                            <td class=\"menu-panel\">\\n                                %%%variables.panels.menu%%%\\n                            </td>\\n                        </tr>\\n                        <tr>\\n                            <td class=\"settings-panel\">\\n                                %%%variables.panels.settings%%%\\n                            </td>\\n                        </tr>\\n                        <tr>\\n                            <td class=\"inspector-panel\" height=\"100%\">\\n                                %%%variables.panels.inspector%%%\\n                            </td>\\n                        </tr>\\n                    </table>\\n                </td>\\n            </tr>\\n        </table>\\n    </div>\\n    <div class=\"manage\" style=\"display: none;\">\\n        <table class=\"header\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\">\\n            <tr>\\n                <td><button class=\"close-button\">Close</button></td>\\n                <td class=\"right\"><div class=\"version\" style=\"display: none;\"></div></td>\\n            </tr>\\n        </table>\\n        %%%variables.panels.manage%%%\\n    </div>\\n    <div class=\"uninitialized\" style=\"display: none;\">\\n        <p><button action=\"reload\">Reload</button> to initialize FirePHP</p>\\n    </div>\\n</div>",
         "_format": "html",
         "_args": ["variables"],
         "_compiled": false
       },
       css: {
         ".@": "github.com~0ink~codeblock/codeblock:Codeblock",
-        "_code": "{\"_cssid\":\"a11eecd0464aca3cb6851b756d9fc3a11bb1d738\",\"repUri\":\"layout\"}",
+        "_code": "{\"_cssid\":\"2f5dd500e1e4e62dff743510d9a36390d191d88e\",\"repUri\":\"layout\"}",
         "_format": "json",
         "_args": [],
         "_compiled": false
@@ -572,7 +568,7 @@ exports.main = function (JSONREP, node, options) {
 
           var forceManage = false;
           var comp = COMPONENT.for({
-            browser: browser
+            browser: WINDOW.crossbrowser
           });
           comp.on("changed.context", function () {
             comp.contextChangeAcknowledged();
@@ -588,12 +584,12 @@ exports.main = function (JSONREP, node, options) {
             }
           });
           var persistLogs = false;
-          browser.storage.onChanged.addListener(function (changes, area) {
+          WINDOW.crossbrowser.storage.onChanged.addListener(function (changes, area) {
             if (changes["persist-on-navigate"]) {
               persistLogs = changes["persist-on-navigate"].newValue;
             }
           });
-          browser.storage.local.get("persist-on-navigate").then(function (value) {
+          WINDOW.crossbrowser.storage.local.get("persist-on-navigate").then(function (value) {
             persistLogs = value["persist-on-navigate"];
           });
           var view = null;
@@ -624,16 +620,20 @@ exports.main = function (JSONREP, node, options) {
                 manage: false,
                 uninitialized: false
               };
+              var versionEl = el.querySelector("DIV.manage TABLE.header DIV.version");
+              versionEl.style.display = "none";
+              versionEl.innerHTML = "v" + WINDOW.crossbrowser.runtime.getManifest().version;
 
               if (view === "uninitialized") {
                 toggles.uninitialized = true;
               } else if (view === "manage") {
                 toggles.manage = true;
+                versionEl.style.display = "inline-block";
 
                 if (forceManage || configured || persistLogs) {
-                  el.querySelector("DIV.manage > BUTTON.close-button").style.display = "inline-block";
+                  el.querySelector("DIV.manage TABLE.header BUTTON.close-button").style.display = "inline-block";
                 } else {
-                  el.querySelector("DIV.manage > BUTTON.close-button").style.display = "none";
+                  el.querySelector("DIV.manage TABLE.header BUTTON.close-button").style.display = "none";
                 }
               } else if (view === "console") {
                 toggles.ui = true;
@@ -645,12 +645,12 @@ exports.main = function (JSONREP, node, options) {
               el.querySelector("DIV.manage").style.display = toggles.manage ? "block" : "none";
               el.querySelector("DIV.uninitialized").style.display = toggles.uninitialized ? "block" : "none";
             } catch (err) {
-              console.error("Error during sync():", err);
+              console.error("Error during sync():", err.message || err.stack || err);
               throw err;
             }
           }
 
-          el.querySelector("DIV.manage > BUTTON.close-button").addEventListener("click", async function () {
+          el.querySelector("DIV.manage TABLE.header BUTTON.close-button").addEventListener("click", async function () {
             try {
               if (persistLogs && enabled && !configured) {
                 await comp.setSetting("enabled", false);
@@ -672,37 +672,7 @@ exports.main = function (JSONREP, node, options) {
     }, undefined, options);
   });
 };
-},{"./adapters/page-browser-api":14,"./component":15}],14:[function(require,module,exports){
-"use strict";
-
-module.exports = {
-  runtime: {
-    onMessage: {
-      addListener: function (listener) {
-        console.log("[page-browser] browser.runtime.onMessage.addListener (listener):", listener);
-      }
-    },
-    sendMessage: function (message) {
-      console.log("[page-browser] browser.runtime.sendMessage (message):", message);
-    }
-  },
-  storage: {
-    onChanged: {
-      addListener: function (listener) {}
-    },
-    local: {
-      get: function (name) {
-        return Promise.resolve(false);
-      }
-    }
-  },
-  devtools: {
-    inspectedWindow: {
-      tabId: 1
-    }
-  }
-};
-},{}],15:[function(require,module,exports){
+},{"./component":14}],14:[function(require,module,exports){
 (function (setImmediate){
 "use strict";
 
@@ -736,7 +706,7 @@ exports.for = function (ctx) {
 
   ctx.browser.runtime.onMessage.addListener(function (message) {
     try {
-      if (typeof ctx.browser !== "undefined" && message.context && message.context.tabId != ctx.browser.devtools.inspectedWindow.tabId) {
+      if (!ctx.browser || !ctx.browser.devtools || !ctx.browser.devtools.inspectedWindow || !message.context || message.context.tabId != ctx.browser.devtools.inspectedWindow.tabId) {
         return;
       }
 
@@ -913,7 +883,7 @@ exports.for = function (ctx) {
   return events;
 };
 }).call(this,require("timers").setImmediate)
-},{"events":16,"lodash/debounce":7,"timers":18}],16:[function(require,module,exports){
+},{"events":15,"lodash/debounce":7,"timers":17}],15:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -1438,7 +1408,7 @@ function functionBindPolyfill(context) {
   };
 }
 
-},{}],17:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -1624,7 +1594,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],18:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 (function (setImmediate,clearImmediate){
 var nextTick = require('process/browser.js').nextTick;
 var apply = Function.prototype.apply;
@@ -1703,7 +1673,7 @@ exports.clearImmediate = typeof clearImmediate === "function" ? clearImmediate :
   delete immediateIds[id];
 };
 }).call(this,require("timers").setImmediate,require("timers").clearImmediate)
-},{"process/browser.js":17,"timers":18}]},{},[13])(13)
+},{"process/browser.js":16,"timers":17}]},{},[13])(13)
 });
 
 	});

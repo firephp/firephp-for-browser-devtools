@@ -520,11 +520,13 @@ module.exports = toNumber;
 },{"./isObject":8,"./isSymbol":10}],13:[function(require,module,exports){
 "use strict";
 
+var WINDOW = window;
+
 exports.main = function (JSONREP, node, options) {
   return JSONREP.makeRep('<div class="inspector">' + '<div class="close" style="display: none;">x</div>' + '<div class="viewer"></div>' + '</div>', {
     css: {
       ".@": "github.com~0ink~codeblock/codeblock:Codeblock",
-      "_code": "{\"_cssid\":\"5c03bb4fa6df3130ef1807455d2983f73e89285c\",\"repUri\":\"inspector\"}",
+      "_code": "{\"_cssid\":\"28a5003f8fc18a24ec32c4aa8527cfc59ac5db1d\",\"repUri\":\"inspector\"}",
       "_format": "json",
       "_args": [],
       "_compiled": false
@@ -534,7 +536,7 @@ exports.main = function (JSONREP, node, options) {
         var COMPONENT = require("./component");
 
         var comp = COMPONENT.for({
-          browser: browser
+          browser: WINDOW.crossbrowser
         });
         comp.on("setting.enabled", function (enabled) {
           if (!enabled) {
@@ -625,7 +627,7 @@ exports.for = function (ctx) {
 
   ctx.browser.runtime.onMessage.addListener(function (message) {
     try {
-      if (typeof ctx.browser !== "undefined" && message.context && message.context.tabId != ctx.browser.devtools.inspectedWindow.tabId) {
+      if (!ctx.browser || !ctx.browser.devtools || !ctx.browser.devtools.inspectedWindow || !message.context || message.context.tabId != ctx.browser.devtools.inspectedWindow.tabId) {
         return;
       }
 

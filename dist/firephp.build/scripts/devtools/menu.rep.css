@@ -1,16 +1,25 @@
 
 
-    DIV[data-is="tag_4827980e290cf3d76ed38b24636074971dcb86ac"] .menu {
+    DIV[data-is="tag_43c5ec7c7cfaf69d925cc0ee408b216fa3ab7872"] .menu {
         padding: 5px;
         padding-left: 10px;
         padding-right: 10px;
         white-space: nowrap;
     }
 
-    DIV[data-is="tag_4827980e290cf3d76ed38b24636074971dcb86ac"] .menu > BUTTON {
+    DIV[data-is="tag_43c5ec7c7cfaf69d925cc0ee408b216fa3ab7872"] .menu > BUTTON {
         cursor: pointer;
         width: auto;
-        padding-left: 1px;
-        padding-right: 1px;
+        padding-left: 5px;
+        padding-right: 5px;
+
+        border-radius: 5px;
+        border-color: rgb(216, 216, 216) rgb(209, 209, 209) rgb(186, 186, 186);
+        border-style: solid;
+        border-width: 1px;
+        padding: 1px 5px 2px;
+        color: rgba(0, 0, 0, 0.847);
+        background-color: rgb(255, 255, 255);
+        box-sizing: border-box;
     }
-    
+
