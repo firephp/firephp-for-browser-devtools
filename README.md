@@ -1,6 +1,6 @@
 **Status: DEV - Commands will currently not run for you!**
 
-![FirePHP Logo](https://rawgit.com/firephp/firephp-for-browser-devtools/master/src/skin/Logo.png "FirePHP Logo")
+![FirePHP Logo](https://github.com/firephp/firephp-for-browser-devtools/blob/master/src/skin/Logo.png?raw=true "FirePHP Logo")
 
 FirePHP for Browser Developer Tools
 ===================================
@@ -51,7 +51,7 @@ Build from source:
 Preview
 -------
 
-<img src="https://rawgit.com/firephp/firephp-for-browser-devtools/master/src/skin/CodeScreenshot.png" alt="Code" width="300"> &nbsp; <img src="https://rawgit.com/firephp/firephp-for-browser-devtools/master/src/skin/PanelScreenshot.png" alt="Panel" width="300">
+<img src="https://github.com/firephp/firephp-for-browser-devtools/blob/master/src/skin/CodeScreenshot.png?raw=true" alt="Code" width="300"> &nbsp; <img src="https://github.com/firephp/firephp-for-browser-devtools/blob/master/src/skin/PanelScreenshot.png?raw=true" alt="Panel" width="300">
 
 Provenance
 ==========
