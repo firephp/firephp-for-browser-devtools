@@ -51,7 +51,7 @@ Build from source:
     git diff            # Optional to verify build
         # Only the `version` property in `dist/firephp.build/manifest.json` should have changed.
 
-*Load Temporary Addon* at `dist/firephp.build/` into Firefox or Chrome.
+*Load Addon* from `dist/firephp.build/` into Firefox or Chrome.
 
 Preview
 -------
