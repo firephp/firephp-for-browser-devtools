@@ -794,7 +794,516 @@ _module.exports = init();
 }();
 
 }).call(this,require('_process'))
-},{"_process":37}],2:[function(require,module,exports){
+},{"_process":48}],2:[function(require,module,exports){
+var root = require('./_root');
+
+/** Built-in value references. */
+var Symbol = root.Symbol;
+
+module.exports = Symbol;
+
+},{"./_root":7}],3:[function(require,module,exports){
+var Symbol = require('./_Symbol'),
+    getRawTag = require('./_getRawTag'),
+    objectToString = require('./_objectToString');
+
+/** `Object#toString` result references. */
+var nullTag = '[object Null]',
+    undefinedTag = '[object Undefined]';
+
+/** Built-in value references. */
+var symToStringTag = Symbol ? Symbol.toStringTag : undefined;
+
+/**
+ * The base implementation of `getTag` without fallbacks for buggy environments.
+ *
+ * @private
+ * @param {*} value The value to query.
+ * @returns {string} Returns the `toStringTag`.
+ */
+function baseGetTag(value) {
+  if (value == null) {
+    return value === undefined ? undefinedTag : nullTag;
+  }
+  return (symToStringTag && symToStringTag in Object(value))
+    ? getRawTag(value)
+    : objectToString(value);
+}
+
+module.exports = baseGetTag;
+
+},{"./_Symbol":2,"./_getRawTag":5,"./_objectToString":6}],4:[function(require,module,exports){
+(function (global){
+/** Detect free variable `global` from Node.js. */
+var freeGlobal = typeof global == 'object' && global && global.Object === Object && global;
+
+module.exports = freeGlobal;
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{}],5:[function(require,module,exports){
+var Symbol = require('./_Symbol');
+
+/** Used for built-in method references. */
+var objectProto = Object.prototype;
+
+/** Used to check objects for own properties. */
+var hasOwnProperty = objectProto.hasOwnProperty;
+
+/**
+ * Used to resolve the
+ * [`toStringTag`](http://ecma-international.org/ecma-262/7.0/#sec-object.prototype.tostring)
+ * of values.
+ */
+var nativeObjectToString = objectProto.toString;
+
+/** Built-in value references. */
+var symToStringTag = Symbol ? Symbol.toStringTag : undefined;
+
+/**
+ * A specialized version of `baseGetTag` which ignores `Symbol.toStringTag` values.
+ *
+ * @private
+ * @param {*} value The value to query.
+ * @returns {string} Returns the raw `toStringTag`.
+ */
+function getRawTag(value) {
+  var isOwn = hasOwnProperty.call(value, symToStringTag),
+      tag = value[symToStringTag];
+
+  try {
+    value[symToStringTag] = undefined;
+    var unmasked = true;
+  } catch (e) {}
+
+  var result = nativeObjectToString.call(value);
+  if (unmasked) {
+    if (isOwn) {
+      value[symToStringTag] = tag;
+    } else {
+      delete value[symToStringTag];
+    }
+  }
+  return result;
+}
+
+module.exports = getRawTag;
+
+},{"./_Symbol":2}],6:[function(require,module,exports){
+/** Used for built-in method references. */
+var objectProto = Object.prototype;
+
+/**
+ * Used to resolve the
+ * [`toStringTag`](http://ecma-international.org/ecma-262/7.0/#sec-object.prototype.tostring)
+ * of values.
+ */
+var nativeObjectToString = objectProto.toString;
+
+/**
+ * Converts `value` to a string using `Object.prototype.toString`.
+ *
+ * @private
+ * @param {*} value The value to convert.
+ * @returns {string} Returns the converted string.
+ */
+function objectToString(value) {
+  return nativeObjectToString.call(value);
+}
+
+module.exports = objectToString;
+
+},{}],7:[function(require,module,exports){
+var freeGlobal = require('./_freeGlobal');
+
+/** Detect free variable `self`. */
+var freeSelf = typeof self == 'object' && self && self.Object === Object && self;
+
+/** Used as a reference to the global object. */
+var root = freeGlobal || freeSelf || Function('return this')();
+
+module.exports = root;
+
+},{"./_freeGlobal":4}],8:[function(require,module,exports){
+var isObject = require('./isObject'),
+    now = require('./now'),
+    toNumber = require('./toNumber');
+
+/** Error message constants. */
+var FUNC_ERROR_TEXT = 'Expected a function';
+
+/* Built-in method references for those with the same name as other `lodash` methods. */
+var nativeMax = Math.max,
+    nativeMin = Math.min;
+
+/**
+ * Creates a debounced function that delays invoking `func` until after `wait`
+ * milliseconds have elapsed since the last time the debounced function was
+ * invoked. The debounced function comes with a `cancel` method to cancel
+ * delayed `func` invocations and a `flush` method to immediately invoke them.
+ * Provide `options` to indicate whether `func` should be invoked on the
+ * leading and/or trailing edge of the `wait` timeout. The `func` is invoked
+ * with the last arguments provided to the debounced function. Subsequent
+ * calls to the debounced function return the result of the last `func`
+ * invocation.
+ *
+ * **Note:** If `leading` and `trailing` options are `true`, `func` is
+ * invoked on the trailing edge of the timeout only if the debounced function
+ * is invoked more than once during the `wait` timeout.
+ *
+ * If `wait` is `0` and `leading` is `false`, `func` invocation is deferred
+ * until to the next tick, similar to `setTimeout` with a timeout of `0`.
+ *
+ * See [David Corbacho's article](https://css-tricks.com/debouncing-throttling-explained-examples/)
+ * for details over the differences between `_.debounce` and `_.throttle`.
+ *
+ * @static
+ * @memberOf _
+ * @since 0.1.0
+ * @category Function
+ * @param {Function} func The function to debounce.
+ * @param {number} [wait=0] The number of milliseconds to delay.
+ * @param {Object} [options={}] The options object.
+ * @param {boolean} [options.leading=false]
+ *  Specify invoking on the leading edge of the timeout.
+ * @param {number} [options.maxWait]
+ *  The maximum time `func` is allowed to be delayed before it's invoked.
+ * @param {boolean} [options.trailing=true]
+ *  Specify invoking on the trailing edge of the timeout.
+ * @returns {Function} Returns the new debounced function.
+ * @example
+ *
+ * // Avoid costly calculations while the window size is in flux.
+ * jQuery(window).on('resize', _.debounce(calculateLayout, 150));
+ *
+ * // Invoke `sendMail` when clicked, debouncing subsequent calls.
+ * jQuery(element).on('click', _.debounce(sendMail, 300, {
+ *   'leading': true,
+ *   'trailing': false
+ * }));
+ *
+ * // Ensure `batchLog` is invoked once after 1 second of debounced calls.
+ * var debounced = _.debounce(batchLog, 250, { 'maxWait': 1000 });
+ * var source = new EventSource('/stream');
+ * jQuery(source).on('message', debounced);
+ *
+ * // Cancel the trailing debounced invocation.
+ * jQuery(window).on('popstate', debounced.cancel);
+ */
+function debounce(func, wait, options) {
+  var lastArgs,
+      lastThis,
+      maxWait,
+      result,
+      timerId,
+      lastCallTime,
+      lastInvokeTime = 0,
+      leading = false,
+      maxing = false,
+      trailing = true;
+
+  if (typeof func != 'function') {
+    throw new TypeError(FUNC_ERROR_TEXT);
+  }
+  wait = toNumber(wait) || 0;
+  if (isObject(options)) {
+    leading = !!options.leading;
+    maxing = 'maxWait' in options;
+    maxWait = maxing ? nativeMax(toNumber(options.maxWait) || 0, wait) : maxWait;
+    trailing = 'trailing' in options ? !!options.trailing : trailing;
+  }
+
+  function invokeFunc(time) {
+    var args = lastArgs,
+        thisArg = lastThis;
+
+    lastArgs = lastThis = undefined;
+    lastInvokeTime = time;
+    result = func.apply(thisArg, args);
+    return result;
+  }
+
+  function leadingEdge(time) {
+    // Reset any `maxWait` timer.
+    lastInvokeTime = time;
+    // Start the timer for the trailing edge.
+    timerId = setTimeout(timerExpired, wait);
+    // Invoke the leading edge.
+    return leading ? invokeFunc(time) : result;
+  }
+
+  function remainingWait(time) {
+    var timeSinceLastCall = time - lastCallTime,
+        timeSinceLastInvoke = time - lastInvokeTime,
+        timeWaiting = wait - timeSinceLastCall;
+
+    return maxing
+      ? nativeMin(timeWaiting, maxWait - timeSinceLastInvoke)
+      : timeWaiting;
+  }
+
+  function shouldInvoke(time) {
+    var timeSinceLastCall = time - lastCallTime,
+        timeSinceLastInvoke = time - lastInvokeTime;
+
+    // Either this is the first call, activity has stopped and we're at the
+    // trailing edge, the system time has gone backwards and we're treating
+    // it as the trailing edge, or we've hit the `maxWait` limit.
+    return (lastCallTime === undefined || (timeSinceLastCall >= wait) ||
+      (timeSinceLastCall < 0) || (maxing && timeSinceLastInvoke >= maxWait));
+  }
+
+  function timerExpired() {
+    var time = now();
+    if (shouldInvoke(time)) {
+      return trailingEdge(time);
+    }
+    // Restart the timer.
+    timerId = setTimeout(timerExpired, remainingWait(time));
+  }
+
+  function trailingEdge(time) {
+    timerId = undefined;
+
+    // Only invoke if we have `lastArgs` which means `func` has been
+    // debounced at least once.
+    if (trailing && lastArgs) {
+      return invokeFunc(time);
+    }
+    lastArgs = lastThis = undefined;
+    return result;
+  }
+
+  function cancel() {
+    if (timerId !== undefined) {
+      clearTimeout(timerId);
+    }
+    lastInvokeTime = 0;
+    lastArgs = lastCallTime = lastThis = timerId = undefined;
+  }
+
+  function flush() {
+    return timerId === undefined ? result : trailingEdge(now());
+  }
+
+  function debounced() {
+    var time = now(),
+        isInvoking = shouldInvoke(time);
+
+    lastArgs = arguments;
+    lastThis = this;
+    lastCallTime = time;
+
+    if (isInvoking) {
+      if (timerId === undefined) {
+        return leadingEdge(lastCallTime);
+      }
+      if (maxing) {
+        // Handle invocations in a tight loop.
+        timerId = setTimeout(timerExpired, wait);
+        return invokeFunc(lastCallTime);
+      }
+    }
+    if (timerId === undefined) {
+      timerId = setTimeout(timerExpired, wait);
+    }
+    return result;
+  }
+  debounced.cancel = cancel;
+  debounced.flush = flush;
+  return debounced;
+}
+
+module.exports = debounce;
+
+},{"./isObject":9,"./now":12,"./toNumber":13}],9:[function(require,module,exports){
+/**
+ * Checks if `value` is the
+ * [language type](http://www.ecma-international.org/ecma-262/7.0/#sec-ecmascript-language-types)
+ * of `Object`. (e.g. arrays, functions, objects, regexes, `new Number(0)`, and `new String('')`)
+ *
+ * @static
+ * @memberOf _
+ * @since 0.1.0
+ * @category Lang
+ * @param {*} value The value to check.
+ * @returns {boolean} Returns `true` if `value` is an object, else `false`.
+ * @example
+ *
+ * _.isObject({});
+ * // => true
+ *
+ * _.isObject([1, 2, 3]);
+ * // => true
+ *
+ * _.isObject(_.noop);
+ * // => true
+ *
+ * _.isObject(null);
+ * // => false
+ */
+function isObject(value) {
+  var type = typeof value;
+  return value != null && (type == 'object' || type == 'function');
+}
+
+module.exports = isObject;
+
+},{}],10:[function(require,module,exports){
+/**
+ * Checks if `value` is object-like. A value is object-like if it's not `null`
+ * and has a `typeof` result of "object".
+ *
+ * @static
+ * @memberOf _
+ * @since 4.0.0
+ * @category Lang
+ * @param {*} value The value to check.
+ * @returns {boolean} Returns `true` if `value` is object-like, else `false`.
+ * @example
+ *
+ * _.isObjectLike({});
+ * // => true
+ *
+ * _.isObjectLike([1, 2, 3]);
+ * // => true
+ *
+ * _.isObjectLike(_.noop);
+ * // => false
+ *
+ * _.isObjectLike(null);
+ * // => false
+ */
+function isObjectLike(value) {
+  return value != null && typeof value == 'object';
+}
+
+module.exports = isObjectLike;
+
+},{}],11:[function(require,module,exports){
+var baseGetTag = require('./_baseGetTag'),
+    isObjectLike = require('./isObjectLike');
+
+/** `Object#toString` result references. */
+var symbolTag = '[object Symbol]';
+
+/**
+ * Checks if `value` is classified as a `Symbol` primitive or object.
+ *
+ * @static
+ * @memberOf _
+ * @since 4.0.0
+ * @category Lang
+ * @param {*} value The value to check.
+ * @returns {boolean} Returns `true` if `value` is a symbol, else `false`.
+ * @example
+ *
+ * _.isSymbol(Symbol.iterator);
+ * // => true
+ *
+ * _.isSymbol('abc');
+ * // => false
+ */
+function isSymbol(value) {
+  return typeof value == 'symbol' ||
+    (isObjectLike(value) && baseGetTag(value) == symbolTag);
+}
+
+module.exports = isSymbol;
+
+},{"./_baseGetTag":3,"./isObjectLike":10}],12:[function(require,module,exports){
+var root = require('./_root');
+
+/**
+ * Gets the timestamp of the number of milliseconds that have elapsed since
+ * the Unix epoch (1 January 1970 00:00:00 UTC).
+ *
+ * @static
+ * @memberOf _
+ * @since 2.4.0
+ * @category Date
+ * @returns {number} Returns the timestamp.
+ * @example
+ *
+ * _.defer(function(stamp) {
+ *   console.log(_.now() - stamp);
+ * }, _.now());
+ * // => Logs the number of milliseconds it took for the deferred invocation.
+ */
+var now = function() {
+  return root.Date.now();
+};
+
+module.exports = now;
+
+},{"./_root":7}],13:[function(require,module,exports){
+var isObject = require('./isObject'),
+    isSymbol = require('./isSymbol');
+
+/** Used as references for various `Number` constants. */
+var NAN = 0 / 0;
+
+/** Used to match leading and trailing whitespace. */
+var reTrim = /^\s+|\s+$/g;
+
+/** Used to detect bad signed hexadecimal string values. */
+var reIsBadHex = /^[-+]0x[0-9a-f]+$/i;
+
+/** Used to detect binary string values. */
+var reIsBinary = /^0b[01]+$/i;
+
+/** Used to detect octal string values. */
+var reIsOctal = /^0o[0-7]+$/i;
+
+/** Built-in method references without a dependency on `root`. */
+var freeParseInt = parseInt;
+
+/**
+ * Converts `value` to a number.
+ *
+ * @static
+ * @memberOf _
+ * @since 4.0.0
+ * @category Lang
+ * @param {*} value The value to process.
+ * @returns {number} Returns the number.
+ * @example
+ *
+ * _.toNumber(3.2);
+ * // => 3.2
+ *
+ * _.toNumber(Number.MIN_VALUE);
+ * // => 5e-324
+ *
+ * _.toNumber(Infinity);
+ * // => Infinity
+ *
+ * _.toNumber('3.2');
+ * // => 3.2
+ */
+function toNumber(value) {
+  if (typeof value == 'number') {
+    return value;
+  }
+  if (isSymbol(value)) {
+    return NAN;
+  }
+  if (isObject(value)) {
+    var other = typeof value.valueOf == 'function' ? value.valueOf() : value;
+    value = isObject(other) ? (other + '') : other;
+  }
+  if (typeof value != 'string') {
+    return value === 0 ? value : +value;
+  }
+  value = value.replace(reTrim, '');
+  var isBinary = reIsBinary.test(value);
+  return (isBinary || reIsOctal.test(value))
+    ? freeParseInt(value.slice(2), isBinary ? 2 : 8)
+    : (reIsBadHex.test(value) ? NAN : +value);
+}
+
+module.exports = toNumber;
+
+},{"./isObject":9,"./isSymbol":11}],14:[function(require,module,exports){
 
 
 var CHANNEL = require("./channel");
@@ -909,7 +1418,7 @@ HttpHeaderChannel.prototype.getMozillaRequestObserverListener = function(globals
     return this.mozillaRequestObserverListener;
 }
 
-},{"./channel":5}],3:[function(require,module,exports){
+},{"./channel":17}],15:[function(require,module,exports){
 
 var CHANNEL = require("./channel"),
     UTIL = require("fp-modules-for-nodejs/lib/util");
@@ -973,7 +1482,7 @@ PostMessageChannel.prototype.parseReceivedPostMessage = function(msg)
     });
 }
 
-},{"./channel":5,"fp-modules-for-nodejs/lib/util":22}],4:[function(require,module,exports){
+},{"./channel":17,"fp-modules-for-nodejs/lib/util":34}],16:[function(require,module,exports){
 
 var CHANNEL = require("./channel");
 
@@ -990,7 +1499,7 @@ var ShellCommandChannel = exports.ShellCommandChannel = function () {
 
 ShellCommandChannel.prototype = CHANNEL.Channel();
 
-},{"./channel":5}],5:[function(require,module,exports){
+},{"./channel":17}],17:[function(require,module,exports){
 
 var UTIL = require("fp-modules-for-nodejs/lib/util");
 var PROTOCOL = require("./protocol");
@@ -1520,7 +2029,7 @@ Channel.prototype.setTransport = function(transport) {
 }
 
 
-},{"./protocol":9,"./transport":12,"fp-modules-for-nodejs/lib/util":22}],6:[function(require,module,exports){
+},{"./protocol":21,"./transport":24,"fp-modules-for-nodejs/lib/util":34}],18:[function(require,module,exports){
 
 var CHANNEL = require("../channel"),
     UTIL = require("fp-modules-for-nodejs/lib/util"),
@@ -1617,7 +2126,7 @@ HttpClientChannel.prototype.flush = function(applicator, bypassTransport)
     return self._flush(applicator);
 }
 
-},{"../channel":5,"fp-modules-for-nodejs/lib/http-client":15,"fp-modules-for-nodejs/lib/json":16,"fp-modules-for-nodejs/lib/util":22}],7:[function(require,module,exports){
+},{"../channel":17,"fp-modules-for-nodejs/lib/http-client":27,"fp-modules-for-nodejs/lib/json":28,"fp-modules-for-nodejs/lib/util":34}],19:[function(require,module,exports){
 
 var Dispatcher = exports.Dispatcher = function () {
     if (!(this instanceof exports.Dispatcher))
@@ -1656,7 +2165,7 @@ Dispatcher.prototype._dispatch = function(message, bypassReceivers) {
     this.channel.enqueueOutgoing(message, bypassReceivers);
 }
 
-},{}],8:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 
 var Message = exports.Message = function (dispatcher) {
     if (!(this instanceof exports.Message))
@@ -1714,7 +2223,7 @@ Message.prototype.getData = function() {
     return this.data;
 }
 
-},{}],9:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 
 var MESSAGE = require("./message");
 var JSON = require("fp-modules-for-nodejs/lib/json");
@@ -2554,7 +3063,7 @@ function chunk_split(value, length) {
     return parts;
 }
 
-},{"./message":8,"fp-modules-for-nodejs/lib/json":16,"fp-modules-for-nodejs/lib/util":22}],10:[function(require,module,exports){
+},{"./message":20,"fp-modules-for-nodejs/lib/json":28,"fp-modules-for-nodejs/lib/util":34}],22:[function(require,module,exports){
 
 var Receiver = exports.Receiver = function () {
     if (!(this instanceof exports.Receiver))
@@ -2645,7 +3154,7 @@ Receiver.prototype._dispatch = function(event, args) {
     return returnOptions;
 }
 
-},{}],11:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 
 var WILDFIRE = require("../wildfire"),
     JSON = require("fp-modules-for-nodejs/lib/json");
@@ -2775,7 +3284,7 @@ CallbackStream.prototype.receive = function(handler)
     this.receiveHandler = handler;
 }
 
-},{"../wildfire":13,"fp-modules-for-nodejs/lib/json":16}],12:[function(require,module,exports){
+},{"../wildfire":25,"fp-modules-for-nodejs/lib/json":28}],24:[function(require,module,exports){
 
 
 const RECEIVER_ID = "http://registry.pinf.org/cadorn.org/wildfire/@meta/receiver/transport/0";
@@ -2891,7 +3400,7 @@ throw new Error("OOPS!!!");
 }
 
 
-},{"./message":8,"./receiver":10,"./wildfire":13,"fp-modules-for-nodejs/lib/json":16,"fp-modules-for-nodejs/lib/md5":17,"fp-modules-for-nodejs/lib/struct":20}],13:[function(require,module,exports){
+},{"./message":20,"./receiver":22,"./wildfire":25,"fp-modules-for-nodejs/lib/json":28,"fp-modules-for-nodejs/lib/md5":29,"fp-modules-for-nodejs/lib/struct":32}],25:[function(require,module,exports){
 
 exports.Receiver = function() {
     return require("./receiver").Receiver();
@@ -2925,7 +3434,7 @@ exports.CallbackStream = function() {
     return require("./stream/callback").CallbackStream();
 }
 
-},{"./channel-httpheader":2,"./channel-postmessage":3,"./channel-shellcommand":4,"./channel/http-client":6,"./dispatcher":7,"./message":8,"./receiver":10,"./stream/callback":11}],14:[function(require,module,exports){
+},{"./channel-httpheader":14,"./channel-postmessage":15,"./channel-shellcommand":16,"./channel/http-client":18,"./dispatcher":19,"./message":20,"./receiver":22,"./stream/callback":23}],26:[function(require,module,exports){
 
 /* Binary */
 // -- tlrobinson Tom Robinson
@@ -3689,7 +4198,7 @@ ByteArray.prototype.toSource = function() {
 };
 
 
-},{"./platform/node/binary":19,"./util":22}],15:[function(require,module,exports){
+},{"./platform/node/binary":31,"./util":34}],27:[function(require,module,exports){
 
 //var ENGINE = require("./platform/{platform}/http-client");
 var ENGINE = require("./platform/browser/http-client");
@@ -3738,12 +4247,12 @@ exports.request = function(options, successCallback, errorCallback)
     return ENGINE.request(options, successCallback, errorCallback);
 }
 
-},{"./platform/browser/http-client":18,"./uri":21}],16:[function(require,module,exports){
+},{"./platform/browser/http-client":30,"./uri":33}],28:[function(require,module,exports){
 
 exports.encode = JSON.stringify;
 exports.decode = JSON.parse;
 
-},{}],17:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 
 /*!
     A JavaScript implementation of the RSA Data Security, Inc. MD5 Message
@@ -3916,7 +4425,7 @@ var core_hmac_md5 = function (key, data, _characterSize) {
 };
 
 
-},{"./struct":20,"./util":22}],18:[function(require,module,exports){
+},{"./struct":32,"./util":34}],30:[function(require,module,exports){
 
 exports.request = function(options, successCallback, errorCallback)
 {
@@ -3964,7 +4473,7 @@ exports.request = function(options, successCallback, errorCallback)
     }
 }
 
-},{}],19:[function(require,module,exports){
+},{}],31:[function(require,module,exports){
 (function (Buffer){
 
 //var Buffer = require("../../buffer").Buffer;
@@ -4017,7 +4526,7 @@ exports.B_TRANSCODE = function(bytes, offset, length, sourceCharset, targetChars
 };
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":35}],20:[function(require,module,exports){
+},{"buffer":45}],32:[function(require,module,exports){
 
 // -- kriskowal Kris Kowal Copyright (C) 2009-2010 MIT License
 
@@ -4283,7 +4792,7 @@ exports.bin2hex = function (bin) {
     return str;
 }
 
-},{"./binary":14,"./util":22}],21:[function(require,module,exports){
+},{"./binary":26,"./util":34}],33:[function(require,module,exports){
 
 // -- kriskowal Kris Kowal Copyright (C) 2009-2010 MIT License
 // gmosx, George Moschovitis
@@ -4706,7 +5215,7 @@ exports.pathToUri = function (path) {
 };
 */
 
-},{}],22:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 
 // -- kriskowal Kris Kowal Copyright (C) 2009-2010 MIT License
 // -- isaacs Isaac Schlueter
@@ -5889,7 +6398,7 @@ exports.title = function (value, delimiter) {
 };
 
 
-},{}],23:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 (function (setImmediate){
 "use strict";
 
@@ -5899,8 +6408,22 @@ var WILDFIRE = exports.WILDFIRE = require("./wildfire");
 
 var LIB = require("./lib");
 
-WILDFIRE.VERBOSE = true;
-WILDFIRE.once("error", function (err) {
+var COMPONENT = require("./component");
+
+var comp = COMPONENT.for({
+  browser: WINDOW.crossbrowser,
+  getOwnTabId: function () {
+    if (!currentContext) {
+      return null;
+    }
+
+    return currentContext.tabId;
+  }
+});
+var wildfire = new WILDFIRE.Client(comp, {
+  verbose: false
+});
+wildfire.once("error", function (err) {
   console.error(err);
 });
 
@@ -5935,13 +6458,14 @@ setImmediate(initCurrentContext);
 function broadcastForContext(context, message) {
   message.context = context;
   message.to = "message-listener";
+  comp.handleBroadcastMessage(message);
   return LIB.browser.runtime.sendMessage(message).catch(function (err) {
-    if (WILDFIRE.VERBOSE) console.log("WARNING", err);
+    if (wildfire.VERBOSE) console.log("WARNING", err);
   });
 }
 
-WILDFIRE.on("message.firephp", function (message) {
-  if (WILDFIRE.VERBOSE) console.log("[background] WILDFIRE.on -| message.firephp (message):", message);
+wildfire.on("message.firephp", function (message) {
+  if (wildfire.VERBOSE) console.log("[background] WILDFIRE.on -| message.firephp (message):", message);
   broadcastForContext(message.context, {
     message: {
       sender: message.sender,
@@ -5991,7 +6515,7 @@ function setCurrentContextFromDetails(details, clearIfNew) {
 }
 
 async function runtime_onMessage(message) {
-  if (WILDFIRE.VERBOSE) console.log("[background] BROWSER.runtime -| onMessage (message):", message);
+  if (wildfire.VERBOSE) console.log("[background] BROWSER.runtime -| onMessage (message):", message);
 
   if (message.to === "broadcast") {
     if (message.event === "currentContext") {
@@ -6017,12 +6541,12 @@ async function runtime_onMessage(message) {
 }
 
 BROWSER.runtime.onMessage.addListener(runtime_onMessage);
-WILDFIRE.on("destroy", function () {
+wildfire.on("destroy", function () {
   BROWSER.runtime.onMessage.removeListener(runtime_onMessage);
 });
 
 function webNavigation_onBeforeNavigate(details) {
-  if (WILDFIRE.VERBOSE) console.log("[background] BROWSER.webNavigation -| onBeforeNavigate (details):", details);
+  if (wildfire.VERBOSE) console.log("[background] BROWSER.webNavigation -| onBeforeNavigate (details):", details);
 
   if (details.parentFrameId !== -1) {
     return;
@@ -6034,12 +6558,12 @@ function webNavigation_onBeforeNavigate(details) {
 BROWSER.webNavigation.onBeforeNavigate.addListener(webNavigation_onBeforeNavigate, {
   url: [{}]
 });
-WILDFIRE.on("destroy", function () {
+wildfire.on("destroy", function () {
   BROWSER.webNavigation.onBeforeNavigate.removeListener(webNavigation_onBeforeNavigate);
 });
 
 function webRequest_onBeforeRequest(details) {
-  if (WILDFIRE.VERBOSE) console.log("[background] BROWSER.webRequest -| onBeforeRequest (details):", details);
+  if (wildfire.VERBOSE) console.log("[background] BROWSER.webRequest -| onBeforeRequest (details):", details);
 
   if (typeof details.documentUrl !== "undefined" || typeof details.initiator !== "undefined" || details.parentFrameId !== -1) {
     return;
@@ -6051,12 +6575,12 @@ function webRequest_onBeforeRequest(details) {
 BROWSER.webRequest.onBeforeRequest.addListener(webRequest_onBeforeRequest, {
   urls: ["<all_urls>"]
 });
-WILDFIRE.on("destroy", function () {
+wildfire.on("destroy", function () {
   BROWSER.webRequest.onBeforeRequest.removeListener(webRequest_onBeforeRequest);
 });
 
 function tabs_onRemoved(tabId) {
-  if (WILDFIRE.VERBOSE) console.log("[background] BROWSER.tabs -| onRemoved (tabId):", tabId);
+  if (wildfire.VERBOSE) console.log("[background] BROWSER.tabs -| onRemoved (tabId):", tabId);
 
   if (currentContext && currentContext.tabId == tabId) {
     setCurrentContextFromDetails(null);
@@ -6070,144 +6594,604 @@ function tabs_onRemoved(tabId) {
 }
 
 BROWSER.tabs.onRemoved.addListener(tabs_onRemoved);
-WILDFIRE.on("destroy", function () {
+wildfire.on("destroy", function () {
   BROWSER.tabs.onRemoved.removeListener(tabs_onRemoved);
 });
 }).call(this,require("timers").setImmediate)
-},{"./lib":26,"./wildfire":30,"timers":38}],24:[function(require,module,exports){
+},{"./component":38,"./lib":39,"./wildfire":40,"timers":49}],36:[function(require,module,exports){
 "use strict";
 
-exports.for = function (API) {
-  var processor = null;
-  var requestIndex = 0;
+exports.forAPI = function (API) {
+  class RequestObserver {
+    constructor(onRequestHandler) {
+      var self = this;
+      API.on("destroy", function () {
+        self.ensureUnhooked();
+      });
+      var requestIndex = 0;
+      var isHooked = false;
 
-  function onRequest(request) {
-    var requestId = null;
-    var headers = {};
-    request.requestHeaders.forEach(function (header) {
-      if (header.name.toLowerCase() === "x-request-id") {
-        requestId = header.value;
+      function onRequest(request) {
+        if (API.VERBOSE) console.log("[http-request-observer] onRequest (request):", request);
+        var requestId = null;
+        var headers = {};
+        request.requestHeaders.forEach(function (header) {
+          if (header.name.toLowerCase() === "x-request-id") {
+            requestId = header.value;
+          }
+
+          headers[header.name] = header.value;
+        });
+        requestIndex += 1;
+        var result = onRequestHandler({
+          "id": requestId || "id:" + request.url + ":" + requestIndex,
+          "url": request.url,
+          "hostname": request.url.replace(/^https?:\/\/([^:\/]+)(:\d+)?\/.*?$/, "$1"),
+          "port": request.url.replace(/^https?:\/\/[^:]+:?(\d+)?\/.*?$/, "$1") || 80,
+          "method": request.method,
+          "headers": headers
+        });
+
+        if (!result || !result.requestHeaders) {
+          return {};
+        }
+
+        return {
+          requestHeaders: Object.keys(result.requestHeaders).map(function (name) {
+            return {
+              name: name,
+              value: result.requestHeaders[name]
+            };
+          })
+        };
       }
 
-      headers[header.name] = header.value;
-    });
-    var result = processor({
-      "id": requestId || "id:" + request.url + ":" + requestIndex,
-      "url": request.url,
-      "hostname": request.url.replace(/^https?:\/\/([^:\/]+)(:\d+)?\/.*?$/, "$1"),
-      "port": request.url.replace(/^https?:\/\/[^:]+:?(\d+)?\/.*?$/, "$1") || 80,
-      "method": request.method,
-      "headers": headers
-    });
+      self.ensureHooked = function () {
+        if (!isHooked) {
+          API.BROWSER.webRequest.onBeforeSendHeaders.addListener(onRequest, {
+            urls: ["<all_urls>"]
+          }, ["blocking", "requestHeaders"]);
+          isHooked = true;
+        }
+      };
 
-    if (!result) {
-      return {};
+      self.ensureUnhooked = function () {
+        API.BROWSER.webRequest.onBeforeSendHeaders.removeListener(onRequest);
+        isHooked = false;
+      };
     }
 
-    var changes = result;
-    var ret = {};
-
-    if (changes.requestHeaders) {
-      var headers = [];
-      Object.keys(changes.requestHeaders).forEach(function (name) {
-        headers.push({
-          name: name,
-          value: changes.requestHeaders[name]
-        });
-      });
-      ret.requestHeaders = headers;
-    }
-
-    return ret;
   }
 
-  API.BROWSER.webRequest.onBeforeSendHeaders.addListener(onRequest, {
-    urls: ["<all_urls>"]
-  }, ["blocking", "requestHeaders"]);
-  API.on("destroy", function () {
-    API.BROWSER.webRequest.onBeforeSendHeaders.removeListener(onRequest);
+  return RequestObserver;
+};
+},{}],37:[function(require,module,exports){
+"use strict";
+
+exports.forAPI = function (API) {
+  class ResponseObserver {
+    constructor(onResponseHandler) {
+      var self = this;
+      API.on("destroy", function () {
+        self.ensureUnhooked();
+      });
+      var isHooked = false;
+      var pageUrlByTabId = {};
+      var pageTimestampByTabId = {};
+
+      function onHeadersReceived(response) {
+        if (API.VERBOSE) console.log("[http-response-observer] onHeadersReceived (response):", response);
+        var pageUrl = response.documentUrl || response.url;
+        var pageTimeStamp = response.timeStamp;
+
+        if (response.parentFrameId !== -1) {
+          pageUrl = pageUrlByTabId[response.tabId] || null;
+          pageTimeStamp = pageTimestampByTabId[response.tabId] || null;
+        } else if (response.type === "main_frame") {
+            pageUrlByTabId[response.tabId] = pageUrl;
+            pageTimestampByTabId[response.tabId] = pageTimeStamp;
+          }
+
+        onResponseHandler({
+          "request": {
+            "id": response.requestId,
+            "context": {
+              frameId: response.frameId,
+              tabId: response.tabId,
+              url: response.url,
+              hostname: response.url.replace(/^[^:]+:\/\/([^:\/]+)(:\d+)?\/.*?$/, "$1"),
+              requestId: response.requestId,
+              requestType: response.type,
+              documentUrl: response.documentUrl,
+              timeStamp: response.timeStamp,
+              pageUrl: pageUrl,
+              pageTimeStamp: pageTimeStamp,
+              pageUid: JSON.stringify({
+                url: pageUrl,
+                tabId: response.tabId
+              }),
+              requestUid: JSON.stringify({
+                url: response.url,
+                timeStamp: response.timeStamp,
+                frameId: response.frameId,
+                tabId: response.tabId
+              })
+            }
+          },
+          "status": response.statusCode,
+          "headers": response.responseHeaders
+        });
+      }
+
+      self.ensureHooked = function () {
+        if (!isHooked) {
+          API.BROWSER.webRequest.onHeadersReceived.addListener(onHeadersReceived, {
+            urls: ["<all_urls>"]
+          }, ["responseHeaders"]);
+          isHooked = true;
+        }
+      };
+
+      self.ensureUnhooked = function () {
+        API.BROWSER.webRequest.onHeadersReceived.removeListener(onHeadersReceived);
+        isHooked = false;
+        pageUrlByTabId = {};
+        pageTimestampByTabId = {};
+      };
+    }
+
+  }
+
+  return ResponseObserver;
+};
+},{}],38:[function(require,module,exports){
+(function (setImmediate){
+"use strict";
+
+var EVENTS = require("events");
+
+var DEBOUNCE = require('lodash/debounce');
+
+exports.for = function (ctx) {
+  var events = new EVENTS.EventEmitter();
+  events.browser = ctx.browser;
+  events.currentContext = null;
+  setImmediate(function () {
+    onContextMessage(null);
+    broadcastCurrentContext();
   });
-  return {
-    register: function (_processor) {
-      processor = _processor;
+  var contextChangeAcknowledged = false;
+
+  events.contextChangeAcknowledged = function () {
+    contextChangeAcknowledged = true;
+  };
+
+  function onContextMessage(context) {
+    if (context !== events.currentContext && (!events.currentContext || !context || context.pageUid !== events.currentContext.pageUid)) {
+      events.currentContext = context;
+      contextChangeAcknowledged = false;
+    }
+
+    if (!contextChangeAcknowledged) {
+      events.emit("changed.context", events.currentContext);
+    }
+  }
+
+  events.handleBroadcastMessage = function (message) {
+    try {
+      if (message.context && message.to === "message-listener" && (ctx.getOwnTabId && message.context.tabId === ctx.getOwnTabId() || ctx.browser && ctx.browser.devtools && ctx.browser.devtools.inspectedWindow && message.context.tabId === ctx.browser.devtools.inspectedWindow.tabId)) {
+        if (message.event === "currentContext" && typeof message.context !== "undefined") {
+          onContextMessage(message.context);
+        }
+
+        events.emit("message", message);
+      }
+    } catch (err) {
+      console.error(err);
     }
   };
-};
-},{}],25:[function(require,module,exports){
-"use strict";
 
-exports.for = function (API) {
-  var pageUrlByTabId = {};
-  var pageTimestampByTabId = {};
-
-  function onHeadersReceived(response) {
-    var pageUrl = response.documentUrl || response.url;
-    var pageTimeStamp = response.timeStamp;
-
-    if (response.parentFrameId !== -1) {
-      pageUrl = pageUrlByTabId[response.tabId] || null;
-      pageTimeStamp = pageTimestampByTabId[response.tabId] || null;
-    } else if (response.type === "main_frame") {
-        pageUrlByTabId[response.tabId] = pageUrl;
-        pageTimestampByTabId[response.tabId] = pageTimeStamp;
+  ctx.browser.runtime.onMessage.addListener(events.handleBroadcastMessage);
+  var globalSettings = {};
+  var domainSettings = {};
+  ctx.browser.storage.onChanged.addListener(function (changes, area) {
+    try {
+      if (!events.currentContext) {
+        return;
       }
 
-    API.emit("http.response", {
-      "request": {
-        "id": response.requestId,
-        "context": {
-          frameId: response.frameId,
-          tabId: response.tabId,
-          url: response.url,
-          hostname: response.url.replace(/^[^:]+:\/\/([^:\/]+)(:\d+)?\/.*?$/, "$1"),
-          requestId: response.requestId,
-          requestType: response.type,
-          documentUrl: response.documentUrl,
-          timeStamp: response.timeStamp,
-          pageUrl: pageUrl,
-          pageTimeStamp: pageTimeStamp,
-          pageUid: JSON.stringify({
-            url: pageUrl,
-            tabId: response.tabId
-          }),
-          requestUid: JSON.stringify({
-            url: response.url,
-            timeStamp: response.timeStamp,
-            frameId: response.frameId,
-            tabId: response.tabId
-          })
-        }
-      },
-      "status": response.statusCode,
-      "headers": response.responseHeaders
-    });
-  }
+      var prefix = "hostname[".concat(events.currentContext.hostname, "].");
 
-  API.BROWSER.webRequest.onHeadersReceived.addListener(onHeadersReceived, {
-    urls: ["<all_urls>"]
-  }, ["responseHeaders"]);
-  API.on("destroy", function () {
-    API.BROWSER.webRequest.onHeadersReceived.removeListener(onHeadersReceived);
+      for (var item of Object.keys(changes)) {
+        if (!/^hostname\[.+\]\..+$/.test(item)) {
+          globalSettings[item] = changes[item].newValue;
+          continue;
+        }
+
+        if (item.substring(0, prefix.length) === prefix) {
+          var name = item.substring(prefix.length);
+          domainSettings[events.currentContext.hostname] = domainSettings[events.currentContext.hostname] || {};
+          domainSettings[events.currentContext.hostname][name] = changes[item].newValue || false;
+          delete events._getHostnameSettingsForSync._cache[events.currentContext.hostname];
+          events.emit("setting." + name, domainSettings[events.currentContext.hostname][name]);
+          events.emit("changed.setting", name, domainSettings[events.currentContext.hostname][name]);
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    }
   });
-  return {};
+  var broadcastCurrentContext = DEBOUNCE(function () {
+    ctx.browser.runtime.sendMessage({
+      to: "broadcast",
+      event: "currentContext"
+    });
+  }, 250);
+
+  events.getSetting = async function (name) {
+    if (!events.currentContext) {
+      return Promise.resolve(null);
+    }
+
+    return events._getSettingForHostname(events.currentContext.hostname, name);
+  };
+
+  events._getSettingForHostname = async function (hostname, name, defaultValue) {
+    if (typeof defaultValue === "undefined") {
+      defaultValue = false;
+    }
+
+    if (typeof ctx.browser === "undefined") {
+      return Promise.resolve(null);
+    }
+
+    var key = "hostname[" + hostname + "]." + name;
+    return ctx.browser.storage.local.get(key).then(function (value) {
+      if (value[key] === null || typeof value[key] === "undefined") {
+        return defaultValue;
+      }
+
+      return value[key];
+    }).then(function (value) {
+      domainSettings[hostname] = domainSettings[hostname] || {};
+      domainSettings[hostname][name] = value;
+      return value;
+    }).catch(function (err) {
+      console.error(err);
+      throw err;
+    });
+  };
+
+  events._getSettingForHostnameSync = function (hostname, name, defaultValue) {
+    if (typeof defaultValue === "undefined") {
+      defaultValue = false;
+    }
+
+    if (!domainSettings[hostname] || typeof domainSettings[hostname][name] === "undefined") {
+      events._getSettingForHostname(hostname, name, defaultValue);
+
+      return defaultValue;
+    }
+
+    return domainSettings[hostname][name];
+  };
+
+  events.setSetting = async function (name, value) {
+    if (!events.currentContext) {
+      throw new Error("Cannot set setting for name '".concat(name, "' due to no 'currentContext'!"));
+    }
+
+    return events._setSettingForHostname(events.currentContext.hostname, name, value);
+  };
+
+  events._setSettingForHostname = async function (hostname, name, value) {
+    if (typeof ctx.browser === "undefined") {
+      return Promise.resolve(null);
+    }
+
+    return events._getSettingForHostname(hostname, name).then(function (existingValue) {
+      if (value === existingValue) {
+        return;
+      }
+
+      var obj = {};
+      obj["hostname[" + hostname + "]." + name] = value;
+      domainSettings[hostname] = domainSettings[hostname] || {};
+      domainSettings[hostname][name] = value;
+      return ctx.browser.storage.local.set(obj).then(broadcastCurrentContext);
+    }).catch(function (err) {
+      console.error(err);
+      throw err;
+    });
+  };
+
+  events.getGlobalSetting = async function (name) {
+    if (typeof ctx.browser === "undefined") {
+      return null;
+    }
+
+    var defaultValue;
+
+    if (name === "reloadOnEnable") {
+      defaultValue = true;
+    }
+
+    return ctx.browser.storage.local.get(name).then(function (value) {
+      if (typeof value[name] === "undefined") {
+        if (typeof defaultValue !== "undefined") {
+          return defaultValue;
+        }
+
+        return null;
+      }
+
+      return value[name];
+    }).then(function (value) {
+      globalSettings[name] = value;
+      return value;
+    }).catch(function (err) {
+      console.error(err);
+      throw err;
+    });
+  };
+
+  events.setGlobalSetting = async function (name, value) {
+    if (typeof ctx.browser === "undefined") {
+      return null;
+    }
+
+    return events.getGlobalSetting(name).then(function (existingValue) {
+      if (value === existingValue) {
+        return;
+      }
+
+      var obj = {};
+      obj[name] = value;
+      globalSettings[name] = value;
+      return ctx.browser.storage.local.set(obj).then(broadcastCurrentContext);
+    }).catch(function (err) {
+      console.error(err);
+      throw err;
+    });
+  };
+
+  events.isConfigured = async function () {
+    if (!events.currentContext) {
+      throw new Error("Cannot get settings due to no 'currentContext'!");
+    }
+
+    var settings = await events._getHostnameSettingsFor(events.currentContext.hostname);
+    return settings._configured;
+  };
+
+  events._getHostnameSettingsFor = async function (hostname) {
+    var settings = {
+      enabled: await events._getSettingForHostname(hostname, "enabled", false),
+      enableUserAgentHeader: await events._getSettingForHostname(hostname, "enableUserAgentHeader", false),
+      enableFirePHPHeader: await events._getSettingForHostname(hostname, "enableFirePHPHeader", false),
+      enableChromeLoggerData: await events._getSettingForHostname(hostname, "enableChromeLoggerData", false)
+    };
+    settings._configured = settings.enableUserAgentHeader || settings.enableFirePHPHeader || settings.enableChromeLoggerData;
+    return settings;
+  };
+
+  events._getHostnameSettingsForSync = function (hostname) {
+    if (!events._getHostnameSettingsForSync._cache[hostname]) {
+      var settings = {
+        enabled: events._getSettingForHostnameSync(hostname, "enabled", false),
+        enableUserAgentHeader: events._getSettingForHostnameSync(hostname, "enableUserAgentHeader", false),
+        enableFirePHPHeader: events._getSettingForHostnameSync(hostname, "enableFirePHPHeader", false),
+        enableChromeLoggerData: events._getSettingForHostnameSync(hostname, "enableChromeLoggerData", false)
+      };
+      settings._configured = settings.enableUserAgentHeader || settings.enableFirePHPHeader || settings.enableChromeLoggerData;
+      events._getHostnameSettingsForSync._cache[hostname] = settings;
+    }
+
+    return events._getHostnameSettingsForSync._cache[hostname];
+  };
+
+  events._getHostnameSettingsForSync._cache = {};
+
+  events.isEnabled = async function () {
+    if (!events.currentContext) {
+      return false;
+    }
+
+    return events._isEnabledForHostname(events.currentContext.hostname);
+  };
+
+  events._isEnabledForHostname = async function (hostname) {
+    var settings = await events._getHostnameSettingsFor(hostname);
+    return settings.enabled && settings._configured;
+  };
+
+  events.reloadBrowser = function () {
+    ctx.browser.runtime.sendMessage({
+      to: "background",
+      event: "reload",
+      context: {
+        tabId: ctx.browser.devtools.inspectedWindow.tabId
+      }
+    });
+  };
+
+  events.clearConsole = function () {
+    ctx.browser.runtime.sendMessage({
+      to: "broadcast",
+      event: "clear"
+    });
+  };
+
+  events.showView = function (name) {
+    if (name === "manage") {
+      ctx.browser.runtime.sendMessage({
+        to: "broadcast",
+        event: "manage"
+      });
+    }
+  };
+
+  return events;
 };
-},{}],26:[function(require,module,exports){
+}).call(this,require("timers").setImmediate)
+},{"events":46,"lodash/debounce":8,"timers":49}],39:[function(require,module,exports){
 "use strict";
 
 exports.browser = window.crossbrowser;
-},{}],27:[function(require,module,exports){
+},{}],40:[function(require,module,exports){
 "use strict";
 
-exports.for = function (API) {
+var EVENTS = require("eventemitter2");
+
+var ENCODER = require("insight-for-js/lib/encoder/default");
+
+exports.Client = function (comp, options) {
+  options = options || {};
+  var API = new EVENTS();
+  API.console = console;
+  API.BROWSER = comp.browser;
+  API.VERBOSE = options.verbose || false;
+  API.WILDFIRE = require("wildfire-for-js");
+
+  var REQUEST_OBSERVER = require("./adapters/http-request-observer").forAPI(API);
+
+  var RESPONSE_OBSERVER = require("./adapters/http-response-observer").forAPI(API);
+
+  var forceEnabled = false;
+
+  API.forcedEnable = function (oo) {
+    forceEnabled = oo;
+  };
+
+  comp.on("changed.context", function () {
+    comp.contextChangeAcknowledged();
+    syncListeners();
+  });
+  comp.on("changed.setting", function () {
+    syncListeners();
+  });
+
+  async function syncListeners() {
+    var enabled = await comp.isEnabled();
+
+    if (enabled) {
+      ensureListenersHooked();
+    } else {
+      ensureListenersUnhooked();
+    }
+  }
+
+  function ensureListenersHooked() {
+    requestObserver.ensureHooked();
+    responseObserver.ensureHooked();
+  }
+
+  function ensureListenersUnhooked() {
+    requestObserver.ensureUnhooked();
+    responseObserver.ensureUnhooked();
+  }
+
+  var encoder = ENCODER.Encoder();
+  encoder.setOption("maxObjectDepth", 1000);
+  encoder.setOption("maxArrayDepth", 1000);
+  encoder.setOption("maxOverallDepth", 1000);
+
+  function onChromeLoggerMessage(message, context) {
+    try {
+      var i, ic, j, jc;
+
+      var _loop = function () {
+        var log = {};
+
+        for (j = 0, jc = message.columns.length; j < jc; j++) {
+          log[message.columns[j]] = message.rows[i][j];
+        }
+
+        var meta = {
+          "msg.preprocessor": "FirePHPCoreCompatibility",
+          "lang.id": "registry.pinf.org/cadorn.org/github/renderers/packages/php/master",
+          "priority": log.type
+        };
+
+        if (log.backtrace) {
+          var m = log.backtrace.match(/^([^:]+?)(\s*:\s*(\d+))?$/);
+
+          if (m) {
+            meta.file = m[1];
+
+            if (m[3] !== '') {
+              meta.line = parseInt(m[3]);
+            }
+          }
+        }
+
+        if (log.log.length === 1) {
+          log.log = log.log[0];
+        }
+
+        var dataNode = encoder.encode(log.log, {
+          "lang": "php"
+        }, {
+          "jsonEncode": false
+        });
+        var node = dataNode.origin;
+        Object.keys(meta).forEach(function (name) {
+          node.meta[name] = meta[name];
+        });
+        var msg = {
+          "context": context,
+          "sender": "https://github.com/ccampbell/chromelogger",
+          "receiver": "https://gi0.FireConsole.org/rep.js/InsightTree/0.1",
+          "meta": "{}",
+          "data": node
+        };
+        API.emit("message.firephp", msg);
+      };
+
+      for (i = 0, ic = message.rows.length; i < ic; i++) {
+        _loop();
+      }
+    } catch (err) {
+      console.error("Error formatting chromelogger message:", err);
+    }
+  }
+
+  API.on.insightMessage = function (message) {
+    API.emit("message.insight", message);
+  };
+
+  API.on.transport = function (info) {
+    API.emit("message.transport", info);
+  };
+
+  function isEnabled() {
+    return true;
+  }
+
+  var httpHeaderChannel = API.httpHeaderChannel = API.WILDFIRE.HttpHeaderChannel({
+    "enableTransport": false,
+    onError: function (err) {
+      console.error("HttpHeaderChannel error:", err);
+      API.emit("error", err);
+    }
+  });
+  httpHeaderChannel.setNoReceiverCallback(function (id) {
+    API.console.error("trying to log to unknown receiver (extension): " + id);
+  });
+  httpHeaderChannel.addListener({
+    afterChannelOpen: function (context) {
+      if (API.VERBOSE) console.log("[wildfire] httpHeaderChannel -| afterChannelOpen (context):", context);
+      API.emit("response", {
+        context: context.context
+      });
+    }
+  });
   var transportReceiver1 = API.WILDFIRE.Receiver();
   transportReceiver1.setId("http://meta.firephp.org/Wildfire/Structure/FirePHP/FirebugConsole/0.1");
   transportReceiver1.addListener({
     onMessageReceived: function (request, message) {
       message.context = request.context;
-
-      if (API.on && API.on.firePHPMessage) {
-        API.on.firePHPMessage(message);
-      }
+      API.emit("message.firephp", message);
     }
   });
   API.httpHeaderChannel.addReceiver(transportReceiver1);
@@ -6216,19 +7200,10 @@ exports.for = function (API) {
   transportReceiver2.addListener({
     onMessageReceived: function (request, message) {
       message.context = request.context;
-
-      if (API.on && API.on.firePHPMessage) {
-        API.on.firePHPMessage(message);
-      }
+      API.emit("message.firephp", message);
     }
   });
   API.httpHeaderChannel.addReceiver(transportReceiver2);
-  return {};
-};
-},{}],28:[function(require,module,exports){
-"use strict";
-
-exports.for = function (API) {
   var receivers = {
     "http://registry.pinf.org/cadorn.org/insight/@meta/receiver/insight/controller/0": {},
     "http://registry.pinf.org/cadorn.org/insight/@meta/receiver/insight/plugin/0": {},
@@ -6256,353 +7231,85 @@ exports.for = function (API) {
     });
     API.httpHeaderChannel.addReceiver(receiver);
   });
-  return {};
-};
-},{}],29:[function(require,module,exports){
-"use strict";
+  var hostnameSettings = {};
+  var requestObserver = new REQUEST_OBSERVER(function (request) {
+    if (!isEnabled()) {
+      if (API.VERBOSE) console.log("[wildfire] REQUEST_OBSERVER handler: not enabled");
+      return null;
+    }
 
-var LIB = require("./lib");
+    var settings = comp._getHostnameSettingsForSync(request.hostname);
 
-var domainSettingsCache = {};
-var settingsByHostnameCache = {};
+    if (API.VERBOSE) console.log("[wildfire] forceEnabled:", forceEnabled);
+    if (API.VERBOSE) console.log("[wildfire] request domain settings for '" + request.hostname + "':", settings);
+    hostnameSettings[request.hostname] = settings;
 
-if (LIB.browser) {
-  LIB.browser.storage.onChanged.addListener(function (changes, area) {
-    for (var item of Object.keys(changes)) {
-      if (!/^domain\[.+\]\..+$/.test(item)) continue;
-      domainSettingsCache[item] = changes[item].newValue;
-      var m = item.match(/^domain\[([^\]]+)\]\.(.+)$/);
+    if (!forceEnabled && !settings.enabled) {
+      return {};
+    }
 
-      if (m) {
-        if (!settingsByHostnameCache[m[1]]) {
-          settingsByHostnameCache[m[1]] = {
-            "enabled": false,
-            "enableUserAgentHeader": false,
-            "enableFirePHPHeader": false,
-            "enableChromeLoggerData": false
-          };
-        }
-
-        settingsByHostnameCache[m[1]][m[2]] = changes[item].newValue;
+    if (forceEnabled || settings.enableUserAgentHeader) {
+      if (!request.headers["User-Agent"].match(/\sFirePHP\/([\.|\d]*)\s?/)) {
+        request.headers["User-Agent"] = request.headers["User-Agent"] + " FirePHP/0.5";
       }
     }
-  });
-}
 
-exports.getSetting = function (name) {
-  function get() {
-    if (!LIB.browser) return Promise.resolve(null);
-    return LIB.browser.storage.local.get(name).then(function (value) {
-      var m = name.match(/^domain\[([^\]]+)\]\.(.+)$/);
+    if (forceEnabled || settings.enableFirePHPHeader) {
+      request.headers["X-FirePHP-Version"] = "0.4";
+    }
 
-      if (m) {
-        if (!settingsByHostnameCache[m[1]]) {
-          settingsByHostnameCache[m[1]] = {
-            "enabled": false,
-            "enableUserAgentHeader": false,
-            "enableFirePHPHeader": false,
-            "enableChromeLoggerData": false
-          };
-        }
-
-        settingsByHostnameCache[m[1]][m[2]] = value[name] || false;
-      }
-
-      return domainSettingsCache[name] = value[name];
-    });
-  }
-
-  if (typeof domainSettingsCache[name] === "undefined") {
-    get();
-    return Promise.resolve(false);
-  }
-
-  return get();
-};
-
-exports.setSetting = function (name, value) {
-  if (!LIB.browser) return Promise.resolve(null);
-  return LIB.browser.storage.local.set(name, value);
-};
-
-exports.getDomainSettingsForDomain = function (domain) {
-  return exports.getSetting("domain[" + domain + "].enabled").then(function (enabled) {
-    return exports.getSetting("domain[" + domain + "].enableUserAgentHeader").then(function (enableUserAgentHeader) {
-      return exports.getSetting("domain[" + domain + "].enableFirePHPHeader").then(function (enableFirePHPHeader) {
-        return exports.getSetting("domain[" + domain + "].enableChromeLoggerData").then(function (enableChromeLoggerData) {
-          return Promise.resolve({
-            "enabled": enabled,
-            "enableUserAgentHeader": enableUserAgentHeader,
-            "enableFirePHPHeader": enableFirePHPHeader,
-            "enableChromeLoggerData": enableChromeLoggerData
-          });
-        });
-      });
-    });
-  });
-};
-
-exports.isEnabledForDomain = function (domain) {
-  return exports.getDomainSettingsForDomain(domain).then(function (settings) {
-    return settings.enabled && (settings.enableUserAgentHeader || settings.enableFirePHPHeader || settings.enableChromeLoggerData);
-  });
-};
-
-exports.getDomainSettingsForRequest = function (request) {
-  return exports.getDomainSettingsForDomain(request.hostname).then(function (settings) {
-    return settings;
-  });
-};
-
-exports.getDomainSettingsForRequestSync = function (request) {
-  if (!exports.getDomainSettingsForRequestSync._fetchedOnce) {
-    exports.getDomainSettingsForRequestSync._fetchedOnce = {};
-  }
-
-  if (!exports.getDomainSettingsForRequestSync._fetchedOnce[request.hostname]) {
-    exports.getDomainSettingsForRequestSync._fetchedOnce[request.hostname] = true;
-    exports.getDomainSettingsForRequest(request);
-  }
-
-  if (!settingsByHostnameCache[request.hostname]) {
-    settingsByHostnameCache[request.hostname] = {
-      "enabled": false,
-      "enableUserAgentHeader": false,
-      "enableFirePHPHeader": false,
-      "enableChromeLoggerData": false
+    if (API.VERBOSE) console.log("[wildfire] updated request headers:", request.headers);
+    return {
+      requestHeaders: request.headers
     };
-  }
+  });
+  var responseObserver = new RESPONSE_OBSERVER(function (response) {
+    if (!isEnabled()) {
+      return;
+    }
 
-  return settingsByHostnameCache[request.hostname];
-};
-},{"./lib":26}],30:[function(require,module,exports){
-"use strict";
+    var settings = hostnameSettings[response.request.context.hostname];
 
-var EVENTS = require("eventemitter2");
+    if (!settings || !forceEnabled && !settings.enabled) {
+      return;
+    }
 
-var API = module.exports = new EVENTS();
-var BROWSER = typeof browser != "undefined" ? browser : chrome;
-API.console = console;
-API.BROWSER = BROWSER;
-API.WILDFIRE = require("wildfire-for-js");
+    if (API.VERBOSE) console.log("[wildfire] response domain settings for '" + response.request.context.hostname + "':", settings);
 
-var REQUEST_OBSERVER = require("./adapters/http-request-observer").for(API);
+    if (settings.enableChromeLoggerData) {
+      var chromeLoggerMessage = response.headers.filter(function (header) {
+        return header.name === "X-ChromeLogger-Data";
+      });
 
-var RESPONSE_OBSERVER = require("./adapters/http-response-observer").for(API);
-
-var ENCODER = require("insight-for-js/lib/encoder/default");
-
-var encoder = ENCODER.Encoder();
-encoder.setOption("maxObjectDepth", 1000);
-encoder.setOption("maxArrayDepth", 1000);
-encoder.setOption("maxOverallDepth", 1000);
-
-var SETTINGS = require("./settings");
-
-var forceEnabled = false;
-
-API.forcedEnable = function (oo) {
-  forceEnabled = oo;
-};
-
-API.on.chromeLoggerMessage = function (message, context) {
-  try {
-    var i, ic, j, jc;
-
-    var _loop = function () {
-      var log = {};
-
-      for (j = 0, jc = message.columns.length; j < jc; j++) {
-        log[message.columns[j]] = message.rows[i][j];
-      }
-
-      var meta = {
-        "msg.preprocessor": "FirePHPCoreCompatibility",
-        "lang.id": "registry.pinf.org/cadorn.org/github/renderers/packages/php/master",
-        "priority": log.type
-      };
-
-      if (log.backtrace) {
-        var m = log.backtrace.match(/^([^:]+?)(\s*:\s*(\d+))?$/);
-
-        if (m) {
-          meta.file = m[1];
-
-          if (m[3] !== '') {
-            meta.line = parseInt(m[3]);
+      if (chromeLoggerMessage.length > 0) {
+        chromeLoggerMessage.forEach(function (header) {
+          try {
+            var message = decodeURIComponent(escape(atob(header.value)));
+            message = JSON.parse(message);
+            onChromeLoggerMessage(message, response.request.context);
+          } catch (err) {
+            console.error("header", header);
+            console.error("Error processing message:", err);
           }
-        }
+        });
       }
-
-      if (log.log.length === 1) {
-        log.log = log.log[0];
-      }
-
-      var dataNode = encoder.encode(log.log, {
-        "lang": "php"
-      }, {
-        "jsonEncode": false
-      });
-      var node = dataNode.origin;
-      Object.keys(meta).forEach(function (name) {
-        node.meta[name] = meta[name];
-      });
-      var msg = {
-        "context": context,
-        "sender": "https://github.com/ccampbell/chromelogger",
-        "receiver": "https://gi0.FireConsole.org/rep.js/InsightTree/0.1",
-        "meta": "{}",
-        "data": node
-      };
-      API.emit("message.firephp", msg);
-    };
-
-    for (i = 0, ic = message.rows.length; i < ic; i++) {
-      _loop();
     }
-  } catch (err) {
-    console.error("Error formatting chromelogger message:", err);
-  }
-};
 
-API.on.insightMessage = function (message) {
-  API.emit("message.insight", message);
-};
-
-API.on.firePHPMessage = function (message) {
-  API.emit("message.firephp", message);
-};
-
-API.on.transport = function (info) {
-  API.emit("message.transport", info);
-};
-
-function isEnabled() {
-  return true;
-}
-
-var httpHeaderChannel = API.httpHeaderChannel = API.WILDFIRE.HttpHeaderChannel({
-  "enableTransport": false,
-  onError: function (err) {
-    console.error("HttpHeaderChannel error:", err);
-    API.emit("error", err);
-  }
-});
-httpHeaderChannel.setNoReceiverCallback(function (id) {
-  API.console.error("trying to log to unknown receiver (extension): " + id);
-});
-httpHeaderChannel.addListener({
-  afterChannelOpen: function (context) {
-    if (API.VERBOSE) console.log("[wildfire] httpHeaderChannel -| afterChannelOpen (context):", context);
-    API.emit("response", {
-      context: context.context
+    httpHeaderChannel.parseReceived(response.headers, {
+      "id": response.request.id,
+      "url": response.request.url,
+      "hostname": response.request.hostname,
+      "context": response.request.context,
+      "port": response.request.port,
+      "method": response.request.method,
+      "status": response.status,
+      "contentType": response.contentType,
+      "requestHeaders": response.request.headers
     });
-  }
-});
-
-require("./receivers/firephp").for(API);
-
-require("./receivers/insight").for(API);
-
-var announceDispatcher = API.WILDFIRE.Dispatcher();
-announceDispatcher.setProtocol('http://registry.pinf.org/cadorn.org/wildfire/@meta/protocol/announce/0.1.0');
-announceDispatcher.setChannel(httpHeaderChannel);
-
-function getAnnounceMessageForRequest(request) {
-  if (!getAnnounceMessageForRequest._forHostnames) {
-    getAnnounceMessageForRequest._forHostnames = {};
-  }
-
-  var cache = getAnnounceMessageForRequest._forHostnames;
-
-  if (cache[request.hostname]) {
-    return cache[request.hostname];
-  }
-
-  cache[request.hostname] = new API.WILDFIRE.Message();
-  cache[request.hostname].setData(JSON.stringify({
-    "authkey": "mykey",
-    "receivers": httpHeaderChannel.receivers.map(function (receiver) {
-      return receiver.getId();
-    })
-  }));
-  return cache[request.hostname];
-}
-
-var hostnameSettings = {};
-API.hostnameSettings = hostnameSettings;
-REQUEST_OBSERVER.register(function (request) {
-  if (!isEnabled()) {
-    if (API.VERBOSE) console.log("[wildfire] REQUEST_OBSERVER handler: not enabled");
-    return null;
-  }
-
-  var settings = SETTINGS.getDomainSettingsForRequestSync(request);
-  if (API.VERBOSE) console.log("[wildfire] forceEnabled:", forceEnabled);
-  if (API.VERBOSE) console.log("[wildfire] request domain settings for '" + request.hostname + "':", settings);
-  hostnameSettings[request.hostname] = settings;
-
-  if (!forceEnabled && !settings.enabled) {
-    return {};
-  }
-
-  if (forceEnabled || settings.enableUserAgentHeader) {
-    if (!request.headers["User-Agent"].match(/\sFirePHP\/([\.|\d]*)\s?/)) {
-      request.headers["User-Agent"] = request.headers["User-Agent"] + " FirePHP/0.5";
-    }
-  }
-
-  if (forceEnabled || settings.enableFirePHPHeader) {
-    request.headers["X-FirePHP-Version"] = "0.4";
-  }
-
-  if (API.VERBOSE) console.log("[wildfire] updated request headers:", request.headers);
-  return {
-    requestHeaders: request.headers
-  };
-});
-API.on("http.response", function (response) {
-  if (!isEnabled()) {
-    return;
-  }
-
-  var settings = hostnameSettings[response.request.context.hostname];
-
-  if (!settings || !forceEnabled && !settings.enabled) {
-    return;
-  }
-
-  if (API.VERBOSE) console.log("[wildfire] response domain settings for '" + response.request.context.hostname + "':", settings);
-  var chromeLoggerMessage = response.headers.filter(function (header) {
-    return header.name === "X-ChromeLogger-Data";
   });
-
-  if (chromeLoggerMessage.length > 0) {
-    chromeLoggerMessage.forEach(function (header) {
-      try {
-        var message = decodeURIComponent(escape(atob(header.value)));
-        message = JSON.parse(message);
-        API.on.chromeLoggerMessage(message, response.request.context);
-      } catch (err) {
-        console.error("header", header);
-        console.error("Error processing message:", err);
-      }
-    });
-  }
-
-  httpHeaderChannel.parseReceived(response.headers, {
-    "id": response.request.id,
-    "url": response.request.url,
-    "hostname": response.request.hostname,
-    "context": response.request.context,
-    "port": response.request.port,
-    "method": response.request.method,
-    "status": response.status,
-    "contentType": response.contentType,
-    "requestHeaders": response.request.headers
-  });
-});
-},{"./adapters/http-request-observer":24,"./adapters/http-response-observer":25,"./receivers/firephp":27,"./receivers/insight":28,"./settings":29,"eventemitter2":1,"insight-for-js/lib/encoder/default":31,"wildfire-for-js":13}],31:[function(require,module,exports){
+  return API;
+};
+},{"./adapters/http-request-observer":36,"./adapters/http-response-observer":37,"eventemitter2":1,"insight-for-js/lib/encoder/default":41,"wildfire-for-js":25}],41:[function(require,module,exports){
 
 var UTIL = require("fp-modules-for-nodejs/lib/util");
 var JSON = require("fp-modules-for-nodejs/lib/json");
@@ -7013,11 +7720,11 @@ Encoder.prototype.encodeObject = function(meta, object, objectDepth, arrayDepth,
 
     return ret;
 }
-},{"fp-modules-for-nodejs/lib/json":32,"fp-modules-for-nodejs/lib/util":33}],32:[function(require,module,exports){
-arguments[4][16][0].apply(exports,arguments)
-},{"dup":16}],33:[function(require,module,exports){
-arguments[4][22][0].apply(exports,arguments)
-},{"dup":22}],34:[function(require,module,exports){
+},{"fp-modules-for-nodejs/lib/json":42,"fp-modules-for-nodejs/lib/util":43}],42:[function(require,module,exports){
+arguments[4][28][0].apply(exports,arguments)
+},{"dup":28}],43:[function(require,module,exports){
+arguments[4][34][0].apply(exports,arguments)
+},{"dup":34}],44:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -7170,7 +7877,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],35:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
 /*!
  * The buffer module from node.js, for the browser.
  *
@@ -8949,7 +9656,532 @@ function numberIsNaN (obj) {
   return obj !== obj // eslint-disable-line no-self-compare
 }
 
-},{"base64-js":34,"ieee754":36}],36:[function(require,module,exports){
+},{"base64-js":44,"ieee754":47}],46:[function(require,module,exports){
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+var objectCreate = Object.create || objectCreatePolyfill
+var objectKeys = Object.keys || objectKeysPolyfill
+var bind = Function.prototype.bind || functionBindPolyfill
+
+function EventEmitter() {
+  if (!this._events || !Object.prototype.hasOwnProperty.call(this, '_events')) {
+    this._events = objectCreate(null);
+    this._eventsCount = 0;
+  }
+
+  this._maxListeners = this._maxListeners || undefined;
+}
+module.exports = EventEmitter;
+
+// Backwards-compat with node 0.10.x
+EventEmitter.EventEmitter = EventEmitter;
+
+EventEmitter.prototype._events = undefined;
+EventEmitter.prototype._maxListeners = undefined;
+
+// By default EventEmitters will print a warning if more than 10 listeners are
+// added to it. This is a useful default which helps finding memory leaks.
+var defaultMaxListeners = 10;
+
+var hasDefineProperty;
+try {
+  var o = {};
+  if (Object.defineProperty) Object.defineProperty(o, 'x', { value: 0 });
+  hasDefineProperty = o.x === 0;
+} catch (err) { hasDefineProperty = false }
+if (hasDefineProperty) {
+  Object.defineProperty(EventEmitter, 'defaultMaxListeners', {
+    enumerable: true,
+    get: function() {
+      return defaultMaxListeners;
+    },
+    set: function(arg) {
+      // check whether the input is a positive number (whose value is zero or
+      // greater and not a NaN).
+      if (typeof arg !== 'number' || arg < 0 || arg !== arg)
+        throw new TypeError('"defaultMaxListeners" must be a positive number');
+      defaultMaxListeners = arg;
+    }
+  });
+} else {
+  EventEmitter.defaultMaxListeners = defaultMaxListeners;
+}
+
+// Obviously not all Emitters should be limited to 10. This function allows
+// that to be increased. Set to zero for unlimited.
+EventEmitter.prototype.setMaxListeners = function setMaxListeners(n) {
+  if (typeof n !== 'number' || n < 0 || isNaN(n))
+    throw new TypeError('"n" argument must be a positive number');
+  this._maxListeners = n;
+  return this;
+};
+
+function $getMaxListeners(that) {
+  if (that._maxListeners === undefined)
+    return EventEmitter.defaultMaxListeners;
+  return that._maxListeners;
+}
+
+EventEmitter.prototype.getMaxListeners = function getMaxListeners() {
+  return $getMaxListeners(this);
+};
+
+// These standalone emit* functions are used to optimize calling of event
+// handlers for fast cases because emit() itself often has a variable number of
+// arguments and can be deoptimized because of that. These functions always have
+// the same number of arguments and thus do not get deoptimized, so the code
+// inside them can execute faster.
+function emitNone(handler, isFn, self) {
+  if (isFn)
+    handler.call(self);
+  else {
+    var len = handler.length;
+    var listeners = arrayClone(handler, len);
+    for (var i = 0; i < len; ++i)
+      listeners[i].call(self);
+  }
+}
+function emitOne(handler, isFn, self, arg1) {
+  if (isFn)
+    handler.call(self, arg1);
+  else {
+    var len = handler.length;
+    var listeners = arrayClone(handler, len);
+    for (var i = 0; i < len; ++i)
+      listeners[i].call(self, arg1);
+  }
+}
+function emitTwo(handler, isFn, self, arg1, arg2) {
+  if (isFn)
+    handler.call(self, arg1, arg2);
+  else {
+    var len = handler.length;
+    var listeners = arrayClone(handler, len);
+    for (var i = 0; i < len; ++i)
+      listeners[i].call(self, arg1, arg2);
+  }
+}
+function emitThree(handler, isFn, self, arg1, arg2, arg3) {
+  if (isFn)
+    handler.call(self, arg1, arg2, arg3);
+  else {
+    var len = handler.length;
+    var listeners = arrayClone(handler, len);
+    for (var i = 0; i < len; ++i)
+      listeners[i].call(self, arg1, arg2, arg3);
+  }
+}
+
+function emitMany(handler, isFn, self, args) {
+  if (isFn)
+    handler.apply(self, args);
+  else {
+    var len = handler.length;
+    var listeners = arrayClone(handler, len);
+    for (var i = 0; i < len; ++i)
+      listeners[i].apply(self, args);
+  }
+}
+
+EventEmitter.prototype.emit = function emit(type) {
+  var er, handler, len, args, i, events;
+  var doError = (type === 'error');
+
+  events = this._events;
+  if (events)
+    doError = (doError && events.error == null);
+  else if (!doError)
+    return false;
+
+  // If there is no 'error' event listener then throw.
+  if (doError) {
+    if (arguments.length > 1)
+      er = arguments[1];
+    if (er instanceof Error) {
+      throw er; // Unhandled 'error' event
+    } else {
+      // At least give some kind of context to the user
+      var err = new Error('Unhandled "error" event. (' + er + ')');
+      err.context = er;
+      throw err;
+    }
+    return false;
+  }
+
+  handler = events[type];
+
+  if (!handler)
+    return false;
+
+  var isFn = typeof handler === 'function';
+  len = arguments.length;
+  switch (len) {
+      // fast cases
+    case 1:
+      emitNone(handler, isFn, this);
+      break;
+    case 2:
+      emitOne(handler, isFn, this, arguments[1]);
+      break;
+    case 3:
+      emitTwo(handler, isFn, this, arguments[1], arguments[2]);
+      break;
+    case 4:
+      emitThree(handler, isFn, this, arguments[1], arguments[2], arguments[3]);
+      break;
+      // slower
+    default:
+      args = new Array(len - 1);
+      for (i = 1; i < len; i++)
+        args[i - 1] = arguments[i];
+      emitMany(handler, isFn, this, args);
+  }
+
+  return true;
+};
+
+function _addListener(target, type, listener, prepend) {
+  var m;
+  var events;
+  var existing;
+
+  if (typeof listener !== 'function')
+    throw new TypeError('"listener" argument must be a function');
+
+  events = target._events;
+  if (!events) {
+    events = target._events = objectCreate(null);
+    target._eventsCount = 0;
+  } else {
+    // To avoid recursion in the case that type === "newListener"! Before
+    // adding it to the listeners, first emit "newListener".
+    if (events.newListener) {
+      target.emit('newListener', type,
+          listener.listener ? listener.listener : listener);
+
+      // Re-assign `events` because a newListener handler could have caused the
+      // this._events to be assigned to a new object
+      events = target._events;
+    }
+    existing = events[type];
+  }
+
+  if (!existing) {
+    // Optimize the case of one listener. Don't need the extra array object.
+    existing = events[type] = listener;
+    ++target._eventsCount;
+  } else {
+    if (typeof existing === 'function') {
+      // Adding the second element, need to change to array.
+      existing = events[type] =
+          prepend ? [listener, existing] : [existing, listener];
+    } else {
+      // If we've already got an array, just append.
+      if (prepend) {
+        existing.unshift(listener);
+      } else {
+        existing.push(listener);
+      }
+    }
+
+    // Check for listener leak
+    if (!existing.warned) {
+      m = $getMaxListeners(target);
+      if (m && m > 0 && existing.length > m) {
+        existing.warned = true;
+        var w = new Error('Possible EventEmitter memory leak detected. ' +
+            existing.length + ' "' + String(type) + '" listeners ' +
+            'added. Use emitter.setMaxListeners() to ' +
+            'increase limit.');
+        w.name = 'MaxListenersExceededWarning';
+        w.emitter = target;
+        w.type = type;
+        w.count = existing.length;
+        if (typeof console === 'object' && console.warn) {
+          console.warn('%s: %s', w.name, w.message);
+        }
+      }
+    }
+  }
+
+  return target;
+}
+
+EventEmitter.prototype.addListener = function addListener(type, listener) {
+  return _addListener(this, type, listener, false);
+};
+
+EventEmitter.prototype.on = EventEmitter.prototype.addListener;
+
+EventEmitter.prototype.prependListener =
+    function prependListener(type, listener) {
+      return _addListener(this, type, listener, true);
+    };
+
+function onceWrapper() {
+  if (!this.fired) {
+    this.target.removeListener(this.type, this.wrapFn);
+    this.fired = true;
+    switch (arguments.length) {
+      case 0:
+        return this.listener.call(this.target);
+      case 1:
+        return this.listener.call(this.target, arguments[0]);
+      case 2:
+        return this.listener.call(this.target, arguments[0], arguments[1]);
+      case 3:
+        return this.listener.call(this.target, arguments[0], arguments[1],
+            arguments[2]);
+      default:
+        var args = new Array(arguments.length);
+        for (var i = 0; i < args.length; ++i)
+          args[i] = arguments[i];
+        this.listener.apply(this.target, args);
+    }
+  }
+}
+
+function _onceWrap(target, type, listener) {
+  var state = { fired: false, wrapFn: undefined, target: target, type: type, listener: listener };
+  var wrapped = bind.call(onceWrapper, state);
+  wrapped.listener = listener;
+  state.wrapFn = wrapped;
+  return wrapped;
+}
+
+EventEmitter.prototype.once = function once(type, listener) {
+  if (typeof listener !== 'function')
+    throw new TypeError('"listener" argument must be a function');
+  this.on(type, _onceWrap(this, type, listener));
+  return this;
+};
+
+EventEmitter.prototype.prependOnceListener =
+    function prependOnceListener(type, listener) {
+      if (typeof listener !== 'function')
+        throw new TypeError('"listener" argument must be a function');
+      this.prependListener(type, _onceWrap(this, type, listener));
+      return this;
+    };
+
+// Emits a 'removeListener' event if and only if the listener was removed.
+EventEmitter.prototype.removeListener =
+    function removeListener(type, listener) {
+      var list, events, position, i, originalListener;
+
+      if (typeof listener !== 'function')
+        throw new TypeError('"listener" argument must be a function');
+
+      events = this._events;
+      if (!events)
+        return this;
+
+      list = events[type];
+      if (!list)
+        return this;
+
+      if (list === listener || list.listener === listener) {
+        if (--this._eventsCount === 0)
+          this._events = objectCreate(null);
+        else {
+          delete events[type];
+          if (events.removeListener)
+            this.emit('removeListener', type, list.listener || listener);
+        }
+      } else if (typeof list !== 'function') {
+        position = -1;
+
+        for (i = list.length - 1; i >= 0; i--) {
+          if (list[i] === listener || list[i].listener === listener) {
+            originalListener = list[i].listener;
+            position = i;
+            break;
+          }
+        }
+
+        if (position < 0)
+          return this;
+
+        if (position === 0)
+          list.shift();
+        else
+          spliceOne(list, position);
+
+        if (list.length === 1)
+          events[type] = list[0];
+
+        if (events.removeListener)
+          this.emit('removeListener', type, originalListener || listener);
+      }
+
+      return this;
+    };
+
+EventEmitter.prototype.removeAllListeners =
+    function removeAllListeners(type) {
+      var listeners, events, i;
+
+      events = this._events;
+      if (!events)
+        return this;
+
+      // not listening for removeListener, no need to emit
+      if (!events.removeListener) {
+        if (arguments.length === 0) {
+          this._events = objectCreate(null);
+          this._eventsCount = 0;
+        } else if (events[type]) {
+          if (--this._eventsCount === 0)
+            this._events = objectCreate(null);
+          else
+            delete events[type];
+        }
+        return this;
+      }
+
+      // emit removeListener for all listeners on all events
+      if (arguments.length === 0) {
+        var keys = objectKeys(events);
+        var key;
+        for (i = 0; i < keys.length; ++i) {
+          key = keys[i];
+          if (key === 'removeListener') continue;
+          this.removeAllListeners(key);
+        }
+        this.removeAllListeners('removeListener');
+        this._events = objectCreate(null);
+        this._eventsCount = 0;
+        return this;
+      }
+
+      listeners = events[type];
+
+      if (typeof listeners === 'function') {
+        this.removeListener(type, listeners);
+      } else if (listeners) {
+        // LIFO order
+        for (i = listeners.length - 1; i >= 0; i--) {
+          this.removeListener(type, listeners[i]);
+        }
+      }
+
+      return this;
+    };
+
+function _listeners(target, type, unwrap) {
+  var events = target._events;
+
+  if (!events)
+    return [];
+
+  var evlistener = events[type];
+  if (!evlistener)
+    return [];
+
+  if (typeof evlistener === 'function')
+    return unwrap ? [evlistener.listener || evlistener] : [evlistener];
+
+  return unwrap ? unwrapListeners(evlistener) : arrayClone(evlistener, evlistener.length);
+}
+
+EventEmitter.prototype.listeners = function listeners(type) {
+  return _listeners(this, type, true);
+};
+
+EventEmitter.prototype.rawListeners = function rawListeners(type) {
+  return _listeners(this, type, false);
+};
+
+EventEmitter.listenerCount = function(emitter, type) {
+  if (typeof emitter.listenerCount === 'function') {
+    return emitter.listenerCount(type);
+  } else {
+    return listenerCount.call(emitter, type);
+  }
+};
+
+EventEmitter.prototype.listenerCount = listenerCount;
+function listenerCount(type) {
+  var events = this._events;
+
+  if (events) {
+    var evlistener = events[type];
+
+    if (typeof evlistener === 'function') {
+      return 1;
+    } else if (evlistener) {
+      return evlistener.length;
+    }
+  }
+
+  return 0;
+}
+
+EventEmitter.prototype.eventNames = function eventNames() {
+  return this._eventsCount > 0 ? Reflect.ownKeys(this._events) : [];
+};
+
+// About 1.5x faster than the two-arg version of Array#splice().
+function spliceOne(list, index) {
+  for (var i = index, k = i + 1, n = list.length; k < n; i += 1, k += 1)
+    list[i] = list[k];
+  list.pop();
+}
+
+function arrayClone(arr, n) {
+  var copy = new Array(n);
+  for (var i = 0; i < n; ++i)
+    copy[i] = arr[i];
+  return copy;
+}
+
+function unwrapListeners(arr) {
+  var ret = new Array(arr.length);
+  for (var i = 0; i < ret.length; ++i) {
+    ret[i] = arr[i].listener || arr[i];
+  }
+  return ret;
+}
+
+function objectCreatePolyfill(proto) {
+  var F = function() {};
+  F.prototype = proto;
+  return new F;
+}
+function objectKeysPolyfill(obj) {
+  var keys = [];
+  for (var k in obj) if (Object.prototype.hasOwnProperty.call(obj, k)) {
+    keys.push(k);
+  }
+  return k;
+}
+function functionBindPolyfill(context) {
+  var fn = this;
+  return function () {
+    return fn.apply(context, arguments);
+  };
+}
+
+},{}],47:[function(require,module,exports){
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
   var eLen = (nBytes * 8) - mLen - 1
@@ -9035,7 +10267,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],37:[function(require,module,exports){
+},{}],48:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -9221,7 +10453,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],38:[function(require,module,exports){
+},{}],49:[function(require,module,exports){
 (function (setImmediate,clearImmediate){
 var nextTick = require('process/browser.js').nextTick;
 var apply = Function.prototype.apply;
@@ -9300,7 +10532,7 @@ exports.clearImmediate = typeof clearImmediate === "function" ? clearImmediate :
   delete immediateIds[id];
 };
 }).call(this,require("timers").setImmediate,require("timers").clearImmediate)
-},{"process/browser.js":37,"timers":38}]},{},[23])(23)
+},{"process/browser.js":48,"timers":49}]},{},[35])(35)
 });
 
 	});

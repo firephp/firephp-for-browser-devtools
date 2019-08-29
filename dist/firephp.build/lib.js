@@ -41,23 +41,6 @@
     }
 
     WINDOW.crossbrowser = {
-        storage: {
-            onChanged: BROWSER.storage.onChanged,
-            local: {
-                get: async function () {
-                    if (IS_FIREFOX) {
-                        return BROWSER.storage.local.get.apply(BROWSER.storage.local, arguments);
-                    }
-                    return promisifyNoErr(BROWSER.storage.local.get, BROWSER.storage.local)(arguments);
-                },
-                set: async function () {
-                    if (IS_FIREFOX) {
-                        return BROWSER.storage.local.set.apply(BROWSER.storage.local, arguments);
-                    }
-                    return promisifyNoErr(BROWSER.storage.local.set, BROWSER.storage.local)(arguments);
-                }
-            }
-        },
         runtime: {
             getURL: BROWSER.runtime.getURL,
             onMessage: BROWSER.runtime.onMessage,
@@ -74,8 +57,37 @@
             getManifest: function () {
                 return BROWSER.runtime.getManifest();
             }            
-        },
-        tabs: {
+        }
+    };
+
+    if (BROWSER.webRequest) {
+        WINDOW.crossbrowser.webRequest = {
+            onBeforeSendHeaders: BROWSER.webRequest.onBeforeSendHeaders,
+            onHeadersReceived: BROWSER.webRequest.onHeadersReceived
+        };
+    }
+
+    if (BROWSER.devtools) {
+        WINDOW.crossbrowser.devtools = {
+            inspectedWindow: {},
+            panels: {
+                create: async function () {
+                    if (IS_FIREFOX) {
+                        return BROWSER.devtools.panels.create.apply(BROWSER.devtools.panels, arguments);
+                    }
+                    return promisifyNoErr(BROWSER.devtools.panels.create, BROWSER.devtools.panels)(arguments);
+                }
+            }
+        };
+        Object.defineProperty(WINDOW.crossbrowser.devtools.inspectedWindow, 'tabId', {
+            get: function() {
+                return BROWSER.devtools.inspectedWindow.tabId;
+            }
+        });
+    }
+
+    if (BROWSER.tabs) {
+        WINDOW.crossbrowser.tabs = {
             query: async function () {
                 if (IS_FIREFOX) {
                     return BROWSER.tabs.query.apply(BROWSER.tabs, arguments);
@@ -94,24 +106,27 @@
                 }
                 return promisifyNoErr(BROWSER.tabs.reload, BROWSER.tabs)(arguments);
             }
-        },
-        devtools: {
-            inspectedWindow: {},
-            panels: {
-                create: async function () {
+        };
+    }
+
+    if (BROWSER.storage) {
+        WINDOW.crossbrowser.storage = {
+            onChanged: BROWSER.storage.onChanged,
+            local: {
+                get: async function () {
                     if (IS_FIREFOX) {
-                        return BROWSER.devtools.panels.create.apply(BROWSER.devtools.panels, arguments);
+                        return BROWSER.storage.local.get.apply(BROWSER.storage.local, arguments);
                     }
-                    return promisifyNoErr(BROWSER.devtools.panels.create, BROWSER.devtools.panels)(arguments);
+                    return promisifyNoErr(BROWSER.storage.local.get, BROWSER.storage.local)(arguments);
+                },
+                set: async function () {
+                    if (IS_FIREFOX) {
+                        return BROWSER.storage.local.set.apply(BROWSER.storage.local, arguments);
+                    }
+                    return promisifyNoErr(BROWSER.storage.local.set, BROWSER.storage.local)(arguments);
                 }
             }
-        }
+        };
     };
-
-    Object.defineProperty(WINDOW.crossbrowser.devtools.inspectedWindow, 'tabId', {
-        get: function() {
-            return BROWSER.devtools.inspectedWindow.tabId;
-        }
-    });
 
 })(window);

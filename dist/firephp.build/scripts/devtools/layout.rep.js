@@ -682,6 +682,7 @@ var DEBOUNCE = require('lodash/debounce');
 
 exports.for = function (ctx) {
   var events = new EVENTS.EventEmitter();
+  events.browser = ctx.browser;
   events.currentContext = null;
   setImmediate(function () {
     onContextMessage(null);
@@ -704,13 +705,9 @@ exports.for = function (ctx) {
     }
   }
 
-  ctx.browser.runtime.onMessage.addListener(function (message) {
+  events.handleBroadcastMessage = function (message) {
     try {
-      if (!ctx.browser || !ctx.browser.devtools || !ctx.browser.devtools.inspectedWindow || !message.context || message.context.tabId != ctx.browser.devtools.inspectedWindow.tabId) {
-        return;
-      }
-
-      if (message.to === "message-listener") {
+      if (message.context && message.to === "message-listener" && (ctx.getOwnTabId && message.context.tabId === ctx.getOwnTabId() || ctx.browser && ctx.browser.devtools && ctx.browser.devtools.inspectedWindow && message.context.tabId === ctx.browser.devtools.inspectedWindow.tabId)) {
         if (message.event === "currentContext" && typeof message.context !== "undefined") {
           onContextMessage(message.context);
         }
@@ -720,22 +717,32 @@ exports.for = function (ctx) {
     } catch (err) {
       console.error(err);
     }
-  });
+  };
+
+  ctx.browser.runtime.onMessage.addListener(events.handleBroadcastMessage);
+  var globalSettings = {};
+  var domainSettings = {};
   ctx.browser.storage.onChanged.addListener(function (changes, area) {
     try {
       if (!events.currentContext) {
         return;
       }
 
-      var prefix = "domain[".concat(events.currentContext.hostname, "].");
+      var prefix = "hostname[".concat(events.currentContext.hostname, "].");
 
       for (var item of Object.keys(changes)) {
-        if (!/^domain\[.+\]\..+$/.test(item)) continue;
+        if (!/^hostname\[.+\]\..+$/.test(item)) {
+          globalSettings[item] = changes[item].newValue;
+          continue;
+        }
 
         if (item.substring(0, prefix.length) === prefix) {
           var name = item.substring(prefix.length);
-          events.emit("setting." + name, changes[item].newValue);
-          events.emit("changed.setting", name, changes[item].newValue);
+          domainSettings[events.currentContext.hostname] = domainSettings[events.currentContext.hostname] || {};
+          domainSettings[events.currentContext.hostname][name] = changes[item].newValue || false;
+          delete events._getHostnameSettingsForSync._cache[events.currentContext.hostname];
+          events.emit("setting." + name, domainSettings[events.currentContext.hostname][name]);
+          events.emit("changed.setting", name, domainSettings[events.currentContext.hostname][name]);
         }
       }
     } catch (err) {
@@ -749,7 +756,7 @@ exports.for = function (ctx) {
     });
   }, 250);
 
-  events.getSetting = function (name) {
+  events.getSetting = async function (name) {
     if (!events.currentContext) {
       return Promise.resolve(null);
     }
@@ -757,21 +764,47 @@ exports.for = function (ctx) {
     return events._getSettingForHostname(events.currentContext.hostname, name);
   };
 
-  events._getSettingForHostname = function (hostname, name) {
+  events._getSettingForHostname = async function (hostname, name, defaultValue) {
+    if (typeof defaultValue === "undefined") {
+      defaultValue = false;
+    }
+
     if (typeof ctx.browser === "undefined") {
       return Promise.resolve(null);
     }
 
-    var key = "domain[" + hostname + "]." + name;
+    var key = "hostname[" + hostname + "]." + name;
     return ctx.browser.storage.local.get(key).then(function (value) {
-      return value[key] || false;
+      if (value[key] === null || typeof value[key] === "undefined") {
+        return defaultValue;
+      }
+
+      return value[key];
+    }).then(function (value) {
+      domainSettings[hostname] = domainSettings[hostname] || {};
+      domainSettings[hostname][name] = value;
+      return value;
     }).catch(function (err) {
       console.error(err);
       throw err;
     });
   };
 
-  events.setSetting = function (name, value) {
+  events._getSettingForHostnameSync = function (hostname, name, defaultValue) {
+    if (typeof defaultValue === "undefined") {
+      defaultValue = false;
+    }
+
+    if (!domainSettings[hostname] || typeof domainSettings[hostname][name] === "undefined") {
+      events._getSettingForHostname(hostname, name, defaultValue);
+
+      return defaultValue;
+    }
+
+    return domainSettings[hostname][name];
+  };
+
+  events.setSetting = async function (name, value) {
     if (!events.currentContext) {
       throw new Error("Cannot set setting for name '".concat(name, "' due to no 'currentContext'!"));
     }
@@ -779,7 +812,7 @@ exports.for = function (ctx) {
     return events._setSettingForHostname(events.currentContext.hostname, name, value);
   };
 
-  events._setSettingForHostname = function (hostname, name, value) {
+  events._setSettingForHostname = async function (hostname, name, value) {
     if (typeof ctx.browser === "undefined") {
       return Promise.resolve(null);
     }
@@ -790,7 +823,9 @@ exports.for = function (ctx) {
       }
 
       var obj = {};
-      obj["domain[" + hostname + "]." + name] = value;
+      obj["hostname[" + hostname + "]." + name] = value;
+      domainSettings[hostname] = domainSettings[hostname] || {};
+      domainSettings[hostname][name] = value;
       return ctx.browser.storage.local.set(obj).then(broadcastCurrentContext);
     }).catch(function (err) {
       console.error(err);
@@ -798,9 +833,9 @@ exports.for = function (ctx) {
     });
   };
 
-  events.getGlobalSetting = function (name) {
+  events.getGlobalSetting = async function (name) {
     if (typeof ctx.browser === "undefined") {
-      return Promise.resolve(null);
+      return null;
     }
 
     var defaultValue;
@@ -819,15 +854,18 @@ exports.for = function (ctx) {
       }
 
       return value[name];
+    }).then(function (value) {
+      globalSettings[name] = value;
+      return value;
     }).catch(function (err) {
       console.error(err);
       throw err;
     });
   };
 
-  events.setGlobalSetting = function (name, value) {
+  events.setGlobalSetting = async function (name, value) {
     if (typeof ctx.browser === "undefined") {
-      return Promise.resolve(null);
+      return null;
     }
 
     return events.getGlobalSetting(name).then(function (existingValue) {
@@ -837,6 +875,7 @@ exports.for = function (ctx) {
 
       var obj = {};
       obj[name] = value;
+      globalSettings[name] = value;
       return ctx.browser.storage.local.set(obj).then(broadcastCurrentContext);
     }).catch(function (err) {
       console.error(err);
@@ -844,14 +883,54 @@ exports.for = function (ctx) {
     });
   };
 
-  events.isConfigured = function () {
-    return events.getSetting("enableUserAgentHeader").then(function (enableUserAgentHeader) {
-      return events.getSetting("enableFirePHPHeader").then(function (enableFirePHPHeader) {
-        return events.getSetting("enableChromeLoggerData").then(function (enableChromeLoggerData) {
-          return enableUserAgentHeader || enableFirePHPHeader || enableChromeLoggerData;
-        });
-      });
-    });
+  events.isConfigured = async function () {
+    if (!events.currentContext) {
+      throw new Error("Cannot get settings due to no 'currentContext'!");
+    }
+
+    var settings = await events._getHostnameSettingsFor(events.currentContext.hostname);
+    return settings._configured;
+  };
+
+  events._getHostnameSettingsFor = async function (hostname) {
+    var settings = {
+      enabled: await events._getSettingForHostname(hostname, "enabled", false),
+      enableUserAgentHeader: await events._getSettingForHostname(hostname, "enableUserAgentHeader", false),
+      enableFirePHPHeader: await events._getSettingForHostname(hostname, "enableFirePHPHeader", false),
+      enableChromeLoggerData: await events._getSettingForHostname(hostname, "enableChromeLoggerData", false)
+    };
+    settings._configured = settings.enableUserAgentHeader || settings.enableFirePHPHeader || settings.enableChromeLoggerData;
+    return settings;
+  };
+
+  events._getHostnameSettingsForSync = function (hostname) {
+    if (!events._getHostnameSettingsForSync._cache[hostname]) {
+      var settings = {
+        enabled: events._getSettingForHostnameSync(hostname, "enabled", false),
+        enableUserAgentHeader: events._getSettingForHostnameSync(hostname, "enableUserAgentHeader", false),
+        enableFirePHPHeader: events._getSettingForHostnameSync(hostname, "enableFirePHPHeader", false),
+        enableChromeLoggerData: events._getSettingForHostnameSync(hostname, "enableChromeLoggerData", false)
+      };
+      settings._configured = settings.enableUserAgentHeader || settings.enableFirePHPHeader || settings.enableChromeLoggerData;
+      events._getHostnameSettingsForSync._cache[hostname] = settings;
+    }
+
+    return events._getHostnameSettingsForSync._cache[hostname];
+  };
+
+  events._getHostnameSettingsForSync._cache = {};
+
+  events.isEnabled = async function () {
+    if (!events.currentContext) {
+      return false;
+    }
+
+    return events._isEnabledForHostname(events.currentContext.hostname);
+  };
+
+  events._isEnabledForHostname = async function (hostname) {
+    var settings = await events._getHostnameSettingsFor(hostname);
+    return settings.enabled && settings._configured;
   };
 
   events.reloadBrowser = function () {
