@@ -1,83 +1,96 @@
 
-exports.for = function (API) {
 
-    // TODO: Clear old records
-    let pageUrlByTabId = {};
-    let pageTimestampByTabId = {};
+exports.forAPI = function (API) {
 
+    class ResponseObserver {
 
-    function onHeadersReceived (response) {
-//        if (API.VERBOSE)
-//console.log("[http-response-observer] onHeadersReceived (response):", response);
+        constructor (onResponseHandler) {
+            const self = this;
 
-        var pageUrl = response.documentUrl || response.url;
-        var pageTimeStamp = response.timeStamp;
-        if (response.parentFrameId !== -1) {
-            pageUrl = pageUrlByTabId[response.tabId] || null;
-            pageTimeStamp = pageTimestampByTabId[response.tabId] || null;
-        } else
-        if (
-            response.type === "main_frame"// ||
-//            response.type === "sub_frame"
-        ) {
-            pageUrlByTabId[response.tabId] = pageUrl;
-            pageTimestampByTabId[response.tabId] = pageTimeStamp;
+            API.on("destroy", function () {
+                self.ensureUnhooked();
+            });            
+
+            let isHooked = false;
+
+            let pageUrlByTabId = {};
+            let pageTimestampByTabId = {};
+
+            function onHeadersReceived (response) {
+
+                if (API.VERBOSE) console.log("[http-response-observer] onHeadersReceived (response):", response);
+
+                let pageUrl = response.documentUrl || response.url;
+                let pageTimeStamp = response.timeStamp;
+                if (response.parentFrameId !== -1) {
+                    pageUrl = pageUrlByTabId[response.tabId] || null;
+                    pageTimeStamp = pageTimestampByTabId[response.tabId] || null;
+                } else
+                if (
+                    response.type === "main_frame"// ||
+                    //response.type === "sub_frame"
+                ) {
+                    pageUrlByTabId[response.tabId] = pageUrl;
+                    pageTimestampByTabId[response.tabId] = pageTimeStamp;
+                }
+
+                onResponseHandler({
+                    "request": {
+                        "id": response.requestId,
+                        "context": {
+                            frameId: response.frameId,
+                            tabId: response.tabId,
+                            url: response.url,
+                            hostname: response.url.replace(/^[^:]+:\/\/([^:\/]+)(:\d+)?\/.*?$/, "$1"),
+                            requestId: response.requestId,
+                            requestType: response.type,
+                            documentUrl: response.documentUrl,
+                            timeStamp: response.timeStamp,
+                            pageUrl: pageUrl,
+                            pageTimeStamp: pageTimeStamp,
+                            pageUid: JSON.stringify({
+                                url: pageUrl,
+                                tabId: response.tabId
+                            }),
+                            requestUid: JSON.stringify({
+                                url: response.url,
+                                timeStamp: response.timeStamp,
+                                frameId: response.frameId,
+                                tabId: response.tabId
+                            })
+                        }
+                    },
+                    "status": response.statusCode,
+                    "headers": response.responseHeaders
+                });
+            }
+
+            self.ensureHooked = function () {
+                if (!isHooked) {    
+                    API.BROWSER.webRequest.onHeadersReceived.addListener(
+                        onHeadersReceived,
+                        {
+                            urls: [
+                                "<all_urls>"
+                            ]
+                        },
+                        [
+                            "responseHeaders"
+                        ]
+                    );
+                    isHooked = true;
+                }
+            }
+
+            self.ensureUnhooked = function () {
+                API.BROWSER.webRequest.onHeadersReceived.removeListener(onHeadersReceived);
+                isHooked = false;
+                pageUrlByTabId = {};
+                pageTimestampByTabId = {};
+            }
         }
 
-//console.log("pageUrlByFrameId :::", pageUrlByFrameId);
-
-//console.log("Make pageUrl", pageUrl, "from response", response);
-
-        API.emit("http.response", {
-            "request": {
-                "id": response.requestId,
-                //"url": response.url,
-                //"hostname": response.url,
-                //"port": response.url,
-                //"method": response.method,
-                //"headers": [],
-                "context": {
-                    frameId: response.frameId,
-                    tabId: response.tabId,
-                    url: response.url,
-                    hostname: response.url.replace(/^[^:]+:\/\/([^:\/]+)(:\d+)?\/.*?$/, "$1"),
-                    requestId: response.requestId,
-                    requestType: response.type,
-                    documentUrl: response.documentUrl,
-                    timeStamp: response.timeStamp,
-                    pageUrl: pageUrl,
-                    pageTimeStamp: pageTimeStamp,
-                    pageUid: JSON.stringify({
-                        url: pageUrl,
-                        tabId: response.tabId
-                    }),
-                    requestUid: JSON.stringify({
-                        url: response.url,
-                        timeStamp: response.timeStamp,
-                        frameId: response.frameId,
-                        tabId: response.tabId
-                    })
-                }
-            },
-            "status": response.statusCode,
-            //"contentType": contentType,
-            "headers": response.responseHeaders
-        });
     }
-    API.BROWSER.webRequest.onHeadersReceived.addListener(
-        onHeadersReceived,
-        {
-            urls: [
-                "<all_urls>"
-            ]
-        },
-        [
-            "responseHeaders"
-        ]
-    );
-    API.on("destroy", function () {
-        API.BROWSER.webRequest.onHeadersReceived.removeListener(onHeadersReceived);
-    });
 
-    return {};
+    return ResponseObserver;
 }

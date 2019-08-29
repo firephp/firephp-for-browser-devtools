@@ -187,7 +187,7 @@ console.log("CLEAR lastRequestConsole CONSOLE!!");
                             } else
                             if (message.event === "prepare") {
 
-console.log("PREPARE CONSOLE!!!", message.context);
+//console.log("PREPARE CONSOLE!!!", message.context);
 
                                 let fc = getConsoleForContext(message.context);
                                 if (!persistLogs) {
@@ -209,7 +209,7 @@ console.log("PREPARE CONSOLE!!!", message.context);
 
                             } else
                             if (message.event === "clear") {
-console.log("CLEAR CONSOLE!!!", message.context);
+//console.log("CLEAR CONSOLE!!!", message.context);
 
                                 Object.keys(consoles).forEach(function (id) {
 //console.log("console id", id);                                    
@@ -221,7 +221,7 @@ console.log("CLEAR CONSOLE!!!", message.context);
                                 scrollIfBottom();
                             } else
                             if (message.event === "destroyContext") {
-console.log("DESTROY CONTEXT!!!", message.context);
+//console.log("DESTROY CONTEXT!!!", message.context);
 
                                 Object.keys(consoles).forEach(function (id) {
                                     if (id == message.context.pageUid) {

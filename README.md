@@ -1,5 +1,3 @@
-**Status: DEV - Commands will currently not run for you!**
-
 ![FirePHP Logo](https://github.com/firephp/firephp-for-browser-devtools/blob/master/src/skin/Logo.png?raw=true "FirePHP Logo")
 
 FirePHP for Browser Developer Tools
@@ -12,6 +10,11 @@ This project holds the [FirePHP Tool](http://firephp.org) in the form of a Brows
 
 > Log from PHP to Browser Developer Tools via HTTP Response Headers.
 
+Supported protocols:
+
+  * Wildfire (FirePHP)
+  * Chrome Logger
+
 For a list of supported server libraries see [http://firephp.org](http://firephp.org).
 
 
@@ -21,7 +24,7 @@ Install
 ### Published
 
   * Firefox: [addons.mozilla.org/en-US/firefox/addon/firephp](https://addons.mozilla.org/en-US/firefox/addon/firephp/)
-  * Chrome: *TBD*
+  * Chrome: [chrome.google.com/webstore/detail/firephp/ikfbpappjhegehjflebknjbhdocbgkdi](https://chrome.google.com/webstore/detail/firephp/ikfbpappjhegehjflebknjbhdocbgkdi)
 
 ### Local
 
@@ -38,6 +41,8 @@ Requirements:
   * [nvm](https://github.com/creationix/nvm) - Node Version Manager
 
 Build from source:
+
+**Status: DEV - Commands will currently not run for you!**
 
     rm -Rf dist/        # Optional to verify build
     nvm use 9

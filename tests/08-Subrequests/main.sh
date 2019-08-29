@@ -21,7 +21,7 @@ CALL_webext run {
     "homepage": ":${port}/",
     "manifest": {
         "permissions": [
-            "tabs",
+            "activeTab",
             "storage",
             "webRequest",
             "webNavigation",
@@ -58,6 +58,13 @@ CALL_webext run {
                         "code": {
                             "@github.com~jsonrep~jsonrep#s1": {
                                 "externalizeCss": true,
+                                "include": {
+                                    "jquery": false,
+                                    "regenerator-runtime": false,
+                                    "riot.csp.js": true,
+                                    "riot.js": false,
+                                    "riot.min.js": false
+                                },
                                 "page": {
                                     "@layout": {
                                         "console": {

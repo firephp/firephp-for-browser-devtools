@@ -19,7 +19,7 @@ function do_run {
     CALL_webext run {
         "manifest": {
             "dist": "$__DIRNAME__/dist/firephp.build",
-            "name": "FirePHP",
+            "name": "FirePHP (Official)",
             "version": "${version}",
             "description": "Log from PHP to a devtools panel.",
             "applications": {
