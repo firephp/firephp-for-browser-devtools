@@ -12,7 +12,7 @@ This project holds the [FirePHP Tool](http://firephp.org) in the form of a Brows
 
 Supported protocols:
 
-  * Wildfire (FirePHP)
+  * FirePHP (Wildfire based)
   * Chrome Logger
 
 For a list of supported server libraries see [http://firephp.org](http://firephp.org).

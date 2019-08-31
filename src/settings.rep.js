@@ -20,10 +20,12 @@ exports.main = function (JSONREP, node, options) {
             
                             <h2>Settings for: { hostname }</h2>
 
+                            <p>For a list of supported server libraries see <a href="http://firephp.org/">firephp.org</a>. There are also many framework plugins out there.</p>
+
                             <div class="settings">
                                 <ul>
                                     <li>
-                                        <h2><a href="https://github.com/firephp/firephp-core" target="_blank">FirePHPCore</a></h2>
+                                        <h2><a href="https://github.com/firephp/firephp-core" target="_blank">FirePHP (Wildfire based)</a> Protocol</h2>
                                         <p>Only one type of request header needs to be sent.</p>
                                         <ul>
                                             <li><input type="checkbox" name="enableUserAgentHeader" onchange={syncCheckbox}/> Enable <b>UserAgent Request Header</b> - Modifies the <i>User-Agent</i> request header by appending <i>FirePHP/0.5</i>.</li>
@@ -31,7 +33,7 @@ exports.main = function (JSONREP, node, options) {
                                         </ul>
                                     </li>
                                     <li>
-                                        <h2><a href="https://github.com/ccampbell/chromelogger" target="_blank">Chrome Logger</a></h2>
+                                        <h2><a href="https://github.com/ccampbell/chromelogger" target="_blank">Chrome Logger</a> Protocol</h2>
                                         <ul>
                                             <li><input type="checkbox" name="enableChromeLoggerData" onchange={syncCheckbox}/> Render <i>X-ChromeLogger-Data</i> response headers to the console.</li>
                                         </ul>
@@ -43,9 +45,9 @@ exports.main = function (JSONREP, node, options) {
                             <div class="info">
                                 <h2>How to get setup</h2>
                                 <ol>
-                                    <li>Choose an integration method.</li>
+                                    <li>Choose a <a href="http://firephp.org/">server library</a>.</li>
                                     <li>Integrate the server library into your project.</li>
-                                    <li>Check the relevant box.</li>
+                                    <li>Check the relevant protocol box to your left.</li>
                                     <li><b>Close</b> the <i>Settings</i> and <b>Enable</b> the tool.</li>
                                 </ol>
                                 <p><i>FirePHP is <a target="_blank" href="https://github.com/firephp/firephp-for-firefox-devtools">Open Source with code on Github</a></i></p>
