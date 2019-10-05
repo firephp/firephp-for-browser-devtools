@@ -108,40 +108,43 @@ exports.Client = function (comp, options) {
     API.on.insightMessage = function (message) {    
         API.emit("message.insight", message);
     }
-    API.on.transport = function (info) {
+    API.on.transport = async function (info) {
         API.emit("message.transport", info);
-        
-    //console.log("make backend request", JSON.stringify(info, null, 4));
-    
-    /*
-    var jqxhr = JQUERY.ajax({
-    "method": "POST",
-    "url": info.url,
-    crossDomain: true,
-    headers: info.headers,
-    data: {
-    payload: JSON.stringify(info.payload)
+
+console.log("make backend request", JSON.stringify(info, null, 4));
+
+        let url = info.data.url;
+        if (url.indexOf("x-insight=transport") !== -1) {
+            return;
+        }
+
+        if (url.indexOf("?") === -1) {
+            url += "?";
+        } else {
+            url += "&";
+        }
+        url += "x-insight=transport";
+        const response = await fetch(url, {
+            method: 'POST',
+            mode: 'same-origin',
+            cache: 'no-cache',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-insight': 'transport'
+            },
+            redirect: 'follow',
+            referrer: 'no-referrer',
+            body: JSON.stringify(info.data.payload)
+        });
+
+        const body = await response.text();
+
+console.log("BODY", body);
+
     }
-    }).done(function (data) {
-    
-    //console.log("SUCCESS DATA", data);
-    
-    RECEIVERS_EXPORTS.parseReceived(data);
-    
-    
-    }).fail(function (jqXHR, textStatus) {
-    
-    console.error("REQUEST ERROR", jqXHR, textStatus);
-    });
-    */
-    }
-    
-    
-    function isEnabled () {
-        return true;
-    }
-    
-    
+
+
     var httpHeaderChannel = API.httpHeaderChannel = API.WILDFIRE.HttpHeaderChannel({
         "enableTransport": false,
         onError: function (err) {
@@ -189,47 +192,49 @@ exports.Client = function (comp, options) {
     API.httpHeaderChannel.addReceiver(transportReceiver2);
 
 
-    /*
-    // FirePHP 0.x compatibility
-    "http://registry.pinf.org/cadorn.org/github/fireconsole/@meta/receiver/console/0.1.0"
+
+    // FireConsole 0.x compatibility
     var receiver = API.WILDFIRE.Receiver();
     receiver.setId("http://github.com/fireconsole/@meta/receivers/wildfire/fireconsole/0");
     receiver.addListener({
         onMessageReceived: function(request, message) {
             try {
+API.console.log("receiver onMessageReceived FirePHP!: ", message);
+/*
                 var data = JSON.decode(message.getData());
                 if (data.method = "callApi") {
                     return context.callApi(data.args[0], data.args[1] || {});
                 } else {
                     throw new Error("Method '" + data.method + "' not found!");
                 }
+*/
             } catch (err) {
                 console.error(err);
             }
         }
     });
-    */
-    // FirePHP 0.x compatibility
-    /*
+    // FireConsole 0.x compatibility
     var transportReceiver = API.WILDFIRE.Receiver();
-    transportReceiver.setId("http://registry.pinf.org/cadorn.org/github/fireconsole/@meta/receiver/console/0.1.0");
+    transportReceiver.setId("http://registry.pinf.org/cadorn.org/wildfire/@meta/receiver/transport/0");
+    //transportReceiver.setId("http://registry.pinf.org/cadorn.org/github/fireconsole/@meta/receiver/console/0.1.0");
     transportReceiver.addListener({
 	    onMessageReceived: function(request, message) {
 	        try {
-	        	API.console.log("FireConsole onMessageReceived FirePHP!: " + message);
-            if (
-                API.on &&
-                API.on.message
-            ) {
-                API.on.message(message);
-            }
+                if (
+                    API.on &&
+                    API.on.transport
+                ) {
+                    API.on.transport({
+                        request: request,
+                        data: JSON.parse(message.data)
+                    });
+                }
 	        } catch (err) {
 	        	API.console.error(err);
 	        }
 	    }
   	});
     API.httpHeaderChannel.addReceiver(transportReceiver);
-    */
 
 
 
@@ -267,26 +272,25 @@ console.log("IGNORING insight MESSAGE:", message);
         API.httpHeaderChannel.addReceiver(receiver);
     });
 
-    
-    /*
+
+    // FireConsole 0.x compatibility
     var announceDispatcher = API.WILDFIRE.Dispatcher();
     announceDispatcher.setProtocol('http://registry.pinf.org/cadorn.org/wildfire/@meta/protocol/announce/0.1.0');
     announceDispatcher.setChannel(httpHeaderChannel);
-    
     function getAnnounceMessageForRequest (request) {
-    
+
         if (!getAnnounceMessageForRequest._forHostnames) {
             getAnnounceMessageForRequest._forHostnames = {};
         }
         var cache = getAnnounceMessageForRequest._forHostnames;
-    
+
         // TODO: Don't just use `request.hostname` for cache.
         // TODO: If config changes this announceMessage needs to be reset
-    
+
         if (cache[request.hostname]) {
             return cache[request.hostname];
         }
-    
+
         cache[request.hostname] = new API.WILDFIRE.Message();
         cache[request.hostname].setData(JSON.stringify({
             // TODO: Populate crypto-based key
@@ -295,10 +299,9 @@ console.log("IGNORING insight MESSAGE:", message);
                 return receiver.getId();
             })
         }));
-    
+
         return cache[request.hostname];
     }
-    */
     
     
     let hostnameSettings = {};  
@@ -311,11 +314,6 @@ console.log("IGNORING insight MESSAGE:", message);
         // Chrome requires a sync return
         // @see https://developer.chrome.com/extensions/webRequest#event-onBeforeSendHeaders
     
-        if (!isEnabled()) {
-            if (API.VERBOSE) console.log("[wildfire] REQUEST_OBSERVER handler: not enabled");
-            return null;
-        }
-
         const settings = comp._getHostnameSettingsForSync(request.hostname);
     
         if (API.VERBOSE) console.log("[wildfire] forceEnabled:", forceEnabled);
@@ -345,50 +343,39 @@ console.log("IGNORING insight MESSAGE:", message);
         ) {
             request.headers["X-FirePHP-Version"] = "0.4";
         }
-    
+
         if (API.VERBOSE) console.log("[wildfire] updated request headers:", request.headers);
-    
+
+
+        // FireConsole 0.x compatibility
+        var announceMessage = getAnnounceMessageForRequest(request);
+        if (announceMessage) {
+
+            // dispatch announce message
+            announceDispatcher.dispatch(announceMessage);
+
+            // flush channel
+            httpHeaderChannel.flush({
+                setMessagePart: function (name, value) {
+                    request.headers[name] = ('' + value);
+                },
+                getMessagePart: function (name) {
+                    return request.headers[name];
+                }
+            });
+
+        //} else {
+        //    // TODO: Use a proper unique ID + counter.
+        //    request.httpChannel.setRequestHeader("x-request-id", ""+(new Date().getTime()) + "" + Math.floor(Math.random()*1000+1), false);
+        }
+
         return {
             requestHeaders: request.headers
         };
-    /*
-    // TODO: Implement wildfire messaging
-        var announceMessage = getAnnounceMessageForRequest(request);
-        if (announceMessage) {
-            // dispatch announce message
-            announceDispatcher.dispatch(announceMessage);
-    
-            // flush channel
-            httpHeaderChannel.flush({
-                setMessagePart: function(name, value) {
-                    request.httpChannel.setRequestHeader(name, value, false);
-                },
-                getMessagePart: function(name) {
-                    if (request.httpChannel.getRequestHeader) {
-                        return null;
-                    }
-                    // HACK: Do not use exception for flow control
-                    try {
-                        return request.httpChannel.getRequestHeader(name);
-                    } catch (err) {
-                        return null;
-                    }
-                }
-            });
-        } else {
-            // TODO: Use a proper unique ID + counter.
-            request.httpChannel.setRequestHeader("x-request-id", ""+(new Date().getTime()) + "" + Math.floor(Math.random()*1000+1), false);
-        }
-        // API.console.log("REQUEST", request);
-    */
     });
 
 
     const responseObserver = new RESPONSE_OBSERVER(function (response) {
-
-        if (!isEnabled()) {
-            return;
-        }
     
         var settings = hostnameSettings[response.request.context.hostname];
     

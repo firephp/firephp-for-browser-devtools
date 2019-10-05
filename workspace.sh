@@ -158,7 +158,10 @@ function do_run {
                         res.end("FirePHP Core formatted messages sent in HTTP response headers.");
                     } else {
 
-                        res.end("No FirePHP HTTP request headers found.");
+                        res.end([
+                            "<p>No FirePHP HTTP request headers found.</p>",
+                            "<p><a href=\"http://127.0.0.1:8080/FirePHP.php\">http://127.0.0.1:8080/FirePHP.php</a></p>"
+                        ].join("\n"));
                     }
 
                     if (process.env.BO_TEST_FLAG_DEV) return;
