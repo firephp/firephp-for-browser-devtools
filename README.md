@@ -13,6 +13,12 @@ This project holds the [FirePHP Tool](http://firephp.org) in the form of a Brows
 For a list of supported server libraries see [http://firephp.org](http://firephp.org).
 
 
+Preview
+-------
+
+<img src="https://github.com/firephp/firephp-for-browser-devtools/blob/master/src/skin/CodeScreenshot.png?raw=true" alt="Code" width="300"> &nbsp; <img src="https://github.com/firephp/firephp-for-browser-devtools/blob/master/src/skin/PanelScreenshot.png?raw=true" alt="Panel" width="300">
+
+
 Install
 -------
 
@@ -79,11 +85,6 @@ Build from source:
     * `./scripts/devtools/*.rep.css`
     * `./manifest.json`
 
-
-Preview
--------
-
-<img src="https://github.com/firephp/firephp-for-browser-devtools/blob/master/src/skin/CodeScreenshot.png?raw=true" alt="Code" width="300"> &nbsp; <img src="https://github.com/firephp/firephp-for-browser-devtools/blob/master/src/skin/PanelScreenshot.png?raw=true" alt="Panel" width="300">
 
 Provenance
 ==========
