@@ -9,5 +9,4 @@ node_modules/
 /dist/firephp.zip
 /dist/firephp.build/.web-extension-id
 .~*
-/package-lock.json
 /dist/firephp.build.zip
