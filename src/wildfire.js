@@ -105,13 +105,17 @@ exports.Client = function (comp, options) {
     }
 
 
-    API.on.insightMessage = function (message) {    
-        API.emit("message.insight", message);
-    }
-    API.on.transport = async function (info) {
+    API.on.transport = async function (message, request) {
+        let info = {
+            request: request,
+            data: JSON.parse(message.data)
+        };
+
         API.emit("message.transport", info);
 
-console.log("make backend request", JSON.stringify(info, null, 4));
+//console.log("make backend request", JSON.stringify(info, null, 4));
+
+        info.request.context.serverUrl = info.data.url;
 
         let url = info.data.url;
         if (url.indexOf("x-insight=transport") !== -1) {
@@ -141,7 +145,110 @@ console.log("make backend request", JSON.stringify(info, null, 4));
         const body = await response.text();
 
 console.log("BODY", body);
+//console.log("info.request", info.request);
 
+        /*
+        info.request: {
+            "id": "80",
+            "context": {
+                "frameId": 0,
+                "tabId": 1,
+                "url": "http://127.0.0.1:8080/FirePHP.php",
+                "hostname": "127.0.0.1",
+                "requestId": "80",
+                "requestType": "main_frame",
+                "timeStamp": 1570337910009,
+                "pageUrl": "http://127.0.0.1:8080/FirePHP.php",
+                "pageTimeStamp": 1570337910009,
+                "pageUid": "{\"url\":\"http://127.0.0.1:8080/FirePHP.php\",\"tabId\":1}",
+                "requestUid": "{\"url\":\"http://127.0.0.1:8080/FirePHP.php\",\"timeStamp\":1570337910009,\"frameId\":0,\"tabId\":1}"
+            },
+            "status": 200
+        },
+        */
+
+        httpHeaderChannel.parseReceived(body, {
+            "id": info.request.id,
+            "url": info.request.context.url,
+            "hostname": info.request.context.hostname,
+            "context": info.request.context,
+            "port": 0,
+            "method": "",
+            "status": "",
+            "contentType": "",
+            "requestHeaders": ""
+        });
+    }
+
+
+    API.callServer = async function (serverUrl, payload) {
+        let url = serverUrl;
+        if (url.indexOf("?") === -1) {
+            url += "?";
+        } else {
+            url += "&";
+        }
+        url += "x-insight=serve";
+
+console.log("Sending", payload, "to", url);
+
+        var announceMessage = getAnnounceMessageForRequest(serverUrl.replace(/^https?:\/\/([^\/]+)\/.*$/, '$1'));
+console.log("announceMessage", announceMessage);        
+
+        var headers = {
+            'Content-Type': 'application/json',
+            'x-insight': 'serve'
+        };
+
+        if (announceMessage) {
+
+            // dispatch announce message
+            announceDispatcher.dispatch(announceMessage);
+
+            // flush channel
+            httpHeaderChannel.flush({
+                setMessagePart: function (name, value) {
+                    headers[name] = ('' + value);
+                },
+                getMessagePart: function (name) {
+                    return headers[name];
+                }
+            });            
+        }
+
+console.log("headers::", headers);
+
+        /*
+        curl \
+            --header "Content-Type: application/json" \
+            --header "x-insight: serve" \
+            --header "x-request-id: 157336719818551" \
+            --header "x-wf-1-1: 875||{\"authkey\":\"mykey\",\"receivers\":[\"http://meta.firephp.org/Wildfire/Structure/FirePHP/FirebugConsole/0.1\",\"http://meta.firephp.org/Wildfire/Structure/FirePHP/Dump/0.1\",\"http://registry.pinf.org/cadorn.org/wildfire/@meta/receiver/transport/0\",\"http://registry.pinf.org/cadorn.org/insight/@meta/receiver/insight/controller/0\",\"http://registry.pinf.org/cadorn.org/insight/@meta/receiver/insight/plugin/0\",\"http://registry.pinf.org/cadorn.org/insight/@meta/receiver/insight/package/0\",\"http://registry.pinf.org/cadorn.org/insight/@meta/receiver/insight/selective/0\",\"http://registry.pinf.org/cadorn.org/insight/@meta/receiver/console/request/0\",\"http://registry.pinf.org/cadorn.org/insight/@meta/receiver/console/page/0\",\"http://registry.pinf.org/cadorn.org/insight/@meta/receiver/console/process/0\",\"http://registry.pinf.org/cadorn.org/insight/@meta/receiver/console/firephp/0\"]}|" \
+            --header "x-wf-1-index: 1" \
+            --header "x-wf-protocol-1: http://registry.pinf.org/cadorn.org/wildfire/@meta/protocol/announce/0.1.0" \
+            --request POST \
+            --data '{"target": "Insight_Plugin_FileViewer", "action": "GetFile", "args": {"path": "/christoph/projects/gi0.FirePHP.org/insight/demo/FirePHP.php"}}' \
+            127.0.0.1:8080/FirePHP.php?x-insight=serve
+        */
+
+        const response = await fetch(url, {
+            method: 'POST',
+            mode: 'same-origin',
+            cache: 'no-cache',
+            credentials: 'include',
+            headers: headers,
+            redirect: 'follow',
+            referrer: 'no-referrer',
+            body: JSON.stringify(payload)
+        });
+
+console.log("response in wildfire", response);
+
+        const body = await response.text();
+
+console.log("BODY", body);
+
+        return body;
     }
 
 
@@ -193,61 +300,27 @@ console.log("BODY", body);
 
 
 
-    // FireConsole 0.x compatibility
-    var receiver = API.WILDFIRE.Receiver();
-    receiver.setId("http://github.com/fireconsole/@meta/receivers/wildfire/fireconsole/0");
-    receiver.addListener({
-        onMessageReceived: function(request, message) {
-            try {
-API.console.log("receiver onMessageReceived FirePHP!: ", message);
-/*
-                var data = JSON.decode(message.getData());
-                if (data.method = "callApi") {
-                    return context.callApi(data.args[0], data.args[1] || {});
-                } else {
-                    throw new Error("Method '" + data.method + "' not found!");
-                }
-*/
-            } catch (err) {
-                console.error(err);
-            }
-        }
-    });
-    // FireConsole 0.x compatibility
-    var transportReceiver = API.WILDFIRE.Receiver();
-    transportReceiver.setId("http://registry.pinf.org/cadorn.org/wildfire/@meta/receiver/transport/0");
-    //transportReceiver.setId("http://registry.pinf.org/cadorn.org/github/fireconsole/@meta/receiver/console/0.1.0");
-    transportReceiver.addListener({
-	    onMessageReceived: function(request, message) {
-	        try {
-                if (
-                    API.on &&
-                    API.on.transport
-                ) {
-                    API.on.transport({
-                        request: request,
-                        data: JSON.parse(message.data)
-                    });
-                }
-	        } catch (err) {
-	        	API.console.error(err);
-	        }
-	    }
-  	});
-    API.httpHeaderChannel.addReceiver(transportReceiver);
-
-
-
     const receivers = {
+        "http://registry.pinf.org/cadorn.org/wildfire/@meta/receiver/transport/0": {
+            messageHandler: "transport"
+        },
         "http://registry.pinf.org/cadorn.org/insight/@meta/receiver/insight/controller/0": {},
         "http://registry.pinf.org/cadorn.org/insight/@meta/receiver/insight/plugin/0": {},
         "http://registry.pinf.org/cadorn.org/insight/@meta/receiver/insight/package/0": {},
-        "http://registry.pinf.org/cadorn.org/insight/@meta/receiver/insight/selective/0": {},
-        "http://registry.pinf.org/cadorn.org/insight/@meta/receiver/console/request/0": {},
-        "http://registry.pinf.org/cadorn.org/insight/@meta/receiver/console/page/0": {
-            messageHandler: "insightMessage"
+        "http://registry.pinf.org/cadorn.org/insight/@meta/receiver/insight/selective/0": {
+            messageEvent: "message.insight.selective"
         },
-        "http://registry.pinf.org/cadorn.org/insight/@meta/receiver/console/process/0": {}
+        "http://registry.pinf.org/cadorn.org/insight/@meta/receiver/console/request/0": {
+            messageEvent: "message.insight.request"
+        },
+        "http://registry.pinf.org/cadorn.org/insight/@meta/receiver/console/page/0": {
+            messageEvent: "message.firephp"
+        },
+        "http://registry.pinf.org/cadorn.org/insight/@meta/receiver/console/process/0": {},
+
+        "http://registry.pinf.org/cadorn.org/insight/@meta/receiver/console/firephp/0": {
+            messageEvent: "message.firephp"
+        }
     };
     Object.keys(receivers).forEach(function (uri) {
 
@@ -255,17 +328,24 @@ API.console.log("receiver onMessageReceived FirePHP!: ", message);
         receiver.setId(uri);
         receiver.addListener({
             onMessageReceived: function (request, message) {
-                message.context = request.context;
-                //API.console.log("INSIGHT MESSAGE [" + uri + "] onMessageReceived !1", message);
-                //API.console.log("INSIGHT MESSAGE API.on", API.on);
-                if (
-                    receivers[uri].messageHandler &&
-                    API.on &&
-                    API.on[receivers[uri].messageHandler]
-                ) {
-                    API.on[receivers[uri].messageHandler](message);
-                } else {
-console.log("IGNORING insight MESSAGE:", message);
+                try {
+                    message.context = request.context;
+                    //API.console.log("INSIGHT MESSAGE [" + uri + "] onMessageReceived !1", message);
+                    //API.console.log("INSIGHT MESSAGE API.on", API.on);
+                    if (
+                        receivers[uri].messageHandler &&
+                        API.on &&
+                        API.on[receivers[uri].messageHandler]
+                    ) {
+                        API.on[receivers[uri].messageHandler](message, request);
+                    } else
+                    if (receivers[uri].messageEvent) {
+                        API.emit(receivers[uri].messageEvent, message);
+                    } else {
+    console.log("IGNORING insight MESSAGE:", uri, message);
+                    }
+                } catch (err) {
+                    API.console.error(err);
                 }
             }
         });

@@ -157,7 +157,6 @@ exports.main = function (JSONREP, node, options) {
                         try {
 /*                            
                             if (message.event === "currentContext") {
-
                                 lastRequestConsole = getConsoleForContext(message.context);
                                 if (persistLogs) {
                                     if (!persistentConsole) {
@@ -170,7 +169,6 @@ console.log("CLEAR lastRequestConsole CONSOLE!!");
 
                                     }
                                 }
-
                             } else         
 */
                             if (message.message) {
@@ -180,6 +178,14 @@ console.log("CLEAR lastRequestConsole CONSOLE!!");
                                 ensureRequestWrapper(fc, message.context).then(function (api) {
 
 //console.log("APPEND MESSAGE TO REQUEST CONSOLE");
+
+console.log("LOG TO CONSOLE 1", message.message);
+                                    message.message.meta = (
+                                        message.message.meta &&
+                                        JSON.parse(message.message.meta)
+                                    ) || {};
+                                    message.message.meta.console = message.message.meta.console || {};
+                                    message.message.meta.console.enableFileInspect = true;
 
                                     api.send(message.message);
                                     scrollIfBottom();

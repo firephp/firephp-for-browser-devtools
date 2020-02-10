@@ -551,14 +551,14 @@ exports.main = function (JSONREP, node, options) {
       },
       html: {
         ".@": "github.com~0ink~codeblock/codeblock:Codeblock",
-        "_code": "<div class=\"layout-views\">\\n    <div class=\"ui\" style=\"display: none;\">\\n        <table class=\"layout\" height=\"100%\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\">\\n            <tr>\\n                <td class=\"console-panel\" width=\"100%\" height=\"100%\" rowspan=\"2\">\\n                    %%%variables.panels.console%%%\\n                </td>\\n            </tr>\\n            <tr>\\n                <td class=\"side-panel\">\\n                    <table class=\"layout\" height=\"100%\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\">\\n                        <tr>\\n                            <td class=\"menu-panel\">\\n                                %%%variables.panels.menu%%%\\n                            </td>\\n                        </tr>\\n                        <tr>\\n                            <td class=\"settings-panel\">\\n                                %%%variables.panels.settings%%%\\n                            </td>\\n                        </tr>\\n                        <tr>\\n                            <td class=\"inspector-panel\" height=\"100%\">\\n                                %%%variables.panels.inspector%%%\\n                            </td>\\n                        </tr>\\n                    </table>\\n                </td>\\n            </tr>\\n        </table>\\n    </div>\\n    <div class=\"manage\" style=\"display: none;\">\\n        <table class=\"header\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\">\\n            <tr>\\n                <td><button class=\"close-button\">Close</button></td>\\n                <td class=\"right\"><div class=\"version\" style=\"display: none;\"></div></td>\\n            </tr>\\n        </table>\\n        %%%variables.panels.manage%%%\\n    </div>\\n    <div class=\"uninitialized\" style=\"display: none;\">\\n        <p><button action=\"reload\">Reload</button> to initialize FirePHP</p>\\n    </div>\\n</div>",
+        "_code": "<div class=\"layout-views\">\\n    <div class=\"ui\" style=\"display: none;\">\\n        <table class=\"layout\" height=\"100%\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\">\\n            <tr>\\n                <td class=\"console-panel\" width=\"100%\" height=\"100%\" rowspan=\"2\">\\n                    %%%variables.panels.console%%%\\n                </td>\\n            </tr>\\n            <tr>\\n                <td class=\"side-panel\">\\n                    <table class=\"layout\" height=\"100%\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\">\\n                        <tr>\\n                            <td class=\"menu-panel\">\\n                                %%%variables.panels.menu%%%\\n                            </td>\\n                        </tr>\\n                        <tr>\\n                            <td class=\"settings-panel\">\\n                                %%%variables.panels.settings%%%\\n                            </td>\\n                        </tr>\\n                        <tr>\\n                            <td class=\"inspector-panel\" height=\"100%\">\\n                                %%%variables.panels.inspector%%%\\n                            </td>\\n                        </tr>\\n                    </table>\\n                </td>\\n            </tr>\\n        </table>\\n    </div>\\n    <div class=\"manage\" style=\"display: none;\">\\n        <table class=\"header\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\">\\n            <tr>\\n                <td><button class=\"close-button\">Close</button></td>\\n                <td class=\"right\"><div class=\"version\" style=\"display: none;\"></div></td>\\n            </tr>\\n        </table>\\n        %%%variables.panels.manage%%%\\n    </div>\\n    <div class=\"uninitialized\" style=\"display: none;\">\\n        <p><button action=\"reload\">Reload</button> to initialize FirePHP</p>\\n    </div>\\n    <div class=\"editor\" style=\"display: none;\">\\n        %%%variables.panels.editor%%%\\n    </div>\\n</div>",
         "_format": "html",
         "_args": ["variables"],
         "_compiled": false
       },
       css: {
         ".@": "github.com~0ink~codeblock/codeblock:Codeblock",
-        "_code": "{\"_cssid\":\"2f5dd500e1e4e62dff743510d9a36390d191d88e\",\"repUri\":\"layout\"}",
+        "_code": "{\"_cssid\":\"e6b4c093136308c5b33910848e833b17a8ffdc8a\",\"repUri\":\"layout\"}",
         "_format": "json",
         "_args": [],
         "_compiled": false
@@ -568,19 +568,32 @@ exports.main = function (JSONREP, node, options) {
           var COMPONENT = require("./component");
 
           var forceManage = false;
+          var forceEditor = false;
           var comp = COMPONENT.for({
             browser: WINDOW.crossbrowser
           });
           comp.on("changed.context", function () {
             comp.contextChangeAcknowledged();
+            forceEditor = false;
             sync();
           });
           comp.on("changed.setting", function (name, enabled) {
             sync();
           });
           comp.on("message", function (message) {
+            console.log("message in layout", message);
+
             if (message.event === "manage") {
               forceManage = true;
+              sync();
+            } else if (message.event === "editor") {
+              if (typeof message.value !== 'undefined') {
+                forceEditor = message.value;
+              } else {
+                forceEditor = true;
+              }
+
+              console.log("forceEditor in layout", forceEditor);
               sync();
             }
           });
@@ -605,13 +618,15 @@ exports.main = function (JSONREP, node, options) {
 
                 if (forceManage) {
                   view = "manage";
-                } else if (!configured && !enabled && !persistLogs) {
-                    view = "manage";
-                  } else if (persistLogs && enabled && !configured) {
+                } else if (forceEditor) {
+                    view = "editor";
+                  } else if (!configured && !enabled && !persistLogs) {
                       view = "manage";
-                    } else {
-                      view = "console";
-                    }
+                    } else if (persistLogs && enabled && !configured) {
+                        view = "manage";
+                      } else {
+                        view = "console";
+                      }
               } else {
                 view = "uninitialized";
               }
@@ -619,7 +634,8 @@ exports.main = function (JSONREP, node, options) {
               var toggles = {
                 ui: false,
                 manage: false,
-                uninitialized: false
+                uninitialized: false,
+                editor: false
               };
               var versionEl = el.querySelector("DIV.manage TABLE.header DIV.version");
               versionEl.style.display = "none";
@@ -638,6 +654,8 @@ exports.main = function (JSONREP, node, options) {
                 }
               } else if (view === "console") {
                 toggles.ui = true;
+              } else if (view === "editor") {
+                toggles.editor = true;
               } else {
                 throw new Error("'view' with value '".concat(view, "' not implemented!"));
               }
@@ -645,6 +663,7 @@ exports.main = function (JSONREP, node, options) {
               el.querySelector("DIV.ui").style.display = toggles.ui ? "block" : "none";
               el.querySelector("DIV.manage").style.display = toggles.manage ? "block" : "none";
               el.querySelector("DIV.uninitialized").style.display = toggles.uninitialized ? "block" : "none";
+              el.querySelector("DIV.editor").style.display = toggles.editor ? "block" : "none";
             } catch (err) {
               console.error("Error during sync():", err.message || err.stack || err);
               throw err;
@@ -708,12 +727,20 @@ exports.for = function (ctx) {
 
   events.handleBroadcastMessage = function (message) {
     try {
-      if (message.context && message.to === "message-listener" && (ctx.getOwnTabId && message.context.tabId === ctx.getOwnTabId() || ctx.browser && ctx.browser.devtools && ctx.browser.devtools.inspectedWindow && message.context.tabId === ctx.browser.devtools.inspectedWindow.tabId)) {
-        if (message.event === "currentContext" && typeof message.context !== "undefined") {
-          onContextMessage(message.context);
-        }
+      if (message.context && (ctx.getOwnTabId && message.context.tabId === ctx.getOwnTabId() || ctx.browser && ctx.browser.devtools && ctx.browser.devtools.inspectedWindow && message.context.tabId === ctx.browser.devtools.inspectedWindow.tabId)) {
+        if (message.to === "message-listener") {
+          if (message.event === "currentContext" && typeof message.context !== "undefined") {
+            onContextMessage(message.context);
+          }
 
-        events.emit("message", message);
+          events.emit("message", message);
+        } else if (message.to === "protocol") {
+          if (ctx.handlers && ctx.handlers[message.message.receiver]) {
+            message.message.meta = JSON.parse(message.message.meta);
+            message.message.data = JSON.parse(message.message.data);
+            ctx.handlers[message.message.receiver](message.message);
+          }
+        }
       }
     } catch (err) {
       console.error(err);
@@ -951,13 +978,39 @@ exports.for = function (ctx) {
     });
   };
 
-  events.showView = function (name) {
+  events.showView = function (name, args) {
     if (name === "manage") {
       ctx.browser.runtime.sendMessage({
         to: "broadcast",
         event: "manage"
       });
+    } else if (name === "editor") {
+      ctx.browser.runtime.sendMessage({
+        to: "broadcast",
+        event: "editor",
+        args: args
+      });
     }
+  };
+
+  events.hideView = function (name) {
+    if (name === "editor") {
+      console.log("broadcast hide view: editor");
+      ctx.browser.runtime.sendMessage({
+        to: "broadcast",
+        event: "editor",
+        value: false
+      });
+    }
+  };
+
+  events.loadFile = function (file, line) {
+    ctx.browser.runtime.sendMessage({
+      to: "background",
+      event: "load-file",
+      file: file,
+      line: line
+    });
   };
 
   return events;

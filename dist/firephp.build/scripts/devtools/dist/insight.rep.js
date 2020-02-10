@@ -4463,7 +4463,7 @@ function Renderer (options) {
                     !rootNode.instances[node.value]
                 ) {
                     console.error("node", node);
-                    throw new Error("Object instance for reference '" + node.value + "' not found 'instances'!");
+                    throw new Error("Object instance for reference '" + node.value + "' not found in 'instances'!");
                 }
                 return rootNode.instances[node.value];
             }
@@ -4561,6 +4561,9 @@ function Renderer (options) {
                         } else
                         if (node.meta["lang.type"] === "trace") {
                             loadTypes["default/string"] = true;
+                        } else
+                        if (node.meta["lang.type"] === "pathtree") {
+                            loadTypes["default/string"] = true;
                         }
                     }
 /*                    
@@ -4584,7 +4587,10 @@ function Renderer (options) {
                 }
             }
 
-            if (typeof node.value !== 'undefined') {
+            if (
+                node.value !== null &&
+                typeof node.value !== 'undefined'
+            ) {
 
                 let type = node.type || node.meta["lang.type"];
 

@@ -527,7 +527,7 @@ exports.main = function (JSONREP, node, options) {
   return JSONREP.makeRep('<div class="inspector">' + '<div class="close" style="display: none;">x</div>' + '<div class="viewer"></div>' + '</div>', {
     css: {
       ".@": "github.com~0ink~codeblock/codeblock:Codeblock",
-      "_code": "{\"_cssid\":\"28a5003f8fc18a24ec32c4aa8527cfc59ac5db1d\",\"repUri\":\"inspector\"}",
+      "_code": "{\"_cssid\":\"9c9be6e55e2065132117ad31082315bbfe861e49\",\"repUri\":\"inspector\"}",
       "_format": "json",
       "_args": [],
       "_compiled": false
@@ -585,9 +585,8 @@ exports.main = function (JSONREP, node, options) {
           showMessage(info.node);
         });
         window.FC.on("inspectFile", function (info) {
-          showMessage({
-            type: "string",
-            value: "Viewing of files is not yet implemented."
+          comp.showView("editor", {
+            show: info
           });
         });
       }
@@ -629,12 +628,20 @@ exports.for = function (ctx) {
 
   events.handleBroadcastMessage = function (message) {
     try {
-      if (message.context && message.to === "message-listener" && (ctx.getOwnTabId && message.context.tabId === ctx.getOwnTabId() || ctx.browser && ctx.browser.devtools && ctx.browser.devtools.inspectedWindow && message.context.tabId === ctx.browser.devtools.inspectedWindow.tabId)) {
-        if (message.event === "currentContext" && typeof message.context !== "undefined") {
-          onContextMessage(message.context);
-        }
+      if (message.context && (ctx.getOwnTabId && message.context.tabId === ctx.getOwnTabId() || ctx.browser && ctx.browser.devtools && ctx.browser.devtools.inspectedWindow && message.context.tabId === ctx.browser.devtools.inspectedWindow.tabId)) {
+        if (message.to === "message-listener") {
+          if (message.event === "currentContext" && typeof message.context !== "undefined") {
+            onContextMessage(message.context);
+          }
 
-        events.emit("message", message);
+          events.emit("message", message);
+        } else if (message.to === "protocol") {
+          if (ctx.handlers && ctx.handlers[message.message.receiver]) {
+            message.message.meta = JSON.parse(message.message.meta);
+            message.message.data = JSON.parse(message.message.data);
+            ctx.handlers[message.message.receiver](message.message);
+          }
+        }
       }
     } catch (err) {
       console.error(err);
@@ -872,13 +879,39 @@ exports.for = function (ctx) {
     });
   };
 
-  events.showView = function (name) {
+  events.showView = function (name, args) {
     if (name === "manage") {
       ctx.browser.runtime.sendMessage({
         to: "broadcast",
         event: "manage"
       });
+    } else if (name === "editor") {
+      ctx.browser.runtime.sendMessage({
+        to: "broadcast",
+        event: "editor",
+        args: args
+      });
     }
+  };
+
+  events.hideView = function (name) {
+    if (name === "editor") {
+      console.log("broadcast hide view: editor");
+      ctx.browser.runtime.sendMessage({
+        to: "broadcast",
+        event: "editor",
+        value: false
+      });
+    }
+  };
+
+  events.loadFile = function (file, line) {
+    ctx.browser.runtime.sendMessage({
+      to: "background",
+      event: "load-file",
+      file: file,
+      line: line
+    });
   };
 
   return events;

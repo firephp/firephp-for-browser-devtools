@@ -63,9 +63,11 @@ setImmediate(initCurrentContext);
 //wildfire.emit("destroy");
 
 
+let serverUrl = null;
+
 function broadcastForContext (context, message) {
     message.context = context;
-    message.to = "message-listener";
+    message.to = message.forceTo || "message-listener";
 
     comp.handleBroadcastMessage(message);
     return LIB.browser.runtime.sendMessage(message).catch(function (err) {
@@ -74,8 +76,11 @@ function broadcastForContext (context, message) {
 }
 
 wildfire.on("message.firephp", function (message) {
-    
     if (wildfire.VERBOSE) console.log("[background] WILDFIRE.on -| message.firephp (message):", message);
+
+    if (message.context.serverUrl) {
+        serverUrl = message.context.serverUrl;
+    }
 
     broadcastForContext(message.context, {
         message: {
@@ -87,6 +92,28 @@ wildfire.on("message.firephp", function (message) {
     });
 });
 
+wildfire.on("message.insight.selective", function (message) {    
+    if (wildfire.VERBOSE) console.log("[background] WILDFIRE.on -| message.insight.selective (message):", message);
+
+});
+
+wildfire.on("message.insight.request", function (message) {
+    if (wildfire.VERBOSE) console.log("[background] WILDFIRE.on -| message.insight.request (message):", message);
+
+//console.log("REQUEST message:", message);
+
+    broadcastForContext(message.context, {
+        forceTo: "protocol",
+        message: {
+            sender: message.sender,
+            receiver: message.receiver,
+            meta: message.meta,
+            data: message.data            
+        }
+    });
+});
+
+
 
 let currentContext = null;
 //let broadcastCurrentContext = false;
@@ -96,7 +123,10 @@ let lastDetailsForTabId = {};
 function setCurrentContextFromDetails (details, clearIfNew) {
     if (!details) {
         if (currentContext) {
+console.log("CLEAR CONTEXT", "reset serverUrl");            
+
             currentContext = null;
+            serverUrl = null;
             broadcastForContext(currentContext, {
                 event: "currentContext"
             });
@@ -116,6 +146,8 @@ function setCurrentContextFromDetails (details, clearIfNew) {
                 newCtx.pageUid !== currentContext.pageUid
             )
         ) {
+console.log("NEW CONTEXT", "reset serverUrl", currentContext, newCtx);            
+            serverUrl = null;
 
 //console.log("NEW CONTEXT", newCtx, details);
 
@@ -157,6 +189,7 @@ async function runtime_onMessage (message) {
             ) {
                 await initCurrentContext();
             }
+//console.log("FORWARD in BACKGROUD", message);            
             broadcastForContext(message.context || currentContext || null, message);
         }
     } else
@@ -165,6 +198,51 @@ async function runtime_onMessage (message) {
             LIB.browser.tabs.reload(message.context.tabId, {
                 bypassCache: true
             });
+        } else
+        if (message.event === "load-file") {
+
+
+console.log("LOAD FILE FROM:::", serverUrl);
+
+            const file = message.file;
+            const line = message.line;
+
+            if (!serverUrl) {
+
+console.log("SLIP LOAD FILE FROM::: DUE TO NO serverUrl");
+
+                // TODO: Show error 'Server URL not available!' in UI
+                return;
+            }
+
+            try {
+                const response = await wildfire.callServer(serverUrl, {
+                    target: 'Insight_Plugin_FileViewer',
+                    action: 'GetFile',
+                    args: {
+                        path: file
+                    }
+                });
+
+console.log("SERVER response:", response);
+
+                if (!response) {
+                    return;
+                }
+
+                broadcastForContext(currentContext || null, {
+                    action: "show-file",
+                    args: {
+                        file: file,
+                        line: line,
+                        content: response
+                    }
+                });
+
+            } catch (err) {
+                // TODO: Show error message in UI
+                console.error("Error calling server:", err);
+            }
         }
     }
 }
@@ -183,7 +261,7 @@ function webNavigation_onBeforeNavigate (details) {
         return;
     }
 
-//console.log("ON BEFORE NAVIGATE", details);
+console.log("ON BEFORE NAVIGATE", details);
 
     setCurrentContextFromDetails(details);
 }
@@ -215,7 +293,7 @@ function webRequest_onBeforeRequest (details) {
         return;
     }
 
-//console.log("ON BEFORE REQUEST", details);
+console.log("ON BEFORE REQUEST", details);
 
     setCurrentContextFromDetails(details, true);
 }

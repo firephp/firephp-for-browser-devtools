@@ -528,7 +528,7 @@ exports.main = function (JSONREP, node, options) {
     return JSONREP.makeRep('<div class="console">' + code + '</div>', {
       css: {
         ".@": "github.com~0ink~codeblock/codeblock:Codeblock",
-        "_code": "{\"_cssid\":\"1a87fb313cc2aaf13bf280c443f3a72006e58176\",\"repUri\":\"console\"}",
+        "_code": "{\"_cssid\":\"884ff3ac7a6a819ec4185fdb7c2035051c097737\",\"repUri\":\"console\"}",
         "_format": "json",
         "_args": [],
         "_compiled": false
@@ -630,6 +630,10 @@ exports.main = function (JSONREP, node, options) {
                 message.message.context = message.context;
                 var fc = getConsoleForContext(message.context);
                 ensureRequestWrapper(fc, message.context).then(function (api) {
+                  console.log("LOG TO CONSOLE 1", message.message);
+                  message.message.meta = message.message.meta && JSON.parse(message.message.meta) || {};
+                  message.message.meta.console = message.message.meta.console || {};
+                  message.message.meta.console.enableFileInspect = true;
                   api.send(message.message);
                   scrollIfBottom();
                 });
@@ -775,12 +779,20 @@ exports.for = function (ctx) {
 
   events.handleBroadcastMessage = function (message) {
     try {
-      if (message.context && message.to === "message-listener" && (ctx.getOwnTabId && message.context.tabId === ctx.getOwnTabId() || ctx.browser && ctx.browser.devtools && ctx.browser.devtools.inspectedWindow && message.context.tabId === ctx.browser.devtools.inspectedWindow.tabId)) {
-        if (message.event === "currentContext" && typeof message.context !== "undefined") {
-          onContextMessage(message.context);
-        }
+      if (message.context && (ctx.getOwnTabId && message.context.tabId === ctx.getOwnTabId() || ctx.browser && ctx.browser.devtools && ctx.browser.devtools.inspectedWindow && message.context.tabId === ctx.browser.devtools.inspectedWindow.tabId)) {
+        if (message.to === "message-listener") {
+          if (message.event === "currentContext" && typeof message.context !== "undefined") {
+            onContextMessage(message.context);
+          }
 
-        events.emit("message", message);
+          events.emit("message", message);
+        } else if (message.to === "protocol") {
+          if (ctx.handlers && ctx.handlers[message.message.receiver]) {
+            message.message.meta = JSON.parse(message.message.meta);
+            message.message.data = JSON.parse(message.message.data);
+            ctx.handlers[message.message.receiver](message.message);
+          }
+        }
       }
     } catch (err) {
       console.error(err);
@@ -1018,13 +1030,39 @@ exports.for = function (ctx) {
     });
   };
 
-  events.showView = function (name) {
+  events.showView = function (name, args) {
     if (name === "manage") {
       ctx.browser.runtime.sendMessage({
         to: "broadcast",
         event: "manage"
       });
+    } else if (name === "editor") {
+      ctx.browser.runtime.sendMessage({
+        to: "broadcast",
+        event: "editor",
+        args: args
+      });
     }
+  };
+
+  events.hideView = function (name) {
+    if (name === "editor") {
+      console.log("broadcast hide view: editor");
+      ctx.browser.runtime.sendMessage({
+        to: "broadcast",
+        event: "editor",
+        value: false
+      });
+    }
+  };
+
+  events.loadFile = function (file, line) {
+    ctx.browser.runtime.sendMessage({
+      to: "background",
+      event: "load-file",
+      file: file,
+      line: line
+    });
   };
 
   return events;

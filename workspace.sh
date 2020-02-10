@@ -66,8 +66,20 @@ function do_run {
                         "devtools/index.js": {
                             "label": "FirePHP",
                             "icon": "$__DIRNAME__/src/skin/Logo.png",
+                            "include": {
+                                "codemirror.js": "codemirror/lib/codemirror.js",
+                                "codemirror.css": "codemirror/lib/codemirror.css",
+                                "codemirror/addon/selection/active-line.js": "codemirror/addon/selection/active-line.js",
+                                "codemirror/mode/xml/xml.js": "codemirror/mode/xml/xml.js",
+                                "codemirror/mode/javascript/javascript.js": "codemirror/mode/javascript/javascript.js",
+                                "codemirror/mode/css/css.js": "codemirror/mode/css/css.js",
+                                "codemirror/mode/htmlmixed/htmlmixed.js": "codemirror/mode/htmlmixed/htmlmixed.js",
+                                "codemirror/mode/clike/clike.js": "codemirror/mode/clike/clike.js",
+                                "codemirror/mode/php/php.js": "codemirror/mode/php/php.js"
+                            },
                             "code": {
                                 "@github.com~jsonrep~jsonrep#s1": {
+                                    "prime": true,
                                     "externalizeCss": true,
                                     "include": {
                                         "jquery": false,
@@ -93,6 +105,9 @@ function do_run {
                                             "inspector": {
                                                 "@inspector": {}
                                             },
+                                            "editor": {
+                                                "@editor": {}
+                                            },
                                             "manage": {
                                                 "@manage": {
                                                     "settings": {
@@ -109,6 +124,7 @@ function do_run {
                                         "settings": "$__DIRNAME__/src/settings.rep.js",
                                         "manage": "$__DIRNAME__/src/manage.rep.js",
                                         "inspector": "$__DIRNAME__/src/inspector.rep.js",
+                                        "editor": "$__DIRNAME__/src/editor.rep.js",
                                         "fireconsole": "fireconsole.rep.js/dist/fireconsole.rep.js",
                                         "console": "$__DIRNAME__/src/console.rep.js",
                                         "enabler": "$__DIRNAME__/src/enabler.rep.js"

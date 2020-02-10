@@ -4,72 +4,76 @@ BODY {
     overflow: hidden;
 }
 
-[_cssid="2f5dd500e1e4e62dff743510d9a36390d191d88e"].layout-views {
+[_cssid="e6b4c093136308c5b33910848e833b17a8ffdc8a"].layout-views {
     height: 100%;
 }
 
-[_cssid="2f5dd500e1e4e62dff743510d9a36390d191d88e"].layout-views,
-[_cssid="2f5dd500e1e4e62dff743510d9a36390d191d88e"].layout-views TABLE {
+[_cssid="e6b4c093136308c5b33910848e833b17a8ffdc8a"].layout-views,
+[_cssid="e6b4c093136308c5b33910848e833b17a8ffdc8a"].layout-views TABLE {
     font-family: Lucida Grande, Tahoma, sans-serif;
     font-size: 11px;
 }
 
-[_cssid="2f5dd500e1e4e62dff743510d9a36390d191d88e"] .layout TD {
+[_cssid="e6b4c093136308c5b33910848e833b17a8ffdc8a"] .layout TD {
     vertical-align: top;
 }
 
-[_cssid="2f5dd500e1e4e62dff743510d9a36390d191d88e"] .layout TD.menu-panel {
+[_cssid="e6b4c093136308c5b33910848e833b17a8ffdc8a"] .layout TD.menu-panel {
 }
 
-[_cssid="2f5dd500e1e4e62dff743510d9a36390d191d88e"] .layout TD.settings-panel {
+[_cssid="e6b4c093136308c5b33910848e833b17a8ffdc8a"] .layout TD.settings-panel {
     border-bottom: 1px solid #dcdcdc;
 }
 
-[_cssid="2f5dd500e1e4e62dff743510d9a36390d191d88e"] .layout TD.inspector-panel {
+[_cssid="e6b4c093136308c5b33910848e833b17a8ffdc8a"] .layout TD.inspector-panel {
     min-width: 200px;
     overflow: auto;
 }
 
-[_cssid="2f5dd500e1e4e62dff743510d9a36390d191d88e"] .manage {
+[_cssid="e6b4c093136308c5b33910848e833b17a8ffdc8a"] .manage {
     height: 100%;
     padding: 20px;
     background-color: #efefef;
 }
 
-[_cssid="2f5dd500e1e4e62dff743510d9a36390d191d88e"] .manage TABLE.header {
+[_cssid="e6b4c093136308c5b33910848e833b17a8ffdc8a"] .editor {
+    height: 100%;
+}
+
+[_cssid="e6b4c093136308c5b33910848e833b17a8ffdc8a"] .manage TABLE.header {
     margin-bottom: 10px;
 }
 
-[_cssid="2f5dd500e1e4e62dff743510d9a36390d191d88e"] .manage TABLE.header TD {
+[_cssid="e6b4c093136308c5b33910848e833b17a8ffdc8a"] .manage TABLE.header TD {
     height: 18px;
     min-height: 18px;
 }
 
-[_cssid="2f5dd500e1e4e62dff743510d9a36390d191d88e"] .manage TABLE.header TD.right {
+[_cssid="e6b4c093136308c5b33910848e833b17a8ffdc8a"] .manage TABLE.header TD.right {
     text-align: right;
 }
 
-[_cssid="2f5dd500e1e4e62dff743510d9a36390d191d88e"] .manage TABLE.header .close-button {
+[_cssid="e6b4c093136308c5b33910848e833b17a8ffdc8a"] .manage TABLE.header .close-button {
     display: none;
     cursor: pointer;
 }
 
-[_cssid="2f5dd500e1e4e62dff743510d9a36390d191d88e"] .manage TABLE.header .version {
+[_cssid="e6b4c093136308c5b33910848e833b17a8ffdc8a"] .manage TABLE.header .version {
     display: none;
     color: #acacac;
 }
 
-[_cssid="2f5dd500e1e4e62dff743510d9a36390d191d88e"] .uninitialized {
+[_cssid="e6b4c093136308c5b33910848e833b17a8ffdc8a"] .uninitialized {
     text-align: center;
     padding-top: 50px;
     height: 100%;
 }
-[_cssid="2f5dd500e1e4e62dff743510d9a36390d191d88e"] .uninitialized > P {
+[_cssid="e6b4c093136308c5b33910848e833b17a8ffdc8a"] .uninitialized > P {
     font-weight: bold;
     font-size: 16px;
     color: #dcdcdc;
 }
-[_cssid="2f5dd500e1e4e62dff743510d9a36390d191d88e"] .uninitialized BUTTON {
+[_cssid="e6b4c093136308c5b33910848e833b17a8ffdc8a"] .uninitialized BUTTON {
     font-size: 16px;
     color: #dcdcdc;
     cursor: pointer;

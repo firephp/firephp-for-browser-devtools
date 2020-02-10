@@ -17,7 +17,7 @@ if (WINDOW.document.body.innerHTML.replace(/[\s\n]*/g, "")) {
   console.error(new Error("Cannot render jsonrep page. Page 'body' element is not empty!"));
 } else {
   WINDOW.document.body.setAttribute("renderer", "jsonrep");
-  WINDOW.document.body.innerHTML = "{\"@layout\":{\"console\":{\"@console\":{\"@fireconsole\":{}}},\"menu\":{\"@menu\":{}},\"settings\":{\"@enabler\":{}},\"inspector\":{\"@inspector\":{}},\"manage\":{\"@manage\":{\"settings\":{\"@settings\":{}}}}}}";
+  WINDOW.document.body.innerHTML = "{\"@layout\":{\"console\":{\"@console\":{\"@fireconsole\":{}}},\"menu\":{\"@menu\":{}},\"settings\":{\"@enabler\":{}},\"inspector\":{\"@inspector\":{}},\"editor\":{\"@editor\":{}},\"manage\":{\"@manage\":{\"settings\":{\"@settings\":{}}}}}}";
   WINDOW.document.body.style.visibility = "hidden";
   WINDOW.pmodule = pmodule;
 

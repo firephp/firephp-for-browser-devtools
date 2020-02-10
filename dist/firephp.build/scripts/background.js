@@ -6449,10 +6449,11 @@ async function initCurrentContext() {
 }
 
 setImmediate(initCurrentContext);
+var serverUrl = null;
 
 function broadcastForContext(context, message) {
   message.context = context;
-  message.to = "message-listener";
+  message.to = message.forceTo || "message-listener";
   comp.handleBroadcastMessage(message);
   return LIB.browser.runtime.sendMessage(message).catch(function (err) {
     if (wildfire.VERBOSE) console.log("WARNING", err);
@@ -6461,7 +6462,27 @@ function broadcastForContext(context, message) {
 
 wildfire.on("message.firephp", function (message) {
   if (wildfire.VERBOSE) console.log("[background] WILDFIRE.on -| message.firephp (message):", message);
+
+  if (message.context.serverUrl) {
+    serverUrl = message.context.serverUrl;
+  }
+
   broadcastForContext(message.context, {
+    message: {
+      sender: message.sender,
+      receiver: message.receiver,
+      meta: message.meta,
+      data: message.data
+    }
+  });
+});
+wildfire.on("message.insight.selective", function (message) {
+  if (wildfire.VERBOSE) console.log("[background] WILDFIRE.on -| message.insight.selective (message):", message);
+});
+wildfire.on("message.insight.request", function (message) {
+  if (wildfire.VERBOSE) console.log("[background] WILDFIRE.on -| message.insight.request (message):", message);
+  broadcastForContext(message.context, {
+    forceTo: "protocol",
     message: {
       sender: message.sender,
       receiver: message.receiver,
@@ -6476,7 +6497,9 @@ var lastDetailsForTabId = {};
 function setCurrentContextFromDetails(details, clearIfNew) {
   if (!details) {
     if (currentContext) {
+      console.log("CLEAR CONTEXT", "reset serverUrl");
       currentContext = null;
+      serverUrl = null;
       broadcastForContext(currentContext, {
         event: "currentContext"
       });
@@ -6490,6 +6513,8 @@ function setCurrentContextFromDetails(details, clearIfNew) {
     newCtx.hostname = details.url.replace(/^[^:]+:\/\/([^:\/]+)(:\d+)?\/.*?$/, "$1");
 
     if (newCtx !== currentContext && (!newCtx || !currentContext || newCtx.pageUid !== currentContext.pageUid)) {
+      console.log("NEW CONTEXT", "reset serverUrl", currentContext, newCtx);
+      serverUrl = null;
       currentContext = newCtx;
       lastDetailsForTabId[currentContext.tabId] = details;
       broadcastForContext(currentContext, {
@@ -6531,6 +6556,41 @@ async function runtime_onMessage(message) {
       LIB.browser.tabs.reload(message.context.tabId, {
         bypassCache: true
       });
+    } else if (message.event === "load-file") {
+      console.log("LOAD FILE FROM:::", serverUrl);
+      var file = message.file;
+      var line = message.line;
+
+      if (!serverUrl) {
+        console.log("SLIP LOAD FILE FROM::: DUE TO NO serverUrl");
+        return;
+      }
+
+      try {
+        var response = await wildfire.callServer(serverUrl, {
+          target: 'Insight_Plugin_FileViewer',
+          action: 'GetFile',
+          args: {
+            path: file
+          }
+        });
+        console.log("SERVER response:", response);
+
+        if (!response) {
+          return;
+        }
+
+        broadcastForContext(currentContext || null, {
+          action: "show-file",
+          args: {
+            file: file,
+            line: line,
+            content: response
+          }
+        });
+      } catch (err) {
+        console.error("Error calling server:", err);
+      }
     }
   }
 }
@@ -6547,6 +6607,7 @@ function webNavigation_onBeforeNavigate(details) {
     return;
   }
 
+  console.log("ON BEFORE NAVIGATE", details);
   setCurrentContextFromDetails(details);
 }
 
@@ -6564,6 +6625,7 @@ function webRequest_onBeforeRequest(details) {
     return;
   }
 
+  console.log("ON BEFORE REQUEST", details);
   setCurrentContextFromDetails(details, true);
 }
 
@@ -6774,12 +6836,20 @@ exports.for = function (ctx) {
 
   events.handleBroadcastMessage = function (message) {
     try {
-      if (message.context && message.to === "message-listener" && (ctx.getOwnTabId && message.context.tabId === ctx.getOwnTabId() || ctx.browser && ctx.browser.devtools && ctx.browser.devtools.inspectedWindow && message.context.tabId === ctx.browser.devtools.inspectedWindow.tabId)) {
-        if (message.event === "currentContext" && typeof message.context !== "undefined") {
-          onContextMessage(message.context);
-        }
+      if (message.context && (ctx.getOwnTabId && message.context.tabId === ctx.getOwnTabId() || ctx.browser && ctx.browser.devtools && ctx.browser.devtools.inspectedWindow && message.context.tabId === ctx.browser.devtools.inspectedWindow.tabId)) {
+        if (message.to === "message-listener") {
+          if (message.event === "currentContext" && typeof message.context !== "undefined") {
+            onContextMessage(message.context);
+          }
 
-        events.emit("message", message);
+          events.emit("message", message);
+        } else if (message.to === "protocol") {
+          if (ctx.handlers && ctx.handlers[message.message.receiver]) {
+            message.message.meta = JSON.parse(message.message.meta);
+            message.message.data = JSON.parse(message.message.data);
+            ctx.handlers[message.message.receiver](message.message);
+          }
+        }
       }
     } catch (err) {
       console.error(err);
@@ -7017,13 +7087,39 @@ exports.for = function (ctx) {
     });
   };
 
-  events.showView = function (name) {
+  events.showView = function (name, args) {
     if (name === "manage") {
       ctx.browser.runtime.sendMessage({
         to: "broadcast",
         event: "manage"
       });
+    } else if (name === "editor") {
+      ctx.browser.runtime.sendMessage({
+        to: "broadcast",
+        event: "editor",
+        args: args
+      });
     }
+  };
+
+  events.hideView = function (name) {
+    if (name === "editor") {
+      console.log("broadcast hide view: editor");
+      ctx.browser.runtime.sendMessage({
+        to: "broadcast",
+        event: "editor",
+        value: false
+      });
+    }
+  };
+
+  events.loadFile = function (file, line) {
+    ctx.browser.runtime.sendMessage({
+      to: "background",
+      event: "load-file",
+      file: file,
+      line: line
+    });
   };
 
   return events;
@@ -7151,13 +7247,13 @@ exports.Client = function (comp, options) {
     }
   }
 
-  API.on.insightMessage = function (message) {
-    API.emit("message.insight", message);
-  };
-
-  API.on.transport = async function (info) {
+  API.on.transport = async function (message, request) {
+    var info = {
+      request: request,
+      data: JSON.parse(message.data)
+    };
     API.emit("message.transport", info);
-    console.log("make backend request", JSON.stringify(info, null, 4));
+    info.request.context.serverUrl = info.data.url;
     var url = info.data.url;
 
     if (url.indexOf("x-insight=transport") !== -1) {
@@ -7184,20 +7280,67 @@ exports.Client = function (comp, options) {
       referrer: 'no-referrer',
       body: JSON.stringify(info.data.payload)
     });
-    console.log("response", response);
-    console.log("response HEADERS", response.headers);
-
-    for (var pair of response.headers.entries()) {
-      console.log("HEADER", pair[0] + ': ' + pair[1]);
-    }
-
     var body = await response.text();
     console.log("BODY", body);
+    httpHeaderChannel.parseReceived(body, {
+      "id": info.request.id,
+      "url": info.request.context.url,
+      "hostname": info.request.context.hostname,
+      "context": info.request.context,
+      "port": 0,
+      "method": "",
+      "status": "",
+      "contentType": "",
+      "requestHeaders": ""
+    });
   };
 
-  function isEnabled() {
-    return true;
-  }
+  API.callServer = async function (serverUrl, payload) {
+    var url = serverUrl;
+
+    if (url.indexOf("?") === -1) {
+      url += "?";
+    } else {
+      url += "&";
+    }
+
+    url += "x-insight=serve";
+    console.log("Sending", payload, "to", url);
+    var announceMessage = getAnnounceMessageForRequest(serverUrl.replace(/^https?:\/\/([^\/]+)\/.*$/, '$1'));
+    console.log("announceMessage", announceMessage);
+    var headers = {
+      'Content-Type': 'application/json',
+      'x-insight': 'serve'
+    };
+
+    if (announceMessage) {
+      announceDispatcher.dispatch(announceMessage);
+      httpHeaderChannel.flush({
+        setMessagePart: function (name, value) {
+          headers[name] = '' + value;
+        },
+        getMessagePart: function (name) {
+          return headers[name];
+        }
+      });
+    }
+
+    console.log("headers::", headers);
+    var response = await fetch(url, {
+      method: 'POST',
+      mode: 'same-origin',
+      cache: 'no-cache',
+      credentials: 'include',
+      headers: headers,
+      redirect: 'follow',
+      referrer: 'no-referrer',
+      body: JSON.stringify(payload)
+    });
+    console.log("response in wildfire", response);
+    var body = await response.text();
+    console.log("BODY", body);
+    return body;
+  };
 
   var httpHeaderChannel = API.httpHeaderChannel = API.WILDFIRE.HttpHeaderChannel({
     "enableTransport": false,
@@ -7235,56 +7378,44 @@ exports.Client = function (comp, options) {
     }
   });
   API.httpHeaderChannel.addReceiver(transportReceiver2);
-  var receiver = API.WILDFIRE.Receiver();
-  receiver.setId("http://github.com/fireconsole/@meta/receivers/wildfire/fireconsole/0");
-  receiver.addListener({
-    onMessageReceived: function (request, message) {
-      try {
-        API.console.log("receiver onMessageReceived FirePHP!: ", message);
-      } catch (err) {
-        console.error(err);
-      }
-    }
-  });
-  var transportReceiver = API.WILDFIRE.Receiver();
-  transportReceiver.setId("http://registry.pinf.org/cadorn.org/wildfire/@meta/receiver/transport/0");
-  transportReceiver.addListener({
-    onMessageReceived: function (request, message) {
-      try {
-        if (API.on && API.on.transport) {
-          API.on.transport({
-            request: request,
-            data: JSON.parse(message.data)
-          });
-        }
-      } catch (err) {
-        API.console.error(err);
-      }
-    }
-  });
-  API.httpHeaderChannel.addReceiver(transportReceiver);
   var receivers = {
+    "http://registry.pinf.org/cadorn.org/wildfire/@meta/receiver/transport/0": {
+      messageHandler: "transport"
+    },
     "http://registry.pinf.org/cadorn.org/insight/@meta/receiver/insight/controller/0": {},
     "http://registry.pinf.org/cadorn.org/insight/@meta/receiver/insight/plugin/0": {},
     "http://registry.pinf.org/cadorn.org/insight/@meta/receiver/insight/package/0": {},
-    "http://registry.pinf.org/cadorn.org/insight/@meta/receiver/insight/selective/0": {},
-    "http://registry.pinf.org/cadorn.org/insight/@meta/receiver/console/request/0": {},
-    "http://registry.pinf.org/cadorn.org/insight/@meta/receiver/console/page/0": {
-      messageHandler: "insightMessage"
+    "http://registry.pinf.org/cadorn.org/insight/@meta/receiver/insight/selective/0": {
+      messageEvent: "message.insight.selective"
     },
-    "http://registry.pinf.org/cadorn.org/insight/@meta/receiver/console/process/0": {}
+    "http://registry.pinf.org/cadorn.org/insight/@meta/receiver/console/request/0": {
+      messageEvent: "message.insight.request"
+    },
+    "http://registry.pinf.org/cadorn.org/insight/@meta/receiver/console/page/0": {
+      messageEvent: "message.firephp"
+    },
+    "http://registry.pinf.org/cadorn.org/insight/@meta/receiver/console/process/0": {},
+    "http://registry.pinf.org/cadorn.org/insight/@meta/receiver/console/firephp/0": {
+      messageEvent: "message.firephp"
+    }
   };
   Object.keys(receivers).forEach(function (uri) {
     var receiver = API.WILDFIRE.Receiver();
     receiver.setId(uri);
     receiver.addListener({
       onMessageReceived: function (request, message) {
-        message.context = request.context;
+        try {
+          message.context = request.context;
 
-        if (receivers[uri].messageHandler && API.on && API.on[receivers[uri].messageHandler]) {
-          API.on[receivers[uri].messageHandler](message);
-        } else {
-          console.log("IGNORING insight MESSAGE:", message);
+          if (receivers[uri].messageHandler && API.on && API.on[receivers[uri].messageHandler]) {
+            API.on[receivers[uri].messageHandler](message, request);
+          } else if (receivers[uri].messageEvent) {
+            API.emit(receivers[uri].messageEvent, message);
+          } else {
+            console.log("IGNORING insight MESSAGE:", uri, message);
+          }
+        } catch (err) {
+          API.console.error(err);
         }
       }
     });
@@ -7317,11 +7448,6 @@ exports.Client = function (comp, options) {
 
   var hostnameSettings = {};
   var requestObserver = new REQUEST_OBSERVER(function (request) {
-    if (!isEnabled()) {
-      if (API.VERBOSE) console.log("[wildfire] REQUEST_OBSERVER handler: not enabled");
-      return null;
-    }
-
     var settings = comp._getHostnameSettingsForSync(request.hostname);
 
     if (API.VERBOSE) console.log("[wildfire] forceEnabled:", forceEnabled);
@@ -7362,10 +7488,6 @@ exports.Client = function (comp, options) {
     };
   });
   var responseObserver = new RESPONSE_OBSERVER(function (response) {
-    if (!isEnabled()) {
-      return;
-    }
-
     var settings = hostnameSettings[response.request.context.hostname];
 
     if (!settings || !forceEnabled && !settings.enabled) {

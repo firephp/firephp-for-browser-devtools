@@ -136,7 +136,7 @@ function impl(domplate) {
     },
     _getFileActionClass: function _getFileActionClass(message) {
       if (message.meta["file"] && message.meta.console && typeof message.meta.console["enableFileInspect"] !== "undefined") {
-        return message.meta.console["enableInspect"] ? "" : "hidden";
+        return message.meta.console["enableFileInspect"] ? "" : "hidden";
       }
 
       return "hidden";
@@ -362,7 +362,7 @@ var __escape__ = context.__escape__;
 var __if__ = context.__if__;
 var __loop__ = context.__loop__;
 var __link__ = context.__link__;
-return (function (__code__, __context__, __in__, __out__) {  with (this) {  with (__in__) {    __code__.push("","<div", " expandable=\"",__escape__(_isExpandable(node)), "\"", " expanded=\"","false", "\"", " __dbid=\"","3a7bebf32f91801fb7aab559c5946d27a0b717b9", "\"", " __dtid=\"","insight.domplate.reps/wrappers/console", "\"", " class=\"",__escape__(_getMessageClass(node)), " ", "\"",">","<div", " hideOnExpand=\"",__escape__(_getHideShortTagOnExpand(context,node)), "\"", " class=\"",__escape__(_getHeaderClass(node)), " ", "\"",">","<div", " class=\"","expander", " ", "\"",">","</div>","<div", " class=\"","actions", " ", "\"",">","<div", " class=\"","inspect ",__escape__(_getInspectActionClass(context,node)), " ", "\"",">","</div>","<div", " class=\"","file ",__escape__(_getFileActionClass(node)), " ", "\"",">","</div>","</div>","<span", " allowTagExpand=\"","false", "\"", " class=\"","summary", " ", "\"",">","<span", " class=\"","label", " ", "\"",">");__out__.push(onMouseOver,onMouseMove,onMouseOut,onClick,node,context,node,onClick,onClick);__if__.apply(this, [_hasLabel(node), __out__, function(__out__) {    __code__.push("","<span",">",__escape__(_getLabel(node)),"</span>");}]);    __code__.push("","</span>");__link__(_getTag(context,node,CONST_Short), __code__, __out__, {"node":_getValue(context,node),"context":context});    __code__.push("","</span>","<span", " class=\"","fileline", " ", "\"",">","<div",">",__escape__(_getFileLine(node)),"</div>","</span>","</div>","<div", " class=\"",__escape__(_getBodyClass(node)), " ", "\"",">","</div>","</div>");  }}})
+return (function (__code__, __context__, __in__, __out__) {  with (this) {  with (__in__) {    __code__.push("","<div", " expandable=\"",__escape__(_isExpandable(node)), "\"", " expanded=\"","false", "\"", " __dbid=\"","f19222d1afdcb813baf69909d376ee63829cda3c", "\"", " __dtid=\"","insight.domplate.reps/wrappers/console", "\"", " class=\"",__escape__(_getMessageClass(node)), " ", "\"",">","<div", " hideOnExpand=\"",__escape__(_getHideShortTagOnExpand(context,node)), "\"", " class=\"",__escape__(_getHeaderClass(node)), " ", "\"",">","<div", " class=\"","expander", " ", "\"",">","</div>","<div", " class=\"","actions", " ", "\"",">","<div", " class=\"","inspect ",__escape__(_getInspectActionClass(context,node)), " ", "\"",">","</div>","<div", " class=\"","file ",__escape__(_getFileActionClass(node)), " ", "\"",">","</div>","</div>","<span", " allowTagExpand=\"","false", "\"", " class=\"","summary", " ", "\"",">","<span", " class=\"","label", " ", "\"",">");__out__.push(onMouseOver,onMouseMove,onMouseOut,onClick,node,context,node,onClick,onClick);__if__.apply(this, [_hasLabel(node), __out__, function(__out__) {    __code__.push("","<span",">",__escape__(_getLabel(node)),"</span>");}]);    __code__.push("","</span>");__link__(_getTag(context,node,CONST_Short), __code__, __out__, {"node":_getValue(context,node),"context":context});    __code__.push("","</span>","<span", " class=\"","fileline", " ", "\"",">","<div",">",__escape__(_getFileLine(node)),"</div>","</span>","</div>","<div", " class=\"",__escape__(_getBodyClass(node)), " ", "\"",">","</div>","</div>");  }}})
 }
 ,
 "shortTag":function (context) {
@@ -380,10 +380,10 @@ var __escape__ = context.__escape__;
 var __if__ = context.__if__;
 var __loop__ = context.__loop__;
 var __link__ = context.__link__;
-return (function (__code__, __context__, __in__, __out__) {  with (this) {  with (__in__) {    __code__.push("","<div", " __dbid=\"","3a7bebf32f91801fb7aab559c5946d27a0b717b9", "\"", " __dtid=\"","insight.domplate.reps/wrappers/console", "\"", " class=\"","group-no-messages", " ", "\"",">","No Messages","</div>");  }}})
+return (function (__code__, __context__, __in__, __out__) {  with (this) {  with (__in__) {    __code__.push("","<div", " __dbid=\"","f19222d1afdcb813baf69909d376ee63829cda3c", "\"", " __dtid=\"","insight.domplate.reps/wrappers/console", "\"", " class=\"","group-no-messages", " ", "\"",">","No Messages","</div>");  }}})
 }
 };
-  rep.__dbid = "3a7bebf32f91801fb7aab559c5946d27a0b717b9";
+  rep.__dbid = "f19222d1afdcb813baf69909d376ee63829cda3c";
   rep.__dtid = "insight.domplate.reps/wrappers/console";
   var res = domplate.domplate(rep);
   var injectedCss = false;
