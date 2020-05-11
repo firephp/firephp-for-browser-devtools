@@ -7,12 +7,12 @@
     "insight-for-js": "^0.2.0-pre.0",
     "wildfire-for-js": "^0.1.4",
     "fireconsole.rep.js": "^0.1.0-pre.0",
-    "bash.origin.lib": "^0.4.0-pre.10"
+    "bash.origin.lib": "^0.4.0-pre.20"
   },
   "scripts": {
-    "start": "./workspace.sh run",
     "test": "bash.origin.test tests",
-    "build": "./workspace.sh build",
+    "dev": "pinf.it ./#!inf.json --watch",
+    "build": "pinf.it ./#!inf.json",
     "build-via-docker": "./src/docker/build.sh"
   }
 }

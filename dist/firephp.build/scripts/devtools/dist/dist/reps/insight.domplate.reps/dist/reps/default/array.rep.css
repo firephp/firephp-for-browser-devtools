@@ -1,0 +1,45 @@
+
+SPAN.array[__dbid="db686dc5e4aff22e09d387a8de9141e496d71de8"] > SPAN {
+    color: #9C9C9C;
+    font-weight: bold;
+}
+
+SPAN.array[__dbid="db686dc5e4aff22e09d387a8de9141e496d71de8"] > SPAN.collapsed {
+    color: #0000FF;
+    font-weight: normal;
+    padding-left: 5px;
+    padding-right: 5px;
+}
+
+SPAN.array[__dbid="db686dc5e4aff22e09d387a8de9141e496d71de8"] > SPAN.summary {
+    color: #0000FF;
+    font-weight: normal;
+    padding-left: 5px;
+    padding-right: 5px;
+}
+
+SPAN.array[__dbid="db686dc5e4aff22e09d387a8de9141e496d71de8"] > DIV.element {
+    display: block;
+    padding-left: 20px;
+}
+
+SPAN.array[__dbid="db686dc5e4aff22e09d387a8de9141e496d71de8"] > SPAN.element {
+    padding-left: 2px;
+}
+
+SPAN.array[__dbid="db686dc5e4aff22e09d387a8de9141e496d71de8"] > DIV.element.expandable {
+    background-image: url(images/twisty-closed.png);
+    background-repeat: no-repeat;
+    background-position: 6px 2px;
+    cursor: pointer;
+}
+SPAN.array[__dbid="db686dc5e4aff22e09d387a8de9141e496d71de8"] > DIV.element.expandable.expanded {
+    background-image: url(images/twisty-open.png);
+}
+
+SPAN.array[__dbid="db686dc5e4aff22e09d387a8de9141e496d71de8"] > .element > SPAN.value {
+}
+
+SPAN.array[__dbid="db686dc5e4aff22e09d387a8de9141e496d71de8"] > .element > SPAN.separator {
+    color: #9C9C9C;
+}

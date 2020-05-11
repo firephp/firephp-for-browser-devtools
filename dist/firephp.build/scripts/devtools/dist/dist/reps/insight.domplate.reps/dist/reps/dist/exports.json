@@ -1,0 +1,34 @@
+{
+    "js": {
+        "domplate": {
+            "strict": {
+                "path": "./domplate.js",
+                "summary": "Portable JavaScript source code for strict mode. Can only render pre-compiled templates.",
+                "size": 78116,
+                "hash": "sha1:25e4915af523e8042e3294c54a71f2bdbfe48329"
+            },
+            "eval": {
+                "path": "./domplate-eval.js",
+                "summary": "Portable JavaScript source code using eval. Can compile and render templates from source.",
+                "size": 79038,
+                "hash": "sha1:d0dddd8c8f02f14f1e1903ec93096de058c6f413"
+            }
+        }
+    },
+    "js.browser": {
+        "domplate": {
+            "strict": {
+                "path": "./domplate.browser.js",
+                "summary": "Browser JavaScript source code for strict mode. Can only render pre-compiled templates.",
+                "size": 78724,
+                "hash": "sha1:b94d96afdd377840cebcee5ae0d0926ba386a518"
+            },
+            "eval": {
+                "path": "./domplate-eval.browser.js",
+                "summary": "Browser JavaScript source code using eval. Can compile and render templates from source.",
+                "size": 79638,
+                "hash": "sha1:0fc1eda46932a15be063f8e1554ff11c6af07ad8"
+            }
+        }
+    }
+}

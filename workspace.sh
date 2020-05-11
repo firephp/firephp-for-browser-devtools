@@ -12,205 +12,205 @@ depend {
 }
 
 
-function do_run {
+# function do_run {
 
-    version="$(BO_run_recent_node --eval 'process.stdout.write(require("./package.json").version);')"
+#     version="$(BO_run_recent_node --eval 'process.stdout.write(require("./package.json").version);')"
 
-    CALL_webext run {
-        "manifest": {
-            "dist": "$__DIRNAME__/dist/firephp.build",
-            "name": "FirePHP (Official)",
-            "version": "${version}",
-            "description": "Log from PHP to a devtools panel.",
-            "applications": {
-                "gecko": {
-                    "id": "FirePHPExtension-Build@firephp.org",
-                    "strict_min_version": "56.0"
-                }
-            },
-            "icons": {
-                "48": "$__DIRNAME__/src/skin/Logo.png"
-            },
-            "permissions": [
-                "activeTab",
-                "storage",
-                "webRequest",
-                "webNavigation",
-                "webRequestBlocking",            
-                "<all_urls>"
-            ],
-            "content_security_policy": "script-src 'self'; style-src 'self'; object-src 'self'; img-src 'self'",
-            "background": {
-                "scripts": [
-                    {
-                        "background.js": {
-                            "@it.pinf.org.browserify#s1": {
-                                "src": "$__DIRNAME__/src/background.js",
-                                "prime": true,
-                                "format": "pinf",
-                                "babel": {
-                                    "presets": {
-                                        "@babel/preset-env": {
-                                            "targets": "last 1 Firefox versions"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                ]
-            },
-            "devtools": {
-                "panels": [
-                    {
-                        "devtools/index.js": {
-                            "label": "FirePHP",
-                            "icon": "$__DIRNAME__/src/skin/Logo.png",
-                            "include": {
-                                "codemirror.js": "codemirror/lib/codemirror.js",
-                                "codemirror.css": "codemirror/lib/codemirror.css",
-                                "codemirror/addon/selection/active-line.js": "codemirror/addon/selection/active-line.js",
-                                "codemirror/mode/xml/xml.js": "codemirror/mode/xml/xml.js",
-                                "codemirror/mode/javascript/javascript.js": "codemirror/mode/javascript/javascript.js",
-                                "codemirror/mode/css/css.js": "codemirror/mode/css/css.js",
-                                "codemirror/mode/htmlmixed/htmlmixed.js": "codemirror/mode/htmlmixed/htmlmixed.js",
-                                "codemirror/mode/clike/clike.js": "codemirror/mode/clike/clike.js",
-                                "codemirror/mode/php/php.js": "codemirror/mode/php/php.js"
-                            },
-                            "code": {
-                                "@github.com~jsonrep~jsonrep#s1": {
-                                    "prime": true,
-                                    "externalizeCss": true,
-                                    "include": {
-                                        "jquery": false,
-                                        "regenerator-runtime": false,
-                                        "riot.csp.js": true,
-                                        "riot.js": false,
-                                        "riot.min.js": false
-                                    },
-                                    "page": {
-                                        "@layout": {
-                                            "console": {
-                                                "@console": {
-                                                    "@fireconsole": {
-                                                    }
-                                                }
-                                            },
-                                            "menu": {
-                                                "@menu": {}
-                                            },
-                                            "settings": {
-                                                "@enabler": {}
-                                            },
-                                            "inspector": {
-                                                "@inspector": {}
-                                            },
-                                            "editor": {
-                                                "@editor": {}
-                                            },
-                                            "manage": {
-                                                "@manage": {
-                                                    "settings": {
-                                                        "@settings": {}
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    },
-                                    "reps": {
-                                        "layout": "$__DIRNAME__/src/layout.rep.js",
-                                        "menu": "$__DIRNAME__/src/menu.rep.js",
-                                        "summary": "$__DIRNAME__/src/summary.rep.js",
-                                        "settings": "$__DIRNAME__/src/settings.rep.js",
-                                        "manage": "$__DIRNAME__/src/manage.rep.js",
-                                        "inspector": "$__DIRNAME__/src/inspector.rep.js",
-                                        "editor": "$__DIRNAME__/src/editor.rep.js",
-                                        "fireconsole": "fireconsole.rep.js/dist/fireconsole.rep.js",
-                                        "console": "$__DIRNAME__/src/console.rep.js",
-                                        "enabler": "$__DIRNAME__/src/enabler.rep.js"
-                                    },
-                                    "babel": {
-                                        "presets": {
-                                            "@babel/preset-env": {
-                                                "targets": "last 1 Firefox versions"
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                ]
-            }
-        },
-        "routes": {
-            "^/$": (javascript (API) >>>
+#     CALL_webext run {
+#         "manifest": {
+#             "dist": "$__DIRNAME__/dist/firephp.build",
+#             "name": "FirePHP (Official)",
+#             "version": "${version}",
+#             "description": "Log from PHP to a devtools panel.",
+#             "applications": {
+#                 "gecko": {
+#                     "id": "FirePHPExtension-Build@firephp.org",
+#                     "strict_min_version": "56.0"
+#                 }
+#             },
+#             "icons": {
+#                 "48": "$__DIRNAME__/src/skin/Logo.png"
+#             },
+#             "permissions": [
+#                 "activeTab",
+#                 "storage",
+#                 "webRequest",
+#                 "webNavigation",
+#                 "webRequestBlocking",            
+#                 "<all_urls>"
+#             ],
+#             "content_security_policy": "script-src 'self'; style-src 'self'; object-src 'self'; img-src 'self'",
+#             "background": {
+#                 "scripts": [
+#                     {
+#                         "background.js": {
+#                             "@it.pinf.org.browserify#s1": {
+#                                 "src": "$__DIRNAME__/src/background.js",
+#                                 "prime": true,
+#                                 "format": "pinf",
+#                                 "babel": {
+#                                     "presets": {
+#                                         "@babel/preset-env": {
+#                                             "targets": "last 1 Firefox versions"
+#                                         }
+#                                     }
+#                                 }
+#                             }
+#                         }
+#                     }
+#                 ]
+#             },
+#             "devtools": {
+#                 "panels": [
+#                     {
+#                         "devtools/index.js": {
+#                             "label": "FirePHP",
+#                             "icon": "$__DIRNAME__/src/skin/Logo.png",
+#                             "include": {
+#                                 "codemirror.js": "codemirror/lib/codemirror.js",
+#                                 "codemirror.css": "codemirror/lib/codemirror.css",
+#                                 "codemirror/addon/selection/active-line.js": "codemirror/addon/selection/active-line.js",
+#                                 "codemirror/mode/xml/xml.js": "codemirror/mode/xml/xml.js",
+#                                 "codemirror/mode/javascript/javascript.js": "codemirror/mode/javascript/javascript.js",
+#                                 "codemirror/mode/css/css.js": "codemirror/mode/css/css.js",
+#                                 "codemirror/mode/htmlmixed/htmlmixed.js": "codemirror/mode/htmlmixed/htmlmixed.js",
+#                                 "codemirror/mode/clike/clike.js": "codemirror/mode/clike/clike.js",
+#                                 "codemirror/mode/php/php.js": "codemirror/mode/php/php.js"
+#                             },
+#                             "code": {
+#                                 "@github.com~jsonrep~jsonrep#s1": {
+#                                     "prime": true,
+#                                     "externalizeCss": true,
+#                                     "include": {
+#                                         "jquery": false,
+#                                         "regenerator-runtime": false,
+#                                         "riot.csp.js": true,
+#                                         "riot.js": false,
+#                                         "riot.min.js": false
+#                                     },
+#                                     "page": {
+#                                         "@layout": {
+#                                             "console": {
+#                                                 "@console": {
+#                                                     "@fireconsole": {
+#                                                     }
+#                                                 }
+#                                             },
+#                                             "menu": {
+#                                                 "@menu": {}
+#                                             },
+#                                             "settings": {
+#                                                 "@enabler": {}
+#                                             },
+#                                             "inspector": {
+#                                                 "@inspector": {}
+#                                             },
+#                                             "editor": {
+#                                                 "@editor": {}
+#                                             },
+#                                             "manage": {
+#                                                 "@manage": {
+#                                                     "settings": {
+#                                                         "@settings": {}
+#                                                     }
+#                                                 }
+#                                             }
+#                                         }
+#                                     },
+#                                     "reps": {
+#                                         "layout": "$__DIRNAME__/src/layout.rep.js",
+#                                         "menu": "$__DIRNAME__/src/menu.rep.js",
+#                                         "summary": "$__DIRNAME__/src/summary.rep.js",
+#                                         "settings": "$__DIRNAME__/src/settings.rep.js",
+#                                         "manage": "$__DIRNAME__/src/manage.rep.js",
+#                                         "inspector": "$__DIRNAME__/src/inspector.rep.js",
+#                                         "editor": "$__DIRNAME__/src/editor.rep.js",
+#                                         "fireconsole": "fireconsole.rep.js/dist/fireconsole.rep.js",
+#                                         "console": "$__DIRNAME__/src/console.rep.js",
+#                                         "enabler": "$__DIRNAME__/src/enabler.rep.js"
+#                                     },
+#                                     "babel": {
+#                                         "presets": {
+#                                             "@babel/preset-env": {
+#                                                 "targets": "last 1 Firefox versions"
+#                                             }
+#                                         }
+#                                     }
+#                                 }
+#                             }
+#                         }
+#                     }
+#                 ]
+#             }
+#         },
+#         "routes": {
+#             "^/$": (javascript (API) >>>
 
-                return function (req, res, next) {
+#                 return function (req, res, next) {
 
-                    if (
-                        req.headers["x-firephp-version"] ||
-                        /\sFirePHP\/([\.|\d]*)\s?/.test(req.headers["user-agent"])
-                    ) {
+#                     if (
+#                         req.headers["x-firephp-version"] ||
+#                         /\sFirePHP\/([\.|\d]*)\s?/.test(req.headers["user-agent"])
+#                     ) {
 
-                        function wrap (message) {
-                            return message.length + '|' + message + '|';
-                        }
+#                         function wrap (message) {
+#                             return message.length + '|' + message + '|';
+#                         }
 
-                        res.writeHead(200, {
-                            'X-Wf-Protocol-1': 'http://meta.wildfirehq.org/Protocol/JsonStream/0.2',
-                            'X-Wf-1-Plugin-1': 'http://meta.firephp.org/Wildfire/Plugin/FirePHP/Library-FirePHPCore/0.0.0master1106021548',
-                            'X-Wf-1-Structure-1': 'http://meta.firephp.org/Wildfire/Structure/FirePHP/FirebugConsole/0.1',
+#                         res.writeHead(200, {
+#                             'X-Wf-Protocol-1': 'http://meta.wildfirehq.org/Protocol/JsonStream/0.2',
+#                             'X-Wf-1-Plugin-1': 'http://meta.firephp.org/Wildfire/Plugin/FirePHP/Library-FirePHPCore/0.0.0master1106021548',
+#                             'X-Wf-1-Structure-1': 'http://meta.firephp.org/Wildfire/Structure/FirePHP/FirebugConsole/0.1',
 
-                            // @see https://github.com/firephp/firephp/issues/16
-                            'X-Wf-1-1-1-1': wrap('[{"Type":"LOG","File":"/path/to/file","Line":10},"Hello World"]'),
-                            'X-Wf-1-1-1-2': wrap('[{"Type":"INFO","File":"\/christoph\/projects\/gi0.FireConsole.org\/rep.js\/examples\/03-FirePHPCore\/index.php","Line":75},"\\u0427\\u0442\\u043e-\\u0442\\u043e"]'),
-                            'X-Wf-1-1-1-3': wrap('[{"Type":"INFO","File":"\/christoph\/projects\/gi0.FireConsole.org\/rep.js\/examples\/03-FirePHPCore\/index.php","Line":76},"Od\\u00f3metro"]'),
+#                             // @see https://github.com/firephp/firephp/issues/16
+#                             'X-Wf-1-1-1-1': wrap('[{"Type":"LOG","File":"/path/to/file","Line":10},"Hello World"]'),
+#                             'X-Wf-1-1-1-2': wrap('[{"Type":"INFO","File":"\/christoph\/projects\/gi0.FireConsole.org\/rep.js\/examples\/03-FirePHPCore\/index.php","Line":75},"\\u0427\\u0442\\u043e-\\u0442\\u043e"]'),
+#                             'X-Wf-1-1-1-3': wrap('[{"Type":"INFO","File":"\/christoph\/projects\/gi0.FireConsole.org\/rep.js\/examples\/03-FirePHPCore\/index.php","Line":76},"Od\\u00f3metro"]'),
 
-                            'X-Wf-1-Index': '3'
-                        });
+#                             'X-Wf-1-Index': '3'
+#                         });
 
 
-                        res.end("FirePHP Core formatted messages sent in HTTP response headers.");
-                    } else {
+#                         res.end("FirePHP Core formatted messages sent in HTTP response headers.");
+#                     } else {
 
-                        res.end([
-                            "<p>No FirePHP HTTP request headers found.</p>",
-                            "<p><a href=\"http://127.0.0.1:8080/FirePHP.php\">http://127.0.0.1:8080/FirePHP.php</a></p>"
-                        ].join("\n"));
-                    }
+#                         res.end([
+#                             "<p>No FirePHP HTTP request headers found.</p>",
+#                             "<p><a href=\"http://127.0.0.1:8080/FirePHP.php\">http://127.0.0.1:8080/FirePHP.php</a></p>"
+#                         ].join("\n"));
+#                     }
 
-                    if (process.env.BO_TEST_FLAG_DEV) return;
+#                     if (process.env.BO_TEST_FLAG_DEV) return;
 
-                    setTimeout(function () {
-                        API.SERVER.stop();
-                    }, 1000);
-                };
-            <<<),
-            "^/tests": {
-                "@it.pinf.org.mochajs#s1": {}
-            }
-        },
-        "postbuild": (javascript (LIB) >>>
+#                     setTimeout(function () {
+#                         API.SERVER.stop();
+#                     }, 1000);
+#                 };
+#             <<<),
+#             "^/tests": {
+#                 "@it.pinf.org.mochajs#s1": {}
+#             }
+#         },
+#         "postbuild": (javascript (LIB) >>>
         
-            return async function () {
-                // Remove files that we do not need.
-                await Promise.all([
-                    'domplate-eval.browser.js',
-                    'domplate.browser.js',
-                    'pinf-loader-core.browser.js',
-                    'babel-regenerator-runtime.js'
-                ].map(async function (filename) {
-                    const paths = LIB.GLOB.sync('**/' + filename);
-                    await Promise.all(paths.map(async function (path) {
-                        await LIB.FS_EXTRA.removeSync(path);
-                    }));
-                }));
-            };
-        <<<)
-    } "$@"
+#             return async function () {
+#                 // Remove files that we do not need.
+#                 await Promise.all([
+#                     'domplate-eval.browser.js',
+#                     'domplate.browser.js',
+#                     'pinf-loader-core.browser.js',
+#                     'babel-regenerator-runtime.js'
+#                 ].map(async function (filename) {
+#                     const paths = LIB.GLOB.sync('**/' + filename);
+#                     await Promise.all(paths.map(async function (path) {
+#                         await LIB.FS_EXTRA.removeSync(path);
+#                     }));
+#                 }));
+#             };
+#         <<<)
+#     } "$@"
 
-}
+# }
 
 function do_sign {
 

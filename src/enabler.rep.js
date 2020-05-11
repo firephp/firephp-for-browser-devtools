@@ -29,8 +29,8 @@ exports.main = function (JSONREP, node, options) {
         "code": (riotjs:makeRep () >>>
 
             <div>
-                <button if={enabled === false} onclick={triggerEnable} class="enable">Enable</button>
-                <button if={enabled === true} onclick={triggerDisable} class="disable">Disable</button>
+                <button if={enabled === false} onclick={triggerEnable} class="enable">Click to Enable</button>
+                <button if={enabled === true} onclick={triggerDisable} class="disable">Click to Disable</button>
             </div>
 
             <style>
