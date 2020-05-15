@@ -92,6 +92,7 @@
             }
         }
     },
+    "port": 9000,
     "postbuild": {
         ".@": "github.com~0ink~codeblock/codeblock:Codeblock",
         "_code": "\\nreturn async function () {\\n};",
@@ -102,6 +103,5 @@
         "_compiled": false
     },
     "cwd": "/opt/christoph/projects/gi0.FirePHP.org/firephp-for-browser-devtools",
-    "port": 53370,
     "basedir": "/opt/christoph/projects/gi0.FirePHP.org/firephp-for-browser-devtools"
 }

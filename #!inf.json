@@ -12,7 +12,7 @@
     "gi0.PINF.it/build/v0 @ # /dist/firephp.build": (inf () >>>
         {
             "gi0.PINF.it/build/v0 @ # :builder: build() /": {
-
+                "port": 9000,
                 "manifest": {
                     "name": "FirePHP (Official)",
                     "version": "${version}",

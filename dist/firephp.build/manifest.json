@@ -1,11 +1,11 @@
 {
     "manifest_version": 2,
-    "description": "(NOTE: This is a PREVIEW build for branch: preview-insight) Log from PHP to a devtools panel.",
-    "name": "FirePHP (Official) (branch: preview-insight)",
-    "version": "${version}pre_1589010327",
+    "description": "(NOTE: This is a PREVIEW build for branch: preview-buildable) Log from PHP to a devtools panel.",
+    "name": "FirePHP (Official) (branch: preview-buildable)",
+    "version": "${version}pre_1589521107",
     "applications": {
         "gecko": {
-            "id": "FirePHPExtension-Build_branch_preview-insight@firephp.org",
+            "id": "FirePHPExtension-Build_branch_preview-buildable@firephp.org",
             "strict_min_version": "56.0"
         }
     },
