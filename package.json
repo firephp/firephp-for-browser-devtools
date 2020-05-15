@@ -10,9 +10,10 @@
     "bash.origin.lib": "^0.4.0-pre.20"
   },
   "scripts": {
-    "test": "bash.origin.test tests",
-    "dev": "pinf.it ./#!inf.json --watch",
-    "build": "pinf.it ./#!inf.json",
-    "build-via-docker": "./src/docker/build.sh"
+    "test": "pinf.it ./#!inf.json test",
+    "dev": "pinf.it ./#!inf.json dev --watch",
+    "build": "pinf.it ./#!inf.json build",
+    "build-via-docker": "./src/docker/build.sh",
+    "publish": "pinf.it ./#!inf.json publish"
   }
 }

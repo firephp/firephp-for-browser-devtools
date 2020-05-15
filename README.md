@@ -7,13 +7,14 @@ This project holds the [FirePHP Tool](http://firephp.org) in the form of a Brows
 
   * Mozilla Firefox - https://developer.mozilla.org/en-US/Add-ons/WebExtensions
   * Google Chrome - https://developer.chrome.com/extensions
+  * Brave - (runs Google Chrome extensions)
 
 > Log from PHP to Browser Developer Tools via HTTP Response Headers.
 
 Supported protocols:
 
   * FirePHP (Wildfire based)
-  * Chrome Logger
+  * [Chrome Logger](https://craig.is/writing/chrome-logger/techspecs)
 
 For a list of supported server libraries see [http://firephp.org](http://firephp.org).
 
@@ -30,7 +31,7 @@ Install
 ### Published
 
   * Firefox: [addons.mozilla.org/en-US/firefox/addon/firephp](https://addons.mozilla.org/en-US/firefox/addon/firephp/)
-  * Chrome: [chrome.google.com/webstore/detail/firephp/ikfbpappjhegehjflebknjbhdocbgkdi](https://chrome.google.com/webstore/detail/firephp/ikfbpappjhegehjflebknjbhdocbgkdi)
+  * Chrome & Brave: [chrome.google.com/webstore/detail/firephp/ikfbpappjhegehjflebknjbhdocbgkdi](https://chrome.google.com/webstore/detail/firephp/ikfbpappjhegehjflebknjbhdocbgkdi)
 
 ### Local
 
@@ -51,13 +52,13 @@ Build from source:
 **Status: DEV - Commands will currently not run for you!**
 
     rm -Rf dist/        # Optional to verify build
-    nvm use 10
+    nvm use 14
     npm install
-    npm run build       # Append '--ignore-dirty' if you removed 'dist/'
+    npm run build
     git diff            # Optional to verify build
         # Only the `version` property in `dist/firephp.build/manifest.json` should have changed.
 
-*Load Addon* from `dist/firephp.build/` into Firefox or Chrome.
+*Load Addon* from `dist/firephp.build/` into Firefox, Chrome or Brave.
 
 ### Notes for build reviewers
 
