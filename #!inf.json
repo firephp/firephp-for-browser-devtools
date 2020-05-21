@@ -216,7 +216,6 @@
                     rm -Rf scripts/devtools/dist/dist/reps/insight.domplate.reps/dist/reps/dist/domplate-eval.browser.js
                     rm -Rf lib/github.com~pinf~pinf-for-mozilla-web-ext/scripts/lib/pinf-loader-core.browser.js
                     rm -Rf lib/github.com~pinf~pinf-for-mozilla-web-ext/scripts/lib/babel-regenerator-runtime.js
-                    rm -Rf scripts/devtools/dist/index.html
                     rm -Rf scripts/devtools/dist/dist/reps/insight.domplate.reps/dist/reps/*/*.preview.htm
                     rm -Rf scripts/devtools/dist/dist/reps/insight.domplate.reps/dist/reps/reps.json
                     rm -Rf scripts/devtools/dist/dist/reps/io.shields.img.rep.js

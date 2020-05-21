@@ -558,7 +558,7 @@ exports.main = function (JSONREP, node, options) {
       },
       css: {
         ".@": "github.com~0ink~codeblock/codeblock:Codeblock",
-        "_code": "{\"_cssid\":\"e6b4c093136308c5b33910848e833b17a8ffdc8a\",\"repUri\":\"layout\"}",
+        "_code": "{\"_cssid\":\"82d87b72aa7419f2f2111e3d8066482fc701754e\",\"repUri\":\"layout\"}",
         "_format": "json",
         "_args": [],
         "_compiled": false
@@ -639,7 +639,7 @@ exports.main = function (JSONREP, node, options) {
               };
               var versionEl = el.querySelector("DIV.manage TABLE.header DIV.version");
               versionEl.style.display = "none";
-              versionEl.innerHTML = "v" + WINDOW.crossbrowser.runtime.getManifest().version;
+              versionEl.innerHTML = "v" + (WINDOW.crossbrowser.runtime.getManifest().version_name || WINDOW.crossbrowser.runtime.getManifest().version);
 
               if (view === "uninitialized") {
                 toggles.uninitialized = true;
