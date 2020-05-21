@@ -225,7 +225,7 @@
 
                     # Create archive
                     rm -f ../firephp.build.xpi 2> /dev/null || true
-                    zip -r ../firephp.build.xpi * -x 'run.config.json'
+                    # zip -r ../firephp.build.xpi * -x 'run.config.json'
 
                 popd > /dev/null
 
