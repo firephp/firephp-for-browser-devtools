@@ -52,13 +52,20 @@ Build from source:
 **Status: DEV - Commands will currently not run for you!**
 
     rm -Rf dist/        # Optional to verify build
-    nvm use 14
+    nvm use 13
     npm install
     npm run build
     git diff            # Optional to verify build
-        # Only the `version` property in `dist/firephp.build/manifest.json` should have changed.
 
 *Load Addon* from `dist/firephp.build/` into Firefox, Chrome or Brave.
+
+Run from source:
+
+**Status: DEV - Commands will currently not run for you!**
+
+    nvm use 13
+    npm install
+    npm run dev
 
 ### Notes for build reviewers
 

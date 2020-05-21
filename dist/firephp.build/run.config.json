@@ -7,7 +7,7 @@
     "routes": {
         "^/$": {
             ".@": "github.com~0ink~codeblock/codeblock:Codeblock",
-            "_code": "\\nreturn function (req, res, next) {\\n    \\n    if (\\nreq.headers[\"x-firephp-version\"] ||\\n/\\sFirePHP\\/([\\.|\\d]*)\\s?/.test(req.headers[\"user-agent\"])\\n    ) {\\n    \\nfunction wrap (message) {\\n    return message.length + '|' + message + '|';\\n}\\n    \\nres.writeHead(200, {\\n    'X-Wf-Protocol-1': 'http://meta.wildfirehq.org/Protocol/JsonStream/0.2',\\n    'X-Wf-1-Plugin-1': 'http://meta.firephp.org/Wildfire/Plugin/FirePHP/Library-FirePHPCore/0.0.0master1106021548',\\n    'X-Wf-1-Structure-1': 'http://meta.firephp.org/Wildfire/Structure/FirePHP/FirebugConsole/0.1',\\n    \\n    'X-Wf-1-1-1-1': wrap('[{\"Type\":\"LOG\",\"File\":\"/path/to/file\",\"Line\":10},\"Hello World\"]'),\\n    'X-Wf-1-1-1-2': wrap('[{\"Type\":\"INFO\",\"File\":\"\\/christoph\\/projects\\/gi0.FireConsole.org\\/rep.js\\/examples\\/03-FirePHPCore\\/index.php\",\"Line\":75},\"\\\\u0427\\\\u0442\\\\u043e-\\\\u0442\\\\u043e\"]'),\\n    'X-Wf-1-1-1-3': wrap('[{\"Type\":\"INFO\",\"File\":\"\\/christoph\\/projects\\/gi0.FireConsole.org\\/rep.js\\/examples\\/03-FirePHPCore\\/index.php\",\"Line\":76},\"Od\\\\u00f3metro\"]'),\\n    \\n    'X-Wf-1-Index': '3'\\n});\\n    \\n    \\nres.end(\"FirePHP Core formatted messages sent in HTTP response headers.\");\\n    } else {\\n    \\nres.end([\\n    \"<p>No FirePHP HTTP request headers found.</p>\",\\n    \"<p><a href=\\\"http://127.0.0.1:8080/FirePHP.php\\\">http://127.0.0.1:8080/FirePHP.php</a></p>\"\\n].join(\"\\\n\"));\\n    }\\n\\n\\n\\n};",
+            "_code": "\\nreturn function (req, res, next) {\\n    \\n    if (\\nreq.headers[\"x-firephp-version\"] ||\\n/\\sFirePHP\\/([\\.|\\d]*)\\s?/.test(req.headers[\"user-agent\"])\\n    ) {\\n    \\nfunction wrap (message) {\\n    return message.length + '|' + message + '|';\\n}\\n    \\nres.writeHead(200, {\\n    'X-Wf-Protocol-1': 'http://meta.wildfirehq.org/Protocol/JsonStream/0.2',\\n    'X-Wf-1-Plugin-1': 'http://meta.firephp.org/Wildfire/Plugin/FirePHP/Library-FirePHPCore/0.0.0master1106021548',\\n    'X-Wf-1-Structure-1': 'http://meta.firephp.org/Wildfire/Structure/FirePHP/FirebugConsole/0.1',\\n    \\n    'X-Wf-1-1-1-1': wrap('[{\"Type\":\"LOG\",\"File\":\"/path/to/file\",\"Line\":10},\"Hello World\"]'),\\n    'X-Wf-1-1-1-2': wrap('[{\"Type\":\"INFO\",\"File\":\"\\/christoph\\/projects\\/gi0.FireConsole.org\\/rep.js\\/examples\\/03-FirePHPCore\\/index.php\",\"Line\":75},\"\\\\u0427\\\\u0442\\\\u043e-\\\\u0442\\\\u043e\"]'),\\n    'X-Wf-1-1-1-3': wrap('[{\"Type\":\"INFO\",\"File\":\"\\/christoph\\/projects\\/gi0.FireConsole.org\\/rep.js\\/examples\\/03-FirePHPCore\\/index.php\",\"Line\":76},\"Od\\\\u00f3metro\"]'),\\n    \\n    'X-Wf-1-Index': '3'\\n});\\n    \\n    \\nres.end(\"FirePHP Core formatted messages sent in HTTP response headers.\");\\n    } else {\\n    \\nres.end([\\n    \"<p>No FirePHP HTTP request headers found.</p>\",\\n    \"<p><a href=\\\"http://127.0.0.1:8080/FirePHP.php\\\">http://127.0.0.1:8080/FirePHP.php</a></p>\"\\n].join(\"\\\n\"));\\n    }\\n};",
             "_format": "javascript",
             "_args": [
                 "API"
@@ -93,15 +93,6 @@
         }
     },
     "port": 9000,
-    "postbuild": {
-        ".@": "github.com~0ink~codeblock/codeblock:Codeblock",
-        "_code": "\\nreturn async function () {\\n};",
-        "_format": "javascript",
-        "_args": [
-            "LIB"
-        ],
-        "_compiled": false
-    },
     "cwd": "/opt/christoph/projects/gi0.FirePHP.org/firephp-for-browser-devtools",
     "basedir": "/opt/christoph/projects/gi0.FirePHP.org/firephp-for-browser-devtools"
 }

@@ -296,7 +296,10 @@ console.log("forceEditor in layout", forceEditor);
 
                             const versionEl = el.querySelector("DIV.manage TABLE.header DIV.version");
                             versionEl.style.display = "none";
-                            versionEl.innerHTML = "v" + WINDOW.crossbrowser.runtime.getManifest().version;
+                            versionEl.innerHTML = "v" + (
+                                WINDOW.crossbrowser.runtime.getManifest().version_name ||
+                                WINDOW.crossbrowser.runtime.getManifest().version
+                            );
 
                             if (view === "uninitialized") {
                                 toggles.uninitialized = true;
