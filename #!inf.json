@@ -230,10 +230,7 @@
                 popd > /dev/null
 
                 BO_cecho "\nBuilt extension source can be found at: dist/firephp.build/" YELLOW BOLD
-                BO_cecho "This source can be loaded into a browser when running in extension development mode." YELLOW BOLD
-
-                BO_cecho "\nBuilt & archived extension (unsigned) can be found at: dist/firephp.build.xpi" YELLOW BOLD
-                BO_cecho "This build is unusable until signed. Use 'npm run publish' on a branch to sign in self-hosted mode and on master to push a release." YELLOW BOLD
+                BO_cecho "This source can be loaded into a browser when running in extension development mode.\n" YELLOW BOLD
             <<<)
         }
     <<<),
@@ -253,16 +250,16 @@
 
                 pushd "dist/firephp.build" > /dev/null
                     CALL_webext sign {
-                        "dist": "$(pwd)/dist/firephp.xpi",
+                        "dist": "$(pwd)/../firephp.xpi",
                         "manifest": {
                         }
                     }
                 popd > /dev/null
 
                 if [ $(git rev-parse --abbrev-ref HEAD) == "master" ] ; then
-                    BO_cecho "Built extension (signed for addons listing) has been published for review by mozilla and can also be found at: dist/firephp.build.xpi" YELLOW BOLD
+                    BO_cecho "Built extension (signed for addons listing) has been published for review by mozilla and can also be found at: dist/firephp.xpi" YELLOW BOLD
                 else
-                    BO_cecho "Built extension (signed as self-hosted) can be found at: dist/firephp.build.xpi" YELLOW BOLD
+                    BO_cecho "Built extension (signed as self-hosted) can be found at: dist/firephp.xpi" YELLOW BOLD
                 fi
             <<<)
         }
