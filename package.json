@@ -4,10 +4,10 @@
   "devDependencies": {
     "codemirror": "^5.49.0",
     "eventemitter2": "^4.1.2",
-    "insight-for-js": "^0.2.0-pre.0",
-    "wildfire-for-js": "^0.1.4",
-    "fireconsole.rep.js": "^0.1.0-pre.0",
-    "bash.origin.lib": "^0.4.0-pre.20"
+    "insight-for-js": "^0.2.1-pre.0",
+    "wildfire-for-js": "^0.1.5-pre.0",
+    "fireconsole.rep.js": "^0.2.0-pre.0",
+    "bash.origin.lib": "^0.5.0-pre.0"
   },
   "scripts": {
     "test": "pinf.it ./#!inf.json test",
