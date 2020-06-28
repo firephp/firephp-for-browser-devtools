@@ -22,4 +22,7 @@ pushd "firephp"
 
     npm install
 
+    # TODO: Get rid of needing to run this.
+    node_modules/.bin/lib.json from node_modules > .~lib.json
+
 popd

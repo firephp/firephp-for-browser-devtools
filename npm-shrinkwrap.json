@@ -5510,9 +5510,9 @@
       }
     },
     "fireconsole.rep.js": {
-      "version": "0.2.0-pre.1",
-      "resolved": "https://registry.npmjs.org/fireconsole.rep.js/-/fireconsole.rep.js-0.2.0-pre.1.tgz",
-      "integrity": "sha512-bFp/k18HXZOdpJ7E0f1NbCa6JOLHN7RYu7ZfkKDyAeb8Pa1H4UWWEJxign2LiTZlaLgfhkipmeC8N/x6t7JCog==",
+      "version": "0.2.0-pre.2",
+      "resolved": "https://registry.npmjs.org/fireconsole.rep.js/-/fireconsole.rep.js-0.2.0-pre.2.tgz",
+      "integrity": "sha512-b30Tk2EW74aYSdW8Hw+8Tk87VwCQHPjRBQRRP6Enhtr448oZtJGxM95BSzp12I3lkvn3CjkllbSHL6Lh5EU6/w==",
       "dev": true
     },
     "firefox-profile": {
