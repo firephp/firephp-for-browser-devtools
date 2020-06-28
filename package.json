@@ -7,7 +7,9 @@
     "insight-for-js": "^0.2.1-pre.1",
     "wildfire-for-js": "^0.1.4",
     "fireconsole.rep.js": "^0.2.0-pre.1",
-    "bash.origin.lib": "^0.5.0-pre.0"
+    "bash.origin.lib": "^0.5.0-pre.0",
+    "to.pinf.org.mozilla.web-ext": "^0.3.0-pre.0",
+    "it.pinf.org.mozilla.web-ext": "0.3.0-pre.0"
   },
   "scripts": {
     "test": "pinf.it ./#!inf.json test",

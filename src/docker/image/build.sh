@@ -22,7 +22,7 @@ pushd "firephp"
 
     git status
 
-    git diff
+#    git diff
 
 popd
 
