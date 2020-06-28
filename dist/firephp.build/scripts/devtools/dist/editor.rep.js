@@ -563,7 +563,7 @@ exports.main = function (JSONREP, node, options) {
               this.on('update', this.set);
               this.on('mount', this.set);
             });
-            riot.tag2('tag_e7ce2eb402dcaff08a8df09ee619bef75dd33153', '<table width="100%" height="100%" border="0" cellpadding="0" cellspacing="0"> <tr> <td class="menu"> </td> <td class="menu menu-right"> <button onclick="{triggerClose}">Close</button> </td> </tr> <tr> <td class="filetree" width="20%"> <div class="filetree"> </div> </td> <td class="editor" width="80%"> <textarea class="editor"></textarea> </td> </tr> </table>', '', '', function (opts) {
+            riot.tag2('tag_a8a74b856933412a25bf8fc852d97df15dbce804', '<table width="100%" height="100%" border="0" cellpadding="0" cellspacing="0"> <tr> <td class="menu"> </td> <td class="menu menu-right"> <button onclick="{triggerClose}">Close</button> </td> </tr> <tr> <td class="filetree" width="20%"> <div class="filetree"> </div> </td> <td class="editor" width="80%"> <textarea class="editor"></textarea> </td> </tr> </table>', '', '', function (opts) {
               var COMPONENT = require("./component");
 
               var tag = this;
@@ -665,7 +665,7 @@ exports.main = function (JSONREP, node, options) {
                 comp.hideView("editor");
               };
             });
-            riot.mount(el, 'tag_e7ce2eb402dcaff08a8df09ee619bef75dd33153', context);
+            riot.mount(el, 'tag_a8a74b856933412a25bf8fc852d97df15dbce804', context);
           }
         }
       };

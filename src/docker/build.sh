@@ -6,7 +6,7 @@ fi
 
 depend {
     "docker": {
-		"@com.github/bash-origin/bash.origin.docker#s1": "localhost"
+		"bash.origin.docker # runner/v0": "localhost"
 	}
 }
 

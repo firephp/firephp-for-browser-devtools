@@ -4,6 +4,7 @@
 *~.compiled.bash
 .actual.*
 node_modules/
+/package-lock.json
 .rt/
 ~.rt_*
 /dist/firephp.zip
