@@ -14,11 +14,14 @@ pushd "$__DIRNAME__/image" > /dev/null
 
 	echo "Building docker image ..."
 
-	CALL_docker build . "firephp-for-firefox-devtools"
+	CALL_docker build . "firephp-for-firefox-devtools" --no-cache
+	# CALL_docker build . "firephp-for-firefox-devtools"
 
 	echo "Running docker image ..."
 
-	CALL_docker run "firephp-for-firefox-devtools"
+	[ -e ../../../dist/firephp.build-docker ] || mkdir ../../../dist/firephp.build-docker
+
+	CALL_docker run "firephp-for-firefox-devtools" --mount source=../../../dist/firephp.build-docker,target=/firephp/dist/firephp.build
 
 popd > /dev/null
 

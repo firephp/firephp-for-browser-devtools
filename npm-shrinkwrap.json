@@ -852,6 +852,12 @@
             "jsonfile": "^4.0.0",
             "universalify": "^0.1.0"
           }
+        },
+        "pinf-loader-js": {
+          "version": "1.0.4",
+          "resolved": "https://registry.npmjs.org/pinf-loader-js/-/pinf-loader-js-1.0.4.tgz",
+          "integrity": "sha512-1NYozWCZQqSfxAMvDexYmKA/bEcyOFXkVATzhMnZ4toi1wj7M+F0hIRpDjdc9DFjFVOFIrRMAQTSU4NTgzMcHw==",
+          "dev": true
         }
       }
     },
@@ -2182,6 +2188,14 @@
         "uuid": "^3.3.2",
         "uuidgen": "^1.0.0",
         "waitfor": "^0.1.3"
+      },
+      "dependencies": {
+        "pinf-loader-js": {
+          "version": "1.0.4",
+          "resolved": "https://registry.npmjs.org/pinf-loader-js/-/pinf-loader-js-1.0.4.tgz",
+          "integrity": "sha512-1NYozWCZQqSfxAMvDexYmKA/bEcyOFXkVATzhMnZ4toi1wj7M+F0hIRpDjdc9DFjFVOFIrRMAQTSU4NTgzMcHw==",
+          "dev": true
+        }
       }
     },
     "bash.origin.modules": {
@@ -9481,9 +9495,9 @@
       }
     },
     "pinf-loader-js": {
-      "version": "1.0.4",
-      "resolved": "https://registry.npmjs.org/pinf-loader-js/-/pinf-loader-js-1.0.4.tgz",
-      "integrity": "sha512-1NYozWCZQqSfxAMvDexYmKA/bEcyOFXkVATzhMnZ4toi1wj7M+F0hIRpDjdc9DFjFVOFIrRMAQTSU4NTgzMcHw==",
+      "version": "1.1.0-pre.0",
+      "resolved": "https://registry.npmjs.org/pinf-loader-js/-/pinf-loader-js-1.1.0-pre.0.tgz",
+      "integrity": "sha512-VqFumgeas26G37FP/6aUKVKhGtryvcdWl9OkMY7Q99IqpQD1lNss3Pixxpzl5C+d1z4eMo8HeJmD+D275JFiqQ==",
       "dev": true
     },
     "pinkie": {
