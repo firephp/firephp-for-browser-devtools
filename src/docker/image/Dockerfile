@@ -13,4 +13,5 @@ ENV NODE_PATH=/usr/lib/node_modules
 ENV PATH="/node_modules/.bin:$PATH"
 
 RUN ["/bin/bash", "install.sh"]
-CMD ["/bin/bash", "build.sh"]
+
+ENTRYPOINT ["/bin/bash", "build.sh"]
