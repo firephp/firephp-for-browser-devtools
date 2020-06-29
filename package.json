@@ -10,7 +10,8 @@
     "pinf-loader-js": "^1.1.0-pre.0",
     "bash.origin.lib": "^0.5.0-pre.0",
     "to.pinf.org.mozilla.web-ext": "^0.3.0-pre.0",
-    "it.pinf.org.mozilla.web-ext": "0.3.0-pre.0"
+    "it.pinf.org.mozilla.web-ext": "^0.3.0-pre.0",
+    "it.pinf.org.browserify": "^0.2.0-pre.0"
   },
   "scripts": {
     "test": "pinf.it ./#!inf.json test",

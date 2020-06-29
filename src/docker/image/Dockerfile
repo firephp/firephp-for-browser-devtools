@@ -5,7 +5,7 @@ RUN apk update && apk upgrade
 RUN apk add --no-cache \
 	bash curl git perl python make gcc g++ coreutils
 
-COPY .git /source/.git
+COPY .~source /source/.git
 
 COPY install.sh install.sh
 

@@ -14,6 +14,9 @@ pushd "$__DIRNAME__/image" > /dev/null
 
 	echo "Building docker image ..."
 
+	[ ! -e ".~source" ] || rm -Rf ".~source"
+	cp -Rf ../../../.git .~source
+
 	# CALL_docker build . "firephp-for-firefox-devtools" --no-cache
 	CALL_docker build . "firephp-for-firefox-devtools"
 
