@@ -14,15 +14,13 @@ pushd "firephp"
 
     echo "Building ..."
 
-#    export BO_VERBOSE=1
-
+    # export BO_VERBOSE=1
     npm run build
 
     echo "### DIFF ###"
 
     git status
 
-#    git diff
+    # git diff
 
 popd
-
