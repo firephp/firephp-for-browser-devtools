@@ -24,8 +24,8 @@ pushd "$__DIRNAME__/image" > /dev/null
 
 	[ -e ../../../dist/firephp.build-docker ] || mkdir ../../../dist/firephp.build-docker
 
-	CALL_docker run "firephp-for-firefox-devtools" 8080 --mount "src=$(pwd)/../../../dist/firephp.build-docker,target=/firephp/dist/firephp.build,type=bind"
-	# CALL_docker run "firephp-for-firefox-devtools"
+	CALL_docker run "firephp-for-firefox-devtools" 8080 \
+		--mount "src=$(pwd)/../../../dist/firephp.build-docker,target=/firephp/dist/firephp.build,type=bind"
 
 popd > /dev/null
 
