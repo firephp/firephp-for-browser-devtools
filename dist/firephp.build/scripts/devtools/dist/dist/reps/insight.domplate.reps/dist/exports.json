@@ -4,8 +4,8 @@
             "core": {
                 "path": "./insight-domplate-renderer.browser.js",
                 "summary": "Browser JavaScript source code to load and bootstrap reps.",
-                "size": 91354,
-                "hash": "sha1:f4cf21d714d3768c53133d053dbcd0f1b8b3183f"
+                "size": 101238,
+                "hash": "sha1:38109b6660364c169c4d9a5e16de11aada2f8a4b"
             }
         }
     }
