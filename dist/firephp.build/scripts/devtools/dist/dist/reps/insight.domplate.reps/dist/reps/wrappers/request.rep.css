@@ -1,0 +1,91 @@
+
+DIV.console-request[__dbid="42e45d15f38354db25f807078ed4de450a918dea"] {
+    position: relative;
+    margin: 0;
+    border-bottom: 1px solid #D7D7D7;
+    padding: 0px;
+    background-color: steelblue;
+}
+DIV.console-request.selected[__dbid="42e45d15f38354db25f807078ed4de450a918dea"] {
+    background-color: #35FC03 !important;
+}
+DIV.console-request[__dbid="42e45d15f38354db25f807078ed4de450a918dea"] > DIV.header {
+    position: relative;
+    padding-left: 34px;
+    padding-right: 10px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    cursor: pointer;
+    min-height: 16px;
+}
+DIV.console-request[__dbid="42e45d15f38354db25f807078ed4de450a918dea"][expanded=false] > DIV.header:hover {
+    background-color: #ffc73d;
+}
+DIV.console-request[__dbid="42e45d15f38354db25f807078ed4de450a918dea"] > DIV.header > DIV.expander {
+    background-color: black;
+    width: 18px;
+    height: 18px;
+    display: inline-block;
+    float: left;
+    position: relative;
+    top: -1px;
+    margin-left: -14px;
+}
+DIV.console-request[__dbid="42e45d15f38354db25f807078ed4de450a918dea"] > DIV.header > DIV.expander:hover {
+    cursor: pointer;
+}
+DIV.console-request[__dbid="42e45d15f38354db25f807078ed4de450a918dea"][expanded=false] > DIV.header > DIV.expander {
+    background: url(images/plus-small-white.png) no-repeat;
+    background-position: 0px 1px;
+}
+DIV.console-request[__dbid="42e45d15f38354db25f807078ed4de450a918dea"][expanded=true] > DIV.header > DIV.expander {
+    background: url(images/minus-small-white.png) no-repeat;
+    background-position: 0px 1px;
+}
+DIV.console-request[__dbid="42e45d15f38354db25f807078ed4de450a918dea"] > DIV.header > SPAN.fileline > DIV > DIV.label {
+    float: left;
+    margin-top: 0px;
+}
+DIV.console-request[__dbid="42e45d15f38354db25f807078ed4de450a918dea"] > DIV.header > SPAN.summary > SPAN > SPAN.count {
+    color: #8c8c8c;
+}
+DIV.console-request[__dbid="42e45d15f38354db25f807078ed4de450a918dea"] > DIV.header > SPAN.fileline {
+    color: #8c8c8c;
+    word-wrap: break-word;
+    float: right;
+}
+DIV.console-request[__dbid="42e45d15f38354db25f807078ed4de450a918dea"] > DIV.header > SPAN.summary > SPAN {
+    color: #e6e6e6;
+}
+DIV.console-request[__dbid="42e45d15f38354db25f807078ed4de450a918dea"][expandedSummary=true] > DIV.header > SPAN.summary {
+    display: none;
+}
+DIV.console-request[__dbid="42e45d15f38354db25f807078ed4de450a918dea"] > DIV.header {
+    text-align: left !important;
+}
+DIV.console-request[__dbid="42e45d15f38354db25f807078ed4de450a918dea"][keeptitle=true] > DIV.header > SPAN.summary {
+    display: inline !important;
+}
+DIV.console-request[__dbid="42e45d15f38354db25f807078ed4de450a918dea"] > DIV.header > DIV.labels {
+    display: inline-block;
+    position: relative;
+    top: 0px;
+    left: 10px;
+    float: right;
+    margin-left: 0px;
+    margin-right: 5px;
+    font-weight: bold;
+    color: #c8daea;
+    padding-top: 1px;
+}
+DIV.console-request[__dbid="42e45d15f38354db25f807078ed4de450a918dea"] > DIV.body {
+    padding: 0px;
+    margin: 0px;
+    background-color: #ffffff;
+}
+DIV.console-request[__dbid="42e45d15f38354db25f807078ed4de450a918dea"][expanded=false] > DIV.body {
+    display: none;
+}
+DIV.console-request[__dbid="42e45d15f38354db25f807078ed4de450a918dea"] .hidden {
+    display: none !important;
+}

@@ -1,0 +1,27 @@
+
+SPAN.null[__dbid="e8cfecc4a8618496bf811fa7fbd33dfc2338df59"] {
+    color: navy;
+}
+
+SPAN.string[__dbid="e8cfecc4a8618496bf811fa7fbd33dfc2338df59"] {
+    color: black;
+}
+
+SPAN.string[__dbid="e8cfecc4a8618496bf811fa7fbd33dfc2338df59"][wrapped=true] {
+    color: red;
+}
+
+SPAN.string[__dbid="e8cfecc4a8618496bf811fa7fbd33dfc2338df59"] > SPAN.special {
+    color: gray;
+    font-weight: bold;
+    padding-left: 3px;
+    padding-right: 3px;
+}
+
+SPAN.string[__dbid="e8cfecc4a8618496bf811fa7fbd33dfc2338df59"] > SPAN.trimmed {
+    color: #FFFFFF;
+    background-color: blue;
+    padding-left: 5px;
+    padding-right: 5px;
+    margin-left: 5px;
+}

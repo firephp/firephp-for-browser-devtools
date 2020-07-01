@@ -1,0 +1,181 @@
+
+DIV.console-message[__dbid="f19222d1afdcb813baf69909d376ee63829cda3c"] {
+    position: relative;
+    margin: 0;
+    border-bottom: 1px solid #D7D7D7;
+    padding: 0px;
+    background-color: #FFFFFF;
+}
+DIV.console-message.selected[__dbid="f19222d1afdcb813baf69909d376ee63829cda3c"] {
+    background-color: #35FC03 !important;
+}
+DIV.console-message-group[__dbid="f19222d1afdcb813baf69909d376ee63829cda3c"][expanded=true] {
+    background-color: #77CDD9;
+}
+DIV.console-message[__dbid="f19222d1afdcb813baf69909d376ee63829cda3c"] > DIV.header {
+    position: relative;
+    padding-left: 34px;
+    padding-right: 10px;
+    padding-top: 3px;
+    padding-bottom: 4px;
+    cursor: pointer;
+    min-height: 16px;
+}
+DIV.console-message[__dbid="f19222d1afdcb813baf69909d376ee63829cda3c"][expanded=true] > DIV.header > SPAN.summary {
+    opacity: 0.4;
+}
+DIV.console-message[__dbid="f19222d1afdcb813baf69909d376ee63829cda3c"][expanded=false] > DIV.header:hover {
+    background-color: #ffc73d;
+}
+DIV.console-message-group[__dbid="f19222d1afdcb813baf69909d376ee63829cda3c"] > DIV.header {
+    background: url(images/document_page_next.png) no-repeat;
+    background-position: 2px 3px;
+    font-weight: bold;
+    background-color: #77CDD9;
+}
+DIV.console-message[__dbid="f19222d1afdcb813baf69909d376ee63829cda3c"] > DIV.header-priority-info {
+    background: url(images/information.png) no-repeat;
+    background-position: 2px 3px;
+    background-color: #c6eeff;
+}
+DIV.console-message[__dbid="f19222d1afdcb813baf69909d376ee63829cda3c"] > DIV.header-priority-warn {
+    background: url(images/exclamation-diamond.png) no-repeat;
+    background-position: 2px 3px;
+    background-color: #ffe68d;
+}
+DIV.console-message[__dbid="f19222d1afdcb813baf69909d376ee63829cda3c"] > DIV.header-priority-error {
+    background: url(images/exclamation-red.png) no-repeat;
+    background-position: 2px 3px;
+    background-color: #ffa7a7;
+}
+DIV.console-message[__dbid="f19222d1afdcb813baf69909d376ee63829cda3c"] > DIV.header > DIV.expander {
+    background-color: black;
+    width: 18px;
+    height: 18px;
+    display: inline-block;
+    float: left;
+    position: relative;
+    top: -1px;
+    margin-left: -14px;
+}
+DIV.console-message[__dbid="f19222d1afdcb813baf69909d376ee63829cda3c"] > DIV.header > DIV.expander:hover {
+    cursor: pointer;
+}
+DIV.console-message[__dbid="f19222d1afdcb813baf69909d376ee63829cda3c"][expanded=false] > DIV.header > DIV.expander {
+    background: url(images/plus-small-white.png) no-repeat;
+    background-position: 0px 1px;
+}
+DIV.console-message[__dbid="f19222d1afdcb813baf69909d376ee63829cda3c"][expanded=true] > DIV.header > DIV.expander {
+    background: url(images/minus-small-white.png) no-repeat;
+    background-position: 0px 1px;
+}
+DIV.console-message[__dbid="f19222d1afdcb813baf69909d376ee63829cda3c"] > DIV.header > SPAN.summary > SPAN.label > SPAN, DIV.console-message > DIV.header > SPAN.fileline > DIV > DIV.label {
+    margin-right: 5px;
+    background-color: rgba(69,68,60,1);
+    padding-left: 5px;
+    padding-right: 5px;
+    color: white;
+    vertical-align: top;
+    margin-top: 1px;
+}
+DIV.console-message[__dbid="f19222d1afdcb813baf69909d376ee63829cda3c"] > DIV.header > SPAN.fileline > DIV > DIV.label {
+    float: left;
+    margin-top: 0px;
+}
+DIV.console-message[__dbid="f19222d1afdcb813baf69909d376ee63829cda3c"] > DIV.header > SPAN.summary > SPAN > SPAN.count {
+    color: #525252;
+}
+DIV.console-message[__dbid="f19222d1afdcb813baf69909d376ee63829cda3c"] > DIV.header > SPAN.fileline {
+    color: #525252;
+    word-wrap: break-word;
+    float: right;
+}
+DIV.console-message[__dbid="f19222d1afdcb813baf69909d376ee63829cda3c"][expandedSummary=true] > DIV.header > SPAN.summary {
+    display: none;
+}
+DIV.console-message[__dbid="f19222d1afdcb813baf69909d376ee63829cda3c"][keeptitle=true] > DIV.header, DIV.console-message-group > DIV.header {
+    text-align: left !important;
+}
+DIV.console-message[__dbid="f19222d1afdcb813baf69909d376ee63829cda3c"][keeptitle=true] > DIV.header > SPAN.fileline, DIV.console-message-group > DIV.header > SPAN.fileline {
+    display: none !important;
+}
+DIV.console-message[__dbid="f19222d1afdcb813baf69909d376ee63829cda3c"][keeptitle=true] > DIV.header > SPAN.summary, DIV.console-message-group > DIV.header > SPAN.summary {
+    display: inline !important;
+}
+DIV.console-message-group[__dbid="f19222d1afdcb813baf69909d376ee63829cda3c"] > DIV.header > DIV.actions {
+    display: none !important;
+}
+DIV.console-message-group[__dbid="f19222d1afdcb813baf69909d376ee63829cda3c"] > DIV.header > SPAN.summary > SPAN > SPAN.count {
+    color: #ffffff !important;
+}
+DIV.console-message[__dbid="f19222d1afdcb813baf69909d376ee63829cda3c"][expanded=false] > DIV.header > SPAN.fileline {
+    display: none;
+}
+DIV.console-message[__dbid="f19222d1afdcb813baf69909d376ee63829cda3c"] > DIV.header > DIV.actions {
+    display: inline-block;
+    position: relative;
+    top: 0px;
+    left: 10px;
+    float: right;
+    margin-left: 0px;
+    margin-right: 5px;
+}
+DIV.console-message[__dbid="f19222d1afdcb813baf69909d376ee63829cda3c"] > DIV.header > DIV.actions DIV.inspect {
+    display: inline-block;
+    background: url(images/node-magnifier.png) no-repeat;
+    width: 16px;
+    height: 16px;
+    margin-right: 4px;
+}
+DIV.console-message[__dbid="f19222d1afdcb813baf69909d376ee63829cda3c"] > DIV.header > DIV.actions > DIV.file {
+    display: inline-block;
+    background: url(images/document-binary.png) no-repeat;
+    width: 16px;
+    height: 16px;
+    margin-right: 4px;
+}
+DIV.console-message[__dbid="f19222d1afdcb813baf69909d376ee63829cda3c"] > DIV.header > DIV.actions > DIV.inspect:hover, DIV.console-message > DIV.header > DIV.actions > DIV.file:hover {
+    cursor: pointer;
+}
+DIV.console-message[__dbid="f19222d1afdcb813baf69909d376ee63829cda3c"] > DIV.body {
+    padding: 6px;
+    margin: 3px;
+    margin-top: 0px;
+}
+DIV.console-message[__dbid="f19222d1afdcb813baf69909d376ee63829cda3c"][expanded=false] > DIV.body {
+    display: none;
+}
+DIV.console-message-group[__dbid="f19222d1afdcb813baf69909d376ee63829cda3c"] > DIV.body {
+    padding: 0px;
+    margin: 0px;
+    margin-left: 20px;
+    border-top: 1px solid #000000;
+    border-left: 1px solid #000000;
+    margin-bottom: -1px;
+}
+DIV.console-message[__dbid="f19222d1afdcb813baf69909d376ee63829cda3c"] > DIV.body-priority-info {
+    border: 3px solid #c6eeff;
+    margin: 0px;
+    border-top: 0px;
+}
+DIV.console-message[__dbid="f19222d1afdcb813baf69909d376ee63829cda3c"] > DIV.body-priority-warn {
+    border: 3px solid #ffe68d;
+    margin: 0px;
+    border-top: 0px;
+}
+DIV.console-message[__dbid="f19222d1afdcb813baf69909d376ee63829cda3c"] > DIV.body-priority-error {
+    border: 3px solid #ffa7a7;
+    margin: 0px;
+    border-top: 0px;
+}
+DIV.console-message[__dbid="f19222d1afdcb813baf69909d376ee63829cda3c"] > DIV.body > DIV.group-no-messages {
+    background-color: white;
+    padding-left: 4px;
+    padding-right: 4px;
+    padding-top: 3px;
+    padding-bottom: 3px;
+    color: gray;
+}
+DIV.console-message[__dbid="f19222d1afdcb813baf69909d376ee63829cda3c"] .hidden {
+    display: none !important;
+}

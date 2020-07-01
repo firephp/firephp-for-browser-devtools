@@ -1,0 +1,51 @@
+
+SPAN.dictionary[__dbid="77a4ea3f2f877bdbce48a9c8f3bb26e983097a74"] > SPAN {
+    color: #9C9C9C;
+}
+
+SPAN.dictionary[__dbid="77a4ea3f2f877bdbce48a9c8f3bb26e983097a74"] > SPAN.collapsed {
+    color: #0000FF;
+    font-weight: normal;
+    padding-left: 5px;
+    padding-right: 5px;
+}
+
+SPAN.dictionary[__dbid="77a4ea3f2f877bdbce48a9c8f3bb26e983097a74"] > SPAN.summary {
+    color: #0000FF;
+    font-weight: normal;
+    padding-left: 5px;
+    padding-right: 5px;
+}
+
+SPAN.dictionary[__dbid="77a4ea3f2f877bdbce48a9c8f3bb26e983097a74"] > SPAN.member {
+    color: #9C9C9C;
+}
+
+SPAN.dictionary[__dbid="77a4ea3f2f877bdbce48a9c8f3bb26e983097a74"] > DIV.member {
+    display: block;
+    padding-left: 20px;
+}
+SPAN.dictionary[__dbid="77a4ea3f2f877bdbce48a9c8f3bb26e983097a74"] > DIV.member.expandable {
+    background-image: url(images/twisty-closed.png);
+    background-repeat: no-repeat;
+    background-position: 6px 2px;
+    cursor: pointer;
+}
+SPAN.dictionary[__dbid="77a4ea3f2f877bdbce48a9c8f3bb26e983097a74"] > DIV.member.expandable.expanded {
+    background-image: url(images/twisty-open.png);
+}
+
+SPAN.dictionary[__dbid="77a4ea3f2f877bdbce48a9c8f3bb26e983097a74"] > .member > SPAN.name {
+    color: #E59D07;
+    font-weight: normal;
+}
+
+SPAN.dictionary[__dbid="77a4ea3f2f877bdbce48a9c8f3bb26e983097a74"] > .member > SPAN.value {
+    font-weight: normal;
+}
+
+SPAN.dictionary[__dbid="77a4ea3f2f877bdbce48a9c8f3bb26e983097a74"] > .member > SPAN.delimiter, SPAN.dictionary > .member > SPAN.separator, SPAN.dictionary > .member SPAN.more {
+    color: #9C9C9C;
+    padding-left: 2px;
+    padding-right: 2px;
+}        

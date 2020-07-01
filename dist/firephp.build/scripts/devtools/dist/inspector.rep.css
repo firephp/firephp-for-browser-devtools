@@ -1,0 +1,17 @@
+
+[_cssid="9c9be6e55e2065132117ad31082315bbfe861e49"].inspector {
+    padding: 10px;
+}
+
+[_cssid="9c9be6e55e2065132117ad31082315bbfe861e49"].inspector > .close {
+    border: 1px solid #dcdcdc;
+    font-weight: bold;
+    float: right;
+    cursor: pointer;
+    padding: 2px;
+    line-height: 10px;
+}
+
+[_cssid="9c9be6e55e2065132117ad31082315bbfe861e49"].inspector > .viewer {
+    height: 100%;
+}                    
