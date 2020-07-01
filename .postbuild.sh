@@ -19,6 +19,7 @@ pushd "dist/firephp.build" > /dev/null
     rm -Rf scripts/devtools/dist/dist/reps/div.rep.js
     rm -Rf scripts/devtools/dist/dist/reps/golden-layout.rep.js
     rm -Rf skin/box.png
+    rm -Rf run.config.json
 
     # Remove signed archive as it needs to be re-signed
     rm -f ../firephp.build.xpi 2> /dev/null || true
