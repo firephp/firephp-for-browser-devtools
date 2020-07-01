@@ -15,8 +15,8 @@
   },
   "scripts": {
     "test": "pinf.it ./#!inf.json test",
-    "dev": "([ ! -e '.~/gi0.PINF.it~build~v0' ] || rm -Rf '.~/gi0.PINF.it~build~v0') && ([ ! -e 'dist/firephp.build' ] || rm -Rf 'dist/firephp.build'); pinf.it ./#!inf.json dev --watch",
-    "build": "([ ! -e '.~/gi0.PINF.it~build~v0' ] || rm -Rf '.~/gi0.PINF.it~build~v0') && ([ ! -e 'dist/firephp.build' ] || rm -Rf 'dist/firephp.build'); pinf.it ./#!inf.json build",
+    "dev": "./prepare.sh; pinf.it ./#!inf.json dev --watch",
+    "build": "./prepare.sh; pinf.it ./#!inf.json build",
     "build-via-docker": "./src/docker/build.sh",
     "publish": "pinf.it ./#!inf.json publish"
   }
