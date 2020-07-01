@@ -211,6 +211,7 @@
                         pushd "dist/firephp.build" > /dev/null
 
                             # Remove files that we do not need
+                            # TODO: Do this in a better way and coordinate with .gitignore
                             rm -Rf scripts/devtools/dist/dist/riot.min.js
                             rm -Rf scripts/devtools/dist/dist/riot.js
                             rm -Rf scripts/devtools/dist/dist/babel-regenerator-runtime.js
