@@ -1,0 +1,19 @@
+name: Build
+on:
+    - push
+jobs:
+    Run:
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                node-version:
+                    - 13.x
+        steps:
+            -
+                uses: actions/checkout@v1
+            -
+                name: Install
+                run: npm install
+            -
+                name: Build
+                run: npm run build
