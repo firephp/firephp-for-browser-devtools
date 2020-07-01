@@ -9,924 +9,6 @@ _module.exports = init();
        var pmodule = bundle.module;
 
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.mainModule = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
-var root = require('./_root');
-
-/** Built-in value references. */
-var Symbol = root.Symbol;
-
-module.exports = Symbol;
-
-},{"./_root":6}],2:[function(require,module,exports){
-var Symbol = require('./_Symbol'),
-    getRawTag = require('./_getRawTag'),
-    objectToString = require('./_objectToString');
-
-/** `Object#toString` result references. */
-var nullTag = '[object Null]',
-    undefinedTag = '[object Undefined]';
-
-/** Built-in value references. */
-var symToStringTag = Symbol ? Symbol.toStringTag : undefined;
-
-/**
- * The base implementation of `getTag` without fallbacks for buggy environments.
- *
- * @private
- * @param {*} value The value to query.
- * @returns {string} Returns the `toStringTag`.
- */
-function baseGetTag(value) {
-  if (value == null) {
-    return value === undefined ? undefinedTag : nullTag;
-  }
-  return (symToStringTag && symToStringTag in Object(value))
-    ? getRawTag(value)
-    : objectToString(value);
-}
-
-module.exports = baseGetTag;
-
-},{"./_Symbol":1,"./_getRawTag":4,"./_objectToString":5}],3:[function(require,module,exports){
-(function (global){
-/** Detect free variable `global` from Node.js. */
-var freeGlobal = typeof global == 'object' && global && global.Object === Object && global;
-
-module.exports = freeGlobal;
-
-}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],4:[function(require,module,exports){
-var Symbol = require('./_Symbol');
-
-/** Used for built-in method references. */
-var objectProto = Object.prototype;
-
-/** Used to check objects for own properties. */
-var hasOwnProperty = objectProto.hasOwnProperty;
-
-/**
- * Used to resolve the
- * [`toStringTag`](http://ecma-international.org/ecma-262/7.0/#sec-object.prototype.tostring)
- * of values.
- */
-var nativeObjectToString = objectProto.toString;
-
-/** Built-in value references. */
-var symToStringTag = Symbol ? Symbol.toStringTag : undefined;
-
-/**
- * A specialized version of `baseGetTag` which ignores `Symbol.toStringTag` values.
- *
- * @private
- * @param {*} value The value to query.
- * @returns {string} Returns the raw `toStringTag`.
- */
-function getRawTag(value) {
-  var isOwn = hasOwnProperty.call(value, symToStringTag),
-      tag = value[symToStringTag];
-
-  try {
-    value[symToStringTag] = undefined;
-    var unmasked = true;
-  } catch (e) {}
-
-  var result = nativeObjectToString.call(value);
-  if (unmasked) {
-    if (isOwn) {
-      value[symToStringTag] = tag;
-    } else {
-      delete value[symToStringTag];
-    }
-  }
-  return result;
-}
-
-module.exports = getRawTag;
-
-},{"./_Symbol":1}],5:[function(require,module,exports){
-/** Used for built-in method references. */
-var objectProto = Object.prototype;
-
-/**
- * Used to resolve the
- * [`toStringTag`](http://ecma-international.org/ecma-262/7.0/#sec-object.prototype.tostring)
- * of values.
- */
-var nativeObjectToString = objectProto.toString;
-
-/**
- * Converts `value` to a string using `Object.prototype.toString`.
- *
- * @private
- * @param {*} value The value to convert.
- * @returns {string} Returns the converted string.
- */
-function objectToString(value) {
-  return nativeObjectToString.call(value);
-}
-
-module.exports = objectToString;
-
-},{}],6:[function(require,module,exports){
-var freeGlobal = require('./_freeGlobal');
-
-/** Detect free variable `self`. */
-var freeSelf = typeof self == 'object' && self && self.Object === Object && self;
-
-/** Used as a reference to the global object. */
-var root = freeGlobal || freeSelf || Function('return this')();
-
-module.exports = root;
-
-},{"./_freeGlobal":3}],7:[function(require,module,exports){
-var isObject = require('./isObject'),
-    now = require('./now'),
-    toNumber = require('./toNumber');
-
-/** Error message constants. */
-var FUNC_ERROR_TEXT = 'Expected a function';
-
-/* Built-in method references for those with the same name as other `lodash` methods. */
-var nativeMax = Math.max,
-    nativeMin = Math.min;
-
-/**
- * Creates a debounced function that delays invoking `func` until after `wait`
- * milliseconds have elapsed since the last time the debounced function was
- * invoked. The debounced function comes with a `cancel` method to cancel
- * delayed `func` invocations and a `flush` method to immediately invoke them.
- * Provide `options` to indicate whether `func` should be invoked on the
- * leading and/or trailing edge of the `wait` timeout. The `func` is invoked
- * with the last arguments provided to the debounced function. Subsequent
- * calls to the debounced function return the result of the last `func`
- * invocation.
- *
- * **Note:** If `leading` and `trailing` options are `true`, `func` is
- * invoked on the trailing edge of the timeout only if the debounced function
- * is invoked more than once during the `wait` timeout.
- *
- * If `wait` is `0` and `leading` is `false`, `func` invocation is deferred
- * until to the next tick, similar to `setTimeout` with a timeout of `0`.
- *
- * See [David Corbacho's article](https://css-tricks.com/debouncing-throttling-explained-examples/)
- * for details over the differences between `_.debounce` and `_.throttle`.
- *
- * @static
- * @memberOf _
- * @since 0.1.0
- * @category Function
- * @param {Function} func The function to debounce.
- * @param {number} [wait=0] The number of milliseconds to delay.
- * @param {Object} [options={}] The options object.
- * @param {boolean} [options.leading=false]
- *  Specify invoking on the leading edge of the timeout.
- * @param {number} [options.maxWait]
- *  The maximum time `func` is allowed to be delayed before it's invoked.
- * @param {boolean} [options.trailing=true]
- *  Specify invoking on the trailing edge of the timeout.
- * @returns {Function} Returns the new debounced function.
- * @example
- *
- * // Avoid costly calculations while the window size is in flux.
- * jQuery(window).on('resize', _.debounce(calculateLayout, 150));
- *
- * // Invoke `sendMail` when clicked, debouncing subsequent calls.
- * jQuery(element).on('click', _.debounce(sendMail, 300, {
- *   'leading': true,
- *   'trailing': false
- * }));
- *
- * // Ensure `batchLog` is invoked once after 1 second of debounced calls.
- * var debounced = _.debounce(batchLog, 250, { 'maxWait': 1000 });
- * var source = new EventSource('/stream');
- * jQuery(source).on('message', debounced);
- *
- * // Cancel the trailing debounced invocation.
- * jQuery(window).on('popstate', debounced.cancel);
- */
-function debounce(func, wait, options) {
-  var lastArgs,
-      lastThis,
-      maxWait,
-      result,
-      timerId,
-      lastCallTime,
-      lastInvokeTime = 0,
-      leading = false,
-      maxing = false,
-      trailing = true;
-
-  if (typeof func != 'function') {
-    throw new TypeError(FUNC_ERROR_TEXT);
-  }
-  wait = toNumber(wait) || 0;
-  if (isObject(options)) {
-    leading = !!options.leading;
-    maxing = 'maxWait' in options;
-    maxWait = maxing ? nativeMax(toNumber(options.maxWait) || 0, wait) : maxWait;
-    trailing = 'trailing' in options ? !!options.trailing : trailing;
-  }
-
-  function invokeFunc(time) {
-    var args = lastArgs,
-        thisArg = lastThis;
-
-    lastArgs = lastThis = undefined;
-    lastInvokeTime = time;
-    result = func.apply(thisArg, args);
-    return result;
-  }
-
-  function leadingEdge(time) {
-    // Reset any `maxWait` timer.
-    lastInvokeTime = time;
-    // Start the timer for the trailing edge.
-    timerId = setTimeout(timerExpired, wait);
-    // Invoke the leading edge.
-    return leading ? invokeFunc(time) : result;
-  }
-
-  function remainingWait(time) {
-    var timeSinceLastCall = time - lastCallTime,
-        timeSinceLastInvoke = time - lastInvokeTime,
-        timeWaiting = wait - timeSinceLastCall;
-
-    return maxing
-      ? nativeMin(timeWaiting, maxWait - timeSinceLastInvoke)
-      : timeWaiting;
-  }
-
-  function shouldInvoke(time) {
-    var timeSinceLastCall = time - lastCallTime,
-        timeSinceLastInvoke = time - lastInvokeTime;
-
-    // Either this is the first call, activity has stopped and we're at the
-    // trailing edge, the system time has gone backwards and we're treating
-    // it as the trailing edge, or we've hit the `maxWait` limit.
-    return (lastCallTime === undefined || (timeSinceLastCall >= wait) ||
-      (timeSinceLastCall < 0) || (maxing && timeSinceLastInvoke >= maxWait));
-  }
-
-  function timerExpired() {
-    var time = now();
-    if (shouldInvoke(time)) {
-      return trailingEdge(time);
-    }
-    // Restart the timer.
-    timerId = setTimeout(timerExpired, remainingWait(time));
-  }
-
-  function trailingEdge(time) {
-    timerId = undefined;
-
-    // Only invoke if we have `lastArgs` which means `func` has been
-    // debounced at least once.
-    if (trailing && lastArgs) {
-      return invokeFunc(time);
-    }
-    lastArgs = lastThis = undefined;
-    return result;
-  }
-
-  function cancel() {
-    if (timerId !== undefined) {
-      clearTimeout(timerId);
-    }
-    lastInvokeTime = 0;
-    lastArgs = lastCallTime = lastThis = timerId = undefined;
-  }
-
-  function flush() {
-    return timerId === undefined ? result : trailingEdge(now());
-  }
-
-  function debounced() {
-    var time = now(),
-        isInvoking = shouldInvoke(time);
-
-    lastArgs = arguments;
-    lastThis = this;
-    lastCallTime = time;
-
-    if (isInvoking) {
-      if (timerId === undefined) {
-        return leadingEdge(lastCallTime);
-      }
-      if (maxing) {
-        // Handle invocations in a tight loop.
-        clearTimeout(timerId);
-        timerId = setTimeout(timerExpired, wait);
-        return invokeFunc(lastCallTime);
-      }
-    }
-    if (timerId === undefined) {
-      timerId = setTimeout(timerExpired, wait);
-    }
-    return result;
-  }
-  debounced.cancel = cancel;
-  debounced.flush = flush;
-  return debounced;
-}
-
-module.exports = debounce;
-
-},{"./isObject":8,"./now":11,"./toNumber":12}],8:[function(require,module,exports){
-/**
- * Checks if `value` is the
- * [language type](http://www.ecma-international.org/ecma-262/7.0/#sec-ecmascript-language-types)
- * of `Object`. (e.g. arrays, functions, objects, regexes, `new Number(0)`, and `new String('')`)
- *
- * @static
- * @memberOf _
- * @since 0.1.0
- * @category Lang
- * @param {*} value The value to check.
- * @returns {boolean} Returns `true` if `value` is an object, else `false`.
- * @example
- *
- * _.isObject({});
- * // => true
- *
- * _.isObject([1, 2, 3]);
- * // => true
- *
- * _.isObject(_.noop);
- * // => true
- *
- * _.isObject(null);
- * // => false
- */
-function isObject(value) {
-  var type = typeof value;
-  return value != null && (type == 'object' || type == 'function');
-}
-
-module.exports = isObject;
-
-},{}],9:[function(require,module,exports){
-/**
- * Checks if `value` is object-like. A value is object-like if it's not `null`
- * and has a `typeof` result of "object".
- *
- * @static
- * @memberOf _
- * @since 4.0.0
- * @category Lang
- * @param {*} value The value to check.
- * @returns {boolean} Returns `true` if `value` is object-like, else `false`.
- * @example
- *
- * _.isObjectLike({});
- * // => true
- *
- * _.isObjectLike([1, 2, 3]);
- * // => true
- *
- * _.isObjectLike(_.noop);
- * // => false
- *
- * _.isObjectLike(null);
- * // => false
- */
-function isObjectLike(value) {
-  return value != null && typeof value == 'object';
-}
-
-module.exports = isObjectLike;
-
-},{}],10:[function(require,module,exports){
-var baseGetTag = require('./_baseGetTag'),
-    isObjectLike = require('./isObjectLike');
-
-/** `Object#toString` result references. */
-var symbolTag = '[object Symbol]';
-
-/**
- * Checks if `value` is classified as a `Symbol` primitive or object.
- *
- * @static
- * @memberOf _
- * @since 4.0.0
- * @category Lang
- * @param {*} value The value to check.
- * @returns {boolean} Returns `true` if `value` is a symbol, else `false`.
- * @example
- *
- * _.isSymbol(Symbol.iterator);
- * // => true
- *
- * _.isSymbol('abc');
- * // => false
- */
-function isSymbol(value) {
-  return typeof value == 'symbol' ||
-    (isObjectLike(value) && baseGetTag(value) == symbolTag);
-}
-
-module.exports = isSymbol;
-
-},{"./_baseGetTag":2,"./isObjectLike":9}],11:[function(require,module,exports){
-var root = require('./_root');
-
-/**
- * Gets the timestamp of the number of milliseconds that have elapsed since
- * the Unix epoch (1 January 1970 00:00:00 UTC).
- *
- * @static
- * @memberOf _
- * @since 2.4.0
- * @category Date
- * @returns {number} Returns the timestamp.
- * @example
- *
- * _.defer(function(stamp) {
- *   console.log(_.now() - stamp);
- * }, _.now());
- * // => Logs the number of milliseconds it took for the deferred invocation.
- */
-var now = function() {
-  return root.Date.now();
-};
-
-module.exports = now;
-
-},{"./_root":6}],12:[function(require,module,exports){
-var isObject = require('./isObject'),
-    isSymbol = require('./isSymbol');
-
-/** Used as references for various `Number` constants. */
-var NAN = 0 / 0;
-
-/** Used to match leading and trailing whitespace. */
-var reTrim = /^\s+|\s+$/g;
-
-/** Used to detect bad signed hexadecimal string values. */
-var reIsBadHex = /^[-+]0x[0-9a-f]+$/i;
-
-/** Used to detect binary string values. */
-var reIsBinary = /^0b[01]+$/i;
-
-/** Used to detect octal string values. */
-var reIsOctal = /^0o[0-7]+$/i;
-
-/** Built-in method references without a dependency on `root`. */
-var freeParseInt = parseInt;
-
-/**
- * Converts `value` to a number.
- *
- * @static
- * @memberOf _
- * @since 4.0.0
- * @category Lang
- * @param {*} value The value to process.
- * @returns {number} Returns the number.
- * @example
- *
- * _.toNumber(3.2);
- * // => 3.2
- *
- * _.toNumber(Number.MIN_VALUE);
- * // => 5e-324
- *
- * _.toNumber(Infinity);
- * // => Infinity
- *
- * _.toNumber('3.2');
- * // => 3.2
- */
-function toNumber(value) {
-  if (typeof value == 'number') {
-    return value;
-  }
-  if (isSymbol(value)) {
-    return NAN;
-  }
-  if (isObject(value)) {
-    var other = typeof value.valueOf == 'function' ? value.valueOf() : value;
-    value = isObject(other) ? (other + '') : other;
-  }
-  if (typeof value != 'string') {
-    return value === 0 ? value : +value;
-  }
-  value = value.replace(reTrim, '');
-  var isBinary = reIsBinary.test(value);
-  return (isBinary || reIsOctal.test(value))
-    ? freeParseInt(value.slice(2), isBinary ? 2 : 8)
-    : (reIsBadHex.test(value) ? NAN : +value);
-}
-
-module.exports = toNumber;
-
-},{"./isObject":8,"./isSymbol":10}],13:[function(require,module,exports){
-"use strict";
-
-exports.main = function (JSONREP, node, options) {
-  return JSONREP.makeRep2({
-    "config": {
-      "node": node
-    },
-    "code": function (context, options) {
-      var JSONREP = this;
-      return {
-        html: "<div></div>",
-        "on": {
-          "mount": function (el) {
-            if ("1" === "1") {
-              riot.util.styleManager.inject = function () {
-                if (!options) return;
-                JSONREP.loadStyle(options.renderer.uri + '.css');
-              };
-            } else {
-              riot.util.styleManager.add = function (cssText, name) {
-                if (!cssText) {
-                  return;
-                }
-
-                if (window.document.createStyleSheet) {
-                  var sheet = window.document.createStyleSheet();
-                  sheet.cssText = cssText;
-                } else {
-                  var style = window.document.createElementNS ? window.document.createElementNS("http://www.w3.org/1999/xhtml", "style") : window.document.createElement("style");
-                  style.appendChild(window.document.createTextNode(cssText));
-                  var head = window.document.getElementsByTagName("head")[0] || window.document.documentElement;
-                  head.appendChild(style);
-                }
-              };
-            }
-
-            riot.tag('raw', '<div></div>', function (opts) {
-              this.set = function () {
-                this.root.childNodes[0].innerHTML = opts.html;
-              };
-
-              this.on('update', this.set);
-              this.on('mount', this.set);
-            });
-            riot.tag2('tag_43c5ec7c7cfaf69d925cc0ee408b216fa3ab7872', '<div class="menu"> <button onclick="{triggerRelooad}">Reload</button> <button onclick="{triggerClear}">Clear</button> <input type="checkbox" name="settings.persist-on-navigate" onchange="{notifyPersistChange}">Persist <button onclick="{triggerManage}">Settings</button> </div>', '', '', function (opts) {
-              var COMPONENT = require("./component");
-
-              var tag = this;
-              var comp = COMPONENT.for({
-                browser: window.crossbrowser
-              });
-
-              tag.triggerRelooad = function (event) {
-                comp.reloadBrowser();
-              };
-
-              tag.triggerClear = function (event) {
-                comp.clearConsole();
-              };
-
-              tag.triggerManage = function (event) {
-                comp.showView("manage");
-              };
-
-              tag.notifyPersistChange = function (event) {
-                window.crossbrowser.storage.local.set({
-                  "persist-on-navigate": event.target.checked
-                });
-              };
-
-              tag.on("mount", function () {
-                window.crossbrowser.storage.local.get("persist-on-navigate").then(function (value) {
-                  tag.root.querySelector('[name="settings.persist-on-navigate"]').checked = value["persist-on-navigate"] || false;
-                });
-              });
-            });
-            riot.mount(el, 'tag_43c5ec7c7cfaf69d925cc0ee408b216fa3ab7872', context);
-          }
-        }
-      };
-    }
-  }, options);
-};
-},{"./component":14}],14:[function(require,module,exports){
-(function (setImmediate){
-"use strict";
-
-var EVENTS = require("events");
-
-var DEBOUNCE = require('lodash/debounce');
-
-exports.for = function (ctx) {
-  var events = new EVENTS.EventEmitter();
-  events.browser = ctx.browser;
-  events.currentContext = null;
-  setImmediate(function () {
-    onContextMessage(null);
-    broadcastCurrentContext();
-  });
-  var contextChangeAcknowledged = false;
-
-  events.contextChangeAcknowledged = function () {
-    contextChangeAcknowledged = true;
-  };
-
-  function onContextMessage(context) {
-    if (context !== events.currentContext && (!events.currentContext || !context || context.pageUid !== events.currentContext.pageUid)) {
-      events.currentContext = context;
-      contextChangeAcknowledged = false;
-    }
-
-    if (!contextChangeAcknowledged) {
-      events.emit("changed.context", events.currentContext);
-    }
-  }
-
-  events.handleBroadcastMessage = function (message) {
-    try {
-      if (message.context && (ctx.getOwnTabId && message.context.tabId === ctx.getOwnTabId() || ctx.browser && ctx.browser.devtools && ctx.browser.devtools.inspectedWindow && message.context.tabId === ctx.browser.devtools.inspectedWindow.tabId)) {
-        if (message.to === "message-listener") {
-          if (message.event === "currentContext" && typeof message.context !== "undefined") {
-            onContextMessage(message.context);
-          }
-
-          events.emit("message", message);
-        } else if (message.to === "protocol") {
-          if (ctx.handlers && ctx.handlers[message.message.receiver]) {
-            message.message.meta = JSON.parse(message.message.meta);
-            message.message.data = JSON.parse(message.message.data);
-            ctx.handlers[message.message.receiver](message.message);
-          }
-        }
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  ctx.browser.runtime.onMessage.addListener(events.handleBroadcastMessage);
-  var globalSettings = {};
-  var domainSettings = {};
-  ctx.browser.storage.onChanged.addListener(function (changes, area) {
-    try {
-      if (!events.currentContext) {
-        return;
-      }
-
-      var prefix = "hostname[".concat(events.currentContext.hostname, "].");
-
-      for (var item of Object.keys(changes)) {
-        if (!/^hostname\[.+\]\..+$/.test(item)) {
-          globalSettings[item] = changes[item].newValue;
-          continue;
-        }
-
-        if (item.substring(0, prefix.length) === prefix) {
-          var name = item.substring(prefix.length);
-          domainSettings[events.currentContext.hostname] = domainSettings[events.currentContext.hostname] || {};
-          domainSettings[events.currentContext.hostname][name] = changes[item].newValue || false;
-          delete events._getHostnameSettingsForSync._cache[events.currentContext.hostname];
-          events.emit("setting." + name, domainSettings[events.currentContext.hostname][name]);
-          events.emit("changed.setting", name, domainSettings[events.currentContext.hostname][name]);
-        }
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  });
-  var broadcastCurrentContext = DEBOUNCE(function () {
-    ctx.browser.runtime.sendMessage({
-      to: "broadcast",
-      event: "currentContext"
-    });
-  }, 250);
-
-  events.getSetting = async function (name) {
-    if (!events.currentContext) {
-      return Promise.resolve(null);
-    }
-
-    return events._getSettingForHostname(events.currentContext.hostname, name);
-  };
-
-  events._getSettingForHostname = async function (hostname, name, defaultValue) {
-    if (typeof defaultValue === "undefined") {
-      defaultValue = false;
-    }
-
-    if (typeof ctx.browser === "undefined") {
-      return Promise.resolve(null);
-    }
-
-    var key = "hostname[" + hostname + "]." + name;
-    return ctx.browser.storage.local.get(key).then(function (value) {
-      if (value[key] === null || typeof value[key] === "undefined") {
-        return defaultValue;
-      }
-
-      return value[key];
-    }).then(function (value) {
-      domainSettings[hostname] = domainSettings[hostname] || {};
-      domainSettings[hostname][name] = value;
-      return value;
-    }).catch(function (err) {
-      console.error(err);
-      throw err;
-    });
-  };
-
-  events._getSettingForHostnameSync = function (hostname, name, defaultValue) {
-    if (typeof defaultValue === "undefined") {
-      defaultValue = false;
-    }
-
-    if (!domainSettings[hostname] || typeof domainSettings[hostname][name] === "undefined") {
-      events._getSettingForHostname(hostname, name, defaultValue);
-
-      return defaultValue;
-    }
-
-    return domainSettings[hostname][name];
-  };
-
-  events.setSetting = async function (name, value) {
-    if (!events.currentContext) {
-      throw new Error("Cannot set setting for name '".concat(name, "' due to no 'currentContext'!"));
-    }
-
-    return events._setSettingForHostname(events.currentContext.hostname, name, value);
-  };
-
-  events._setSettingForHostname = async function (hostname, name, value) {
-    if (typeof ctx.browser === "undefined") {
-      return Promise.resolve(null);
-    }
-
-    return events._getSettingForHostname(hostname, name).then(function (existingValue) {
-      if (value === existingValue) {
-        return;
-      }
-
-      var obj = {};
-      obj["hostname[" + hostname + "]." + name] = value;
-      domainSettings[hostname] = domainSettings[hostname] || {};
-      domainSettings[hostname][name] = value;
-      return ctx.browser.storage.local.set(obj).then(broadcastCurrentContext);
-    }).catch(function (err) {
-      console.error(err);
-      throw err;
-    });
-  };
-
-  events.getGlobalSetting = async function (name) {
-    if (typeof ctx.browser === "undefined") {
-      return null;
-    }
-
-    var defaultValue;
-
-    if (name === "reloadOnEnable") {
-      defaultValue = true;
-    }
-
-    return ctx.browser.storage.local.get(name).then(function (value) {
-      if (typeof value[name] === "undefined") {
-        if (typeof defaultValue !== "undefined") {
-          return defaultValue;
-        }
-
-        return null;
-      }
-
-      return value[name];
-    }).then(function (value) {
-      globalSettings[name] = value;
-      return value;
-    }).catch(function (err) {
-      console.error(err);
-      throw err;
-    });
-  };
-
-  events.setGlobalSetting = async function (name, value) {
-    if (typeof ctx.browser === "undefined") {
-      return null;
-    }
-
-    return events.getGlobalSetting(name).then(function (existingValue) {
-      if (value === existingValue) {
-        return;
-      }
-
-      var obj = {};
-      obj[name] = value;
-      globalSettings[name] = value;
-      return ctx.browser.storage.local.set(obj).then(broadcastCurrentContext);
-    }).catch(function (err) {
-      console.error(err);
-      throw err;
-    });
-  };
-
-  events.isConfigured = async function () {
-    if (!events.currentContext) {
-      throw new Error("Cannot get settings due to no 'currentContext'!");
-    }
-
-    var settings = await events._getHostnameSettingsFor(events.currentContext.hostname);
-    return settings._configured;
-  };
-
-  events._getHostnameSettingsFor = async function (hostname) {
-    var settings = {
-      enabled: await events._getSettingForHostname(hostname, "enabled", false),
-      enableUserAgentHeader: await events._getSettingForHostname(hostname, "enableUserAgentHeader", false),
-      enableFirePHPHeader: await events._getSettingForHostname(hostname, "enableFirePHPHeader", false),
-      enableChromeLoggerData: await events._getSettingForHostname(hostname, "enableChromeLoggerData", false)
-    };
-    settings._configured = settings.enableUserAgentHeader || settings.enableFirePHPHeader || settings.enableChromeLoggerData;
-    return settings;
-  };
-
-  events._getHostnameSettingsForSync = function (hostname) {
-    if (!events._getHostnameSettingsForSync._cache[hostname]) {
-      var settings = {
-        enabled: events._getSettingForHostnameSync(hostname, "enabled", false),
-        enableUserAgentHeader: events._getSettingForHostnameSync(hostname, "enableUserAgentHeader", false),
-        enableFirePHPHeader: events._getSettingForHostnameSync(hostname, "enableFirePHPHeader", false),
-        enableChromeLoggerData: events._getSettingForHostnameSync(hostname, "enableChromeLoggerData", false)
-      };
-      settings._configured = settings.enableUserAgentHeader || settings.enableFirePHPHeader || settings.enableChromeLoggerData;
-      events._getHostnameSettingsForSync._cache[hostname] = settings;
-    }
-
-    return events._getHostnameSettingsForSync._cache[hostname];
-  };
-
-  events._getHostnameSettingsForSync._cache = {};
-
-  events.isEnabled = async function () {
-    if (!events.currentContext) {
-      return false;
-    }
-
-    return events._isEnabledForHostname(events.currentContext.hostname);
-  };
-
-  events._isEnabledForHostname = async function (hostname) {
-    var settings = await events._getHostnameSettingsFor(hostname);
-    return settings.enabled && settings._configured;
-  };
-
-  events.reloadBrowser = function () {
-    ctx.browser.runtime.sendMessage({
-      to: "background",
-      event: "reload",
-      context: {
-        tabId: ctx.browser.devtools.inspectedWindow.tabId
-      }
-    });
-  };
-
-  events.clearConsole = function () {
-    ctx.browser.runtime.sendMessage({
-      to: "broadcast",
-      event: "clear"
-    });
-  };
-
-  events.showView = function (name, args) {
-    if (name === "manage") {
-      ctx.browser.runtime.sendMessage({
-        to: "broadcast",
-        event: "manage"
-      });
-    } else if (name === "editor") {
-      ctx.browser.runtime.sendMessage({
-        to: "broadcast",
-        event: "editor",
-        args: args
-      });
-    }
-  };
-
-  events.hideView = function (name) {
-    if (name === "editor") {
-      console.log("broadcast hide view: editor");
-      ctx.browser.runtime.sendMessage({
-        to: "broadcast",
-        event: "editor",
-        value: false
-      });
-    }
-  };
-
-  events.loadFile = function (file, line) {
-    ctx.browser.runtime.sendMessage({
-      to: "background",
-      event: "load-file",
-      file: file,
-      line: line
-    });
-  };
-
-  return events;
-};
-}).call(this,require("timers").setImmediate)
-},{"events":15,"lodash/debounce":7,"timers":17}],15:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -1451,7 +533,517 @@ function functionBindPolyfill(context) {
   };
 }
 
-},{}],16:[function(require,module,exports){
+},{}],2:[function(require,module,exports){
+var root = require('./_root');
+
+/** Built-in value references. */
+var Symbol = root.Symbol;
+
+module.exports = Symbol;
+
+},{"./_root":7}],3:[function(require,module,exports){
+var Symbol = require('./_Symbol'),
+    getRawTag = require('./_getRawTag'),
+    objectToString = require('./_objectToString');
+
+/** `Object#toString` result references. */
+var nullTag = '[object Null]',
+    undefinedTag = '[object Undefined]';
+
+/** Built-in value references. */
+var symToStringTag = Symbol ? Symbol.toStringTag : undefined;
+
+/**
+ * The base implementation of `getTag` without fallbacks for buggy environments.
+ *
+ * @private
+ * @param {*} value The value to query.
+ * @returns {string} Returns the `toStringTag`.
+ */
+function baseGetTag(value) {
+  if (value == null) {
+    return value === undefined ? undefinedTag : nullTag;
+  }
+  return (symToStringTag && symToStringTag in Object(value))
+    ? getRawTag(value)
+    : objectToString(value);
+}
+
+module.exports = baseGetTag;
+
+},{"./_Symbol":2,"./_getRawTag":5,"./_objectToString":6}],4:[function(require,module,exports){
+(function (global){
+/** Detect free variable `global` from Node.js. */
+var freeGlobal = typeof global == 'object' && global && global.Object === Object && global;
+
+module.exports = freeGlobal;
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{}],5:[function(require,module,exports){
+var Symbol = require('./_Symbol');
+
+/** Used for built-in method references. */
+var objectProto = Object.prototype;
+
+/** Used to check objects for own properties. */
+var hasOwnProperty = objectProto.hasOwnProperty;
+
+/**
+ * Used to resolve the
+ * [`toStringTag`](http://ecma-international.org/ecma-262/7.0/#sec-object.prototype.tostring)
+ * of values.
+ */
+var nativeObjectToString = objectProto.toString;
+
+/** Built-in value references. */
+var symToStringTag = Symbol ? Symbol.toStringTag : undefined;
+
+/**
+ * A specialized version of `baseGetTag` which ignores `Symbol.toStringTag` values.
+ *
+ * @private
+ * @param {*} value The value to query.
+ * @returns {string} Returns the raw `toStringTag`.
+ */
+function getRawTag(value) {
+  var isOwn = hasOwnProperty.call(value, symToStringTag),
+      tag = value[symToStringTag];
+
+  try {
+    value[symToStringTag] = undefined;
+    var unmasked = true;
+  } catch (e) {}
+
+  var result = nativeObjectToString.call(value);
+  if (unmasked) {
+    if (isOwn) {
+      value[symToStringTag] = tag;
+    } else {
+      delete value[symToStringTag];
+    }
+  }
+  return result;
+}
+
+module.exports = getRawTag;
+
+},{"./_Symbol":2}],6:[function(require,module,exports){
+/** Used for built-in method references. */
+var objectProto = Object.prototype;
+
+/**
+ * Used to resolve the
+ * [`toStringTag`](http://ecma-international.org/ecma-262/7.0/#sec-object.prototype.tostring)
+ * of values.
+ */
+var nativeObjectToString = objectProto.toString;
+
+/**
+ * Converts `value` to a string using `Object.prototype.toString`.
+ *
+ * @private
+ * @param {*} value The value to convert.
+ * @returns {string} Returns the converted string.
+ */
+function objectToString(value) {
+  return nativeObjectToString.call(value);
+}
+
+module.exports = objectToString;
+
+},{}],7:[function(require,module,exports){
+var freeGlobal = require('./_freeGlobal');
+
+/** Detect free variable `self`. */
+var freeSelf = typeof self == 'object' && self && self.Object === Object && self;
+
+/** Used as a reference to the global object. */
+var root = freeGlobal || freeSelf || Function('return this')();
+
+module.exports = root;
+
+},{"./_freeGlobal":4}],8:[function(require,module,exports){
+var isObject = require('./isObject'),
+    now = require('./now'),
+    toNumber = require('./toNumber');
+
+/** Error message constants. */
+var FUNC_ERROR_TEXT = 'Expected a function';
+
+/* Built-in method references for those with the same name as other `lodash` methods. */
+var nativeMax = Math.max,
+    nativeMin = Math.min;
+
+/**
+ * Creates a debounced function that delays invoking `func` until after `wait`
+ * milliseconds have elapsed since the last time the debounced function was
+ * invoked. The debounced function comes with a `cancel` method to cancel
+ * delayed `func` invocations and a `flush` method to immediately invoke them.
+ * Provide `options` to indicate whether `func` should be invoked on the
+ * leading and/or trailing edge of the `wait` timeout. The `func` is invoked
+ * with the last arguments provided to the debounced function. Subsequent
+ * calls to the debounced function return the result of the last `func`
+ * invocation.
+ *
+ * **Note:** If `leading` and `trailing` options are `true`, `func` is
+ * invoked on the trailing edge of the timeout only if the debounced function
+ * is invoked more than once during the `wait` timeout.
+ *
+ * If `wait` is `0` and `leading` is `false`, `func` invocation is deferred
+ * until to the next tick, similar to `setTimeout` with a timeout of `0`.
+ *
+ * See [David Corbacho's article](https://css-tricks.com/debouncing-throttling-explained-examples/)
+ * for details over the differences between `_.debounce` and `_.throttle`.
+ *
+ * @static
+ * @memberOf _
+ * @since 0.1.0
+ * @category Function
+ * @param {Function} func The function to debounce.
+ * @param {number} [wait=0] The number of milliseconds to delay.
+ * @param {Object} [options={}] The options object.
+ * @param {boolean} [options.leading=false]
+ *  Specify invoking on the leading edge of the timeout.
+ * @param {number} [options.maxWait]
+ *  The maximum time `func` is allowed to be delayed before it's invoked.
+ * @param {boolean} [options.trailing=true]
+ *  Specify invoking on the trailing edge of the timeout.
+ * @returns {Function} Returns the new debounced function.
+ * @example
+ *
+ * // Avoid costly calculations while the window size is in flux.
+ * jQuery(window).on('resize', _.debounce(calculateLayout, 150));
+ *
+ * // Invoke `sendMail` when clicked, debouncing subsequent calls.
+ * jQuery(element).on('click', _.debounce(sendMail, 300, {
+ *   'leading': true,
+ *   'trailing': false
+ * }));
+ *
+ * // Ensure `batchLog` is invoked once after 1 second of debounced calls.
+ * var debounced = _.debounce(batchLog, 250, { 'maxWait': 1000 });
+ * var source = new EventSource('/stream');
+ * jQuery(source).on('message', debounced);
+ *
+ * // Cancel the trailing debounced invocation.
+ * jQuery(window).on('popstate', debounced.cancel);
+ */
+function debounce(func, wait, options) {
+  var lastArgs,
+      lastThis,
+      maxWait,
+      result,
+      timerId,
+      lastCallTime,
+      lastInvokeTime = 0,
+      leading = false,
+      maxing = false,
+      trailing = true;
+
+  if (typeof func != 'function') {
+    throw new TypeError(FUNC_ERROR_TEXT);
+  }
+  wait = toNumber(wait) || 0;
+  if (isObject(options)) {
+    leading = !!options.leading;
+    maxing = 'maxWait' in options;
+    maxWait = maxing ? nativeMax(toNumber(options.maxWait) || 0, wait) : maxWait;
+    trailing = 'trailing' in options ? !!options.trailing : trailing;
+  }
+
+  function invokeFunc(time) {
+    var args = lastArgs,
+        thisArg = lastThis;
+
+    lastArgs = lastThis = undefined;
+    lastInvokeTime = time;
+    result = func.apply(thisArg, args);
+    return result;
+  }
+
+  function leadingEdge(time) {
+    // Reset any `maxWait` timer.
+    lastInvokeTime = time;
+    // Start the timer for the trailing edge.
+    timerId = setTimeout(timerExpired, wait);
+    // Invoke the leading edge.
+    return leading ? invokeFunc(time) : result;
+  }
+
+  function remainingWait(time) {
+    var timeSinceLastCall = time - lastCallTime,
+        timeSinceLastInvoke = time - lastInvokeTime,
+        timeWaiting = wait - timeSinceLastCall;
+
+    return maxing
+      ? nativeMin(timeWaiting, maxWait - timeSinceLastInvoke)
+      : timeWaiting;
+  }
+
+  function shouldInvoke(time) {
+    var timeSinceLastCall = time - lastCallTime,
+        timeSinceLastInvoke = time - lastInvokeTime;
+
+    // Either this is the first call, activity has stopped and we're at the
+    // trailing edge, the system time has gone backwards and we're treating
+    // it as the trailing edge, or we've hit the `maxWait` limit.
+    return (lastCallTime === undefined || (timeSinceLastCall >= wait) ||
+      (timeSinceLastCall < 0) || (maxing && timeSinceLastInvoke >= maxWait));
+  }
+
+  function timerExpired() {
+    var time = now();
+    if (shouldInvoke(time)) {
+      return trailingEdge(time);
+    }
+    // Restart the timer.
+    timerId = setTimeout(timerExpired, remainingWait(time));
+  }
+
+  function trailingEdge(time) {
+    timerId = undefined;
+
+    // Only invoke if we have `lastArgs` which means `func` has been
+    // debounced at least once.
+    if (trailing && lastArgs) {
+      return invokeFunc(time);
+    }
+    lastArgs = lastThis = undefined;
+    return result;
+  }
+
+  function cancel() {
+    if (timerId !== undefined) {
+      clearTimeout(timerId);
+    }
+    lastInvokeTime = 0;
+    lastArgs = lastCallTime = lastThis = timerId = undefined;
+  }
+
+  function flush() {
+    return timerId === undefined ? result : trailingEdge(now());
+  }
+
+  function debounced() {
+    var time = now(),
+        isInvoking = shouldInvoke(time);
+
+    lastArgs = arguments;
+    lastThis = this;
+    lastCallTime = time;
+
+    if (isInvoking) {
+      if (timerId === undefined) {
+        return leadingEdge(lastCallTime);
+      }
+      if (maxing) {
+        // Handle invocations in a tight loop.
+        clearTimeout(timerId);
+        timerId = setTimeout(timerExpired, wait);
+        return invokeFunc(lastCallTime);
+      }
+    }
+    if (timerId === undefined) {
+      timerId = setTimeout(timerExpired, wait);
+    }
+    return result;
+  }
+  debounced.cancel = cancel;
+  debounced.flush = flush;
+  return debounced;
+}
+
+module.exports = debounce;
+
+},{"./isObject":9,"./now":12,"./toNumber":13}],9:[function(require,module,exports){
+/**
+ * Checks if `value` is the
+ * [language type](http://www.ecma-international.org/ecma-262/7.0/#sec-ecmascript-language-types)
+ * of `Object`. (e.g. arrays, functions, objects, regexes, `new Number(0)`, and `new String('')`)
+ *
+ * @static
+ * @memberOf _
+ * @since 0.1.0
+ * @category Lang
+ * @param {*} value The value to check.
+ * @returns {boolean} Returns `true` if `value` is an object, else `false`.
+ * @example
+ *
+ * _.isObject({});
+ * // => true
+ *
+ * _.isObject([1, 2, 3]);
+ * // => true
+ *
+ * _.isObject(_.noop);
+ * // => true
+ *
+ * _.isObject(null);
+ * // => false
+ */
+function isObject(value) {
+  var type = typeof value;
+  return value != null && (type == 'object' || type == 'function');
+}
+
+module.exports = isObject;
+
+},{}],10:[function(require,module,exports){
+/**
+ * Checks if `value` is object-like. A value is object-like if it's not `null`
+ * and has a `typeof` result of "object".
+ *
+ * @static
+ * @memberOf _
+ * @since 4.0.0
+ * @category Lang
+ * @param {*} value The value to check.
+ * @returns {boolean} Returns `true` if `value` is object-like, else `false`.
+ * @example
+ *
+ * _.isObjectLike({});
+ * // => true
+ *
+ * _.isObjectLike([1, 2, 3]);
+ * // => true
+ *
+ * _.isObjectLike(_.noop);
+ * // => false
+ *
+ * _.isObjectLike(null);
+ * // => false
+ */
+function isObjectLike(value) {
+  return value != null && typeof value == 'object';
+}
+
+module.exports = isObjectLike;
+
+},{}],11:[function(require,module,exports){
+var baseGetTag = require('./_baseGetTag'),
+    isObjectLike = require('./isObjectLike');
+
+/** `Object#toString` result references. */
+var symbolTag = '[object Symbol]';
+
+/**
+ * Checks if `value` is classified as a `Symbol` primitive or object.
+ *
+ * @static
+ * @memberOf _
+ * @since 4.0.0
+ * @category Lang
+ * @param {*} value The value to check.
+ * @returns {boolean} Returns `true` if `value` is a symbol, else `false`.
+ * @example
+ *
+ * _.isSymbol(Symbol.iterator);
+ * // => true
+ *
+ * _.isSymbol('abc');
+ * // => false
+ */
+function isSymbol(value) {
+  return typeof value == 'symbol' ||
+    (isObjectLike(value) && baseGetTag(value) == symbolTag);
+}
+
+module.exports = isSymbol;
+
+},{"./_baseGetTag":3,"./isObjectLike":10}],12:[function(require,module,exports){
+var root = require('./_root');
+
+/**
+ * Gets the timestamp of the number of milliseconds that have elapsed since
+ * the Unix epoch (1 January 1970 00:00:00 UTC).
+ *
+ * @static
+ * @memberOf _
+ * @since 2.4.0
+ * @category Date
+ * @returns {number} Returns the timestamp.
+ * @example
+ *
+ * _.defer(function(stamp) {
+ *   console.log(_.now() - stamp);
+ * }, _.now());
+ * // => Logs the number of milliseconds it took for the deferred invocation.
+ */
+var now = function() {
+  return root.Date.now();
+};
+
+module.exports = now;
+
+},{"./_root":7}],13:[function(require,module,exports){
+var isObject = require('./isObject'),
+    isSymbol = require('./isSymbol');
+
+/** Used as references for various `Number` constants. */
+var NAN = 0 / 0;
+
+/** Used to match leading and trailing whitespace. */
+var reTrim = /^\s+|\s+$/g;
+
+/** Used to detect bad signed hexadecimal string values. */
+var reIsBadHex = /^[-+]0x[0-9a-f]+$/i;
+
+/** Used to detect binary string values. */
+var reIsBinary = /^0b[01]+$/i;
+
+/** Used to detect octal string values. */
+var reIsOctal = /^0o[0-7]+$/i;
+
+/** Built-in method references without a dependency on `root`. */
+var freeParseInt = parseInt;
+
+/**
+ * Converts `value` to a number.
+ *
+ * @static
+ * @memberOf _
+ * @since 4.0.0
+ * @category Lang
+ * @param {*} value The value to process.
+ * @returns {number} Returns the number.
+ * @example
+ *
+ * _.toNumber(3.2);
+ * // => 3.2
+ *
+ * _.toNumber(Number.MIN_VALUE);
+ * // => 5e-324
+ *
+ * _.toNumber(Infinity);
+ * // => Infinity
+ *
+ * _.toNumber('3.2');
+ * // => 3.2
+ */
+function toNumber(value) {
+  if (typeof value == 'number') {
+    return value;
+  }
+  if (isSymbol(value)) {
+    return NAN;
+  }
+  if (isObject(value)) {
+    var other = typeof value.valueOf == 'function' ? value.valueOf() : value;
+    value = isObject(other) ? (other + '') : other;
+  }
+  if (typeof value != 'string') {
+    return value === 0 ? value : +value;
+  }
+  value = value.replace(reTrim, '');
+  var isBinary = reIsBinary.test(value);
+  return (isBinary || reIsOctal.test(value))
+    ? freeParseInt(value.slice(2), isBinary ? 2 : 8)
+    : (reIsBadHex.test(value) ? NAN : +value);
+}
+
+module.exports = toNumber;
+
+},{"./isObject":9,"./isSymbol":11}],14:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -1637,7 +1229,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],17:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 (function (setImmediate,clearImmediate){
 var nextTick = require('process/browser.js').nextTick;
 var apply = Function.prototype.apply;
@@ -1716,7 +1308,415 @@ exports.clearImmediate = typeof clearImmediate === "function" ? clearImmediate :
   delete immediateIds[id];
 };
 }).call(this,require("timers").setImmediate,require("timers").clearImmediate)
-},{"process/browser.js":16,"timers":17}]},{},[13])(13)
+},{"process/browser.js":14,"timers":15}],16:[function(require,module,exports){
+"use strict";
+
+exports.main = function (JSONREP, node, options) {
+  return JSONREP.makeRep2({
+    "config": {
+      "node": node
+    },
+    "code": function (context, options) {
+      var JSONREP = this;
+      return {
+        html: "<div></div>",
+        "on": {
+          "mount": function (el) {
+            if ("1" === "1") {
+              riot.util.styleManager.inject = function () {
+                if (!options) return;
+                JSONREP.loadStyle(options.renderer.uri + '.css');
+              };
+            } else {
+              riot.util.styleManager.add = function (cssText, name) {
+                if (!cssText) {
+                  return;
+                }
+
+                if (window.document.createStyleSheet) {
+                  var sheet = window.document.createStyleSheet();
+                  sheet.cssText = cssText;
+                } else {
+                  var style = window.document.createElementNS ? window.document.createElementNS("http://www.w3.org/1999/xhtml", "style") : window.document.createElement("style");
+                  style.appendChild(window.document.createTextNode(cssText));
+                  var head = window.document.getElementsByTagName("head")[0] || window.document.documentElement;
+                  head.appendChild(style);
+                }
+              };
+            }
+
+            riot.tag('raw', '<div></div>', function (opts) {
+              this.set = function () {
+                this.root.childNodes[0].innerHTML = opts.html;
+              };
+
+              this.on('update', this.set);
+              this.on('mount', this.set);
+            });
+            riot.tag2('tag_43c5ec7c7cfaf69d925cc0ee408b216fa3ab7872', '<div class="menu"> <button onclick="{triggerRelooad}">Reload</button> <button onclick="{triggerClear}">Clear</button> <input type="checkbox" name="settings.persist-on-navigate" onchange="{notifyPersistChange}">Persist <button onclick="{triggerManage}">Settings</button> </div>', '', '', function (opts) {
+              var COMPONENT = require("./component");
+
+              var tag = this;
+              var comp = COMPONENT.for({
+                browser: window.crossbrowser
+              });
+
+              tag.triggerRelooad = function (event) {
+                comp.reloadBrowser();
+              };
+
+              tag.triggerClear = function (event) {
+                comp.clearConsole();
+              };
+
+              tag.triggerManage = function (event) {
+                comp.showView("manage");
+              };
+
+              tag.notifyPersistChange = function (event) {
+                window.crossbrowser.storage.local.set({
+                  "persist-on-navigate": event.target.checked
+                });
+              };
+
+              tag.on("mount", function () {
+                window.crossbrowser.storage.local.get("persist-on-navigate").then(function (value) {
+                  tag.root.querySelector('[name="settings.persist-on-navigate"]').checked = value["persist-on-navigate"] || false;
+                });
+              });
+            });
+            riot.mount(el, 'tag_43c5ec7c7cfaf69d925cc0ee408b216fa3ab7872', context);
+          }
+        }
+      };
+    }
+  }, options);
+};
+},{"./component":17}],17:[function(require,module,exports){
+(function (setImmediate){
+"use strict";
+
+var EVENTS = require("events");
+
+var DEBOUNCE = require('lodash/debounce');
+
+exports.for = function (ctx) {
+  var events = new EVENTS.EventEmitter();
+  events.browser = ctx.browser;
+  events.currentContext = null;
+  setImmediate(function () {
+    onContextMessage(null);
+    broadcastCurrentContext();
+  });
+  var contextChangeAcknowledged = false;
+
+  events.contextChangeAcknowledged = function () {
+    contextChangeAcknowledged = true;
+  };
+
+  function onContextMessage(context) {
+    if (context !== events.currentContext && (!events.currentContext || !context || context.pageUid !== events.currentContext.pageUid)) {
+      events.currentContext = context;
+      contextChangeAcknowledged = false;
+    }
+
+    if (!contextChangeAcknowledged) {
+      events.emit("changed.context", events.currentContext);
+    }
+  }
+
+  events.handleBroadcastMessage = function (message) {
+    try {
+      if (message.context && (ctx.getOwnTabId && message.context.tabId === ctx.getOwnTabId() || ctx.browser && ctx.browser.devtools && ctx.browser.devtools.inspectedWindow && message.context.tabId === ctx.browser.devtools.inspectedWindow.tabId)) {
+        if (message.to === "message-listener") {
+          if (message.event === "currentContext" && typeof message.context !== "undefined") {
+            onContextMessage(message.context);
+          }
+
+          events.emit("message", message);
+        } else if (message.to === "protocol") {
+          if (ctx.handlers && ctx.handlers[message.message.receiver]) {
+            message.message.meta = JSON.parse(message.message.meta);
+            message.message.data = JSON.parse(message.message.data);
+            ctx.handlers[message.message.receiver](message.message);
+          }
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  ctx.browser.runtime.onMessage.addListener(events.handleBroadcastMessage);
+  var globalSettings = {};
+  var domainSettings = {};
+  ctx.browser.storage.onChanged.addListener(function (changes, area) {
+    try {
+      if (!events.currentContext) {
+        return;
+      }
+
+      var prefix = "hostname[".concat(events.currentContext.hostname, "].");
+
+      for (var item of Object.keys(changes)) {
+        if (!/^hostname\[.+\]\..+$/.test(item)) {
+          globalSettings[item] = changes[item].newValue;
+          continue;
+        }
+
+        if (item.substring(0, prefix.length) === prefix) {
+          var name = item.substring(prefix.length);
+          domainSettings[events.currentContext.hostname] = domainSettings[events.currentContext.hostname] || {};
+          domainSettings[events.currentContext.hostname][name] = changes[item].newValue || false;
+          delete events._getHostnameSettingsForSync._cache[events.currentContext.hostname];
+          events.emit("setting." + name, domainSettings[events.currentContext.hostname][name]);
+          events.emit("changed.setting", name, domainSettings[events.currentContext.hostname][name]);
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  });
+  var broadcastCurrentContext = DEBOUNCE(function () {
+    ctx.browser.runtime.sendMessage({
+      to: "broadcast",
+      event: "currentContext"
+    });
+  }, 250);
+
+  events.getSetting = async function (name) {
+    if (!events.currentContext) {
+      return Promise.resolve(null);
+    }
+
+    return events._getSettingForHostname(events.currentContext.hostname, name);
+  };
+
+  events._getSettingForHostname = async function (hostname, name, defaultValue) {
+    if (typeof defaultValue === "undefined") {
+      defaultValue = false;
+    }
+
+    if (typeof ctx.browser === "undefined") {
+      return Promise.resolve(null);
+    }
+
+    var key = "hostname[" + hostname + "]." + name;
+    return ctx.browser.storage.local.get(key).then(function (value) {
+      if (value[key] === null || typeof value[key] === "undefined") {
+        return defaultValue;
+      }
+
+      return value[key];
+    }).then(function (value) {
+      domainSettings[hostname] = domainSettings[hostname] || {};
+      domainSettings[hostname][name] = value;
+      return value;
+    }).catch(function (err) {
+      console.error(err);
+      throw err;
+    });
+  };
+
+  events._getSettingForHostnameSync = function (hostname, name, defaultValue) {
+    if (typeof defaultValue === "undefined") {
+      defaultValue = false;
+    }
+
+    if (!domainSettings[hostname] || typeof domainSettings[hostname][name] === "undefined") {
+      events._getSettingForHostname(hostname, name, defaultValue);
+
+      return defaultValue;
+    }
+
+    return domainSettings[hostname][name];
+  };
+
+  events.setSetting = async function (name, value) {
+    if (!events.currentContext) {
+      throw new Error("Cannot set setting for name '".concat(name, "' due to no 'currentContext'!"));
+    }
+
+    return events._setSettingForHostname(events.currentContext.hostname, name, value);
+  };
+
+  events._setSettingForHostname = async function (hostname, name, value) {
+    if (typeof ctx.browser === "undefined") {
+      return Promise.resolve(null);
+    }
+
+    return events._getSettingForHostname(hostname, name).then(function (existingValue) {
+      if (value === existingValue) {
+        return;
+      }
+
+      var obj = {};
+      obj["hostname[" + hostname + "]." + name] = value;
+      domainSettings[hostname] = domainSettings[hostname] || {};
+      domainSettings[hostname][name] = value;
+      return ctx.browser.storage.local.set(obj).then(broadcastCurrentContext);
+    }).catch(function (err) {
+      console.error(err);
+      throw err;
+    });
+  };
+
+  events.getGlobalSetting = async function (name) {
+    if (typeof ctx.browser === "undefined") {
+      return null;
+    }
+
+    var defaultValue;
+
+    if (name === "reloadOnEnable") {
+      defaultValue = true;
+    }
+
+    return ctx.browser.storage.local.get(name).then(function (value) {
+      if (typeof value[name] === "undefined") {
+        if (typeof defaultValue !== "undefined") {
+          return defaultValue;
+        }
+
+        return null;
+      }
+
+      return value[name];
+    }).then(function (value) {
+      globalSettings[name] = value;
+      return value;
+    }).catch(function (err) {
+      console.error(err);
+      throw err;
+    });
+  };
+
+  events.setGlobalSetting = async function (name, value) {
+    if (typeof ctx.browser === "undefined") {
+      return null;
+    }
+
+    return events.getGlobalSetting(name).then(function (existingValue) {
+      if (value === existingValue) {
+        return;
+      }
+
+      var obj = {};
+      obj[name] = value;
+      globalSettings[name] = value;
+      return ctx.browser.storage.local.set(obj).then(broadcastCurrentContext);
+    }).catch(function (err) {
+      console.error(err);
+      throw err;
+    });
+  };
+
+  events.isConfigured = async function () {
+    if (!events.currentContext) {
+      throw new Error("Cannot get settings due to no 'currentContext'!");
+    }
+
+    var settings = await events._getHostnameSettingsFor(events.currentContext.hostname);
+    return settings._configured;
+  };
+
+  events._getHostnameSettingsFor = async function (hostname) {
+    var settings = {
+      enabled: await events._getSettingForHostname(hostname, "enabled", false),
+      enableUserAgentHeader: await events._getSettingForHostname(hostname, "enableUserAgentHeader", false),
+      enableFirePHPHeader: await events._getSettingForHostname(hostname, "enableFirePHPHeader", false),
+      enableChromeLoggerData: await events._getSettingForHostname(hostname, "enableChromeLoggerData", false)
+    };
+    settings._configured = settings.enableUserAgentHeader || settings.enableFirePHPHeader || settings.enableChromeLoggerData;
+    return settings;
+  };
+
+  events._getHostnameSettingsForSync = function (hostname) {
+    if (!events._getHostnameSettingsForSync._cache[hostname]) {
+      var settings = {
+        enabled: events._getSettingForHostnameSync(hostname, "enabled", false),
+        enableUserAgentHeader: events._getSettingForHostnameSync(hostname, "enableUserAgentHeader", false),
+        enableFirePHPHeader: events._getSettingForHostnameSync(hostname, "enableFirePHPHeader", false),
+        enableChromeLoggerData: events._getSettingForHostnameSync(hostname, "enableChromeLoggerData", false)
+      };
+      settings._configured = settings.enableUserAgentHeader || settings.enableFirePHPHeader || settings.enableChromeLoggerData;
+      events._getHostnameSettingsForSync._cache[hostname] = settings;
+    }
+
+    return events._getHostnameSettingsForSync._cache[hostname];
+  };
+
+  events._getHostnameSettingsForSync._cache = {};
+
+  events.isEnabled = async function () {
+    if (!events.currentContext) {
+      return false;
+    }
+
+    return events._isEnabledForHostname(events.currentContext.hostname);
+  };
+
+  events._isEnabledForHostname = async function (hostname) {
+    var settings = await events._getHostnameSettingsFor(hostname);
+    return settings.enabled && settings._configured;
+  };
+
+  events.reloadBrowser = function () {
+    ctx.browser.runtime.sendMessage({
+      to: "background",
+      event: "reload",
+      context: {
+        tabId: ctx.browser.devtools.inspectedWindow.tabId
+      }
+    });
+  };
+
+  events.clearConsole = function () {
+    ctx.browser.runtime.sendMessage({
+      to: "broadcast",
+      event: "clear"
+    });
+  };
+
+  events.showView = function (name, args) {
+    if (name === "manage") {
+      ctx.browser.runtime.sendMessage({
+        to: "broadcast",
+        event: "manage"
+      });
+    } else if (name === "editor") {
+      ctx.browser.runtime.sendMessage({
+        to: "broadcast",
+        event: "editor",
+        args: args
+      });
+    }
+  };
+
+  events.hideView = function (name) {
+    if (name === "editor") {
+      console.log("broadcast hide view: editor");
+      ctx.browser.runtime.sendMessage({
+        to: "broadcast",
+        event: "editor",
+        value: false
+      });
+    }
+  };
+
+  events.loadFile = function (file, line) {
+    ctx.browser.runtime.sendMessage({
+      to: "background",
+      event: "load-file",
+      file: file,
+      line: line
+    });
+  };
+
+  return events;
+};
+}).call(this,require("timers").setImmediate)
+},{"events":1,"lodash/debounce":8,"timers":15}]},{},[16])(16)
 });
 
 	});
