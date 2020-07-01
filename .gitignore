@@ -13,6 +13,7 @@ node_modules/
 /dist/firephp.build.zip
 /tests/*/.extension.built
 
+/dist/firephp.zip
 /dist/firephp.build-docker
 
 # Files that we do not need

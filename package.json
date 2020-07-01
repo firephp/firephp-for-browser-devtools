@@ -16,7 +16,7 @@
   "scripts": {
     "test": "./.prepare.sh; pinf.it ./#!inf.json test",
     "dev": "./.prepare.sh; pinf.it ./#!inf.json dev --watch",
-    "build": "./.prepare.sh; pinf.it ./#!inf.json build",
+    "build": "./.prepare.sh; pinf.it ./#!inf.json build; ./.postbuild.sh",
     "build-via-docker": "./src/docker/build.sh",
     "publish": "./.prepare.sh; pinf.it ./#!inf.json publish"
   }
