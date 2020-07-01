@@ -1,11 +1,11 @@
 {
     "manifest_version": 2,
-    "description": "(NOTE: This is a PREVIEW build for branch: pre-verify) Log from PHP to a devtools panel.",
-    "name": "FirePHP (Official) [pre-verify]",
+    "description": "(NOTE: This is a PREVIEW build for branch: pre) Log from PHP to a devtools panel.",
+    "name": "FirePHP (Official) [pre]",
     "version": "1.4.2",
     "applications": {
         "gecko": {
-            "id": "FirePHPExtension-Build_branch_pre-verify@firephp.org",
+            "id": "FirePHPExtension-Build_branch_pre@firephp.org",
             "strict_min_version": "56.0"
         }
     },
@@ -25,5 +25,5 @@
     "background": {
         "page": "background.html"
     },
-    "version_name": "1.4.2 pre-verify"
+    "version_name": "1.4.2 pre"
 }

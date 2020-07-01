@@ -3787,8 +3787,8 @@ Encoder.prototype.encodeArray = function(meta, variable, objectDepth, arrayDepth
     }
     var self = this,
         items = [];
-    Object.keys(variable).forEach(function(name) {
-        items.push(self.encodeVariable(meta, [name, variable[name]], 1, arrayDepth + 1, overallDepth + 1));
+    variable.forEach(function(item) {
+        items.push(self.encodeVariable(meta, item, 1, arrayDepth + 1, overallDepth + 1));
     });
     return items;
 }
@@ -9697,7 +9697,7 @@ protocols["http://meta.wildfirehq.org/Protocol/JsonStream/0.2"] = function(uri) 
 
                 // NOTE: The old protocol specifies senders independent from receivers so we need to add senders for every receiver
                 //       If no receiver is known yet we assume a receiver key of "1"
-                if (Object.keys(receivers).length > 0) {
+                if (Object.keys(receivers).length == 0) {
                     senders["1" + ":" + parts[1]] = value;
                 } else {
                     for( var receiverKey in receivers ) {
@@ -9944,14 +9944,14 @@ protocols["http://meta.wildfirehq.org/Protocol/JsonStream/0.2"] = function(uri) 
                 message.setSender(sender);
 
                 try {
-                    message.setMeta(JSON.parse(meta));
+                    message.setMeta(JSON.stringify(meta));
                 } catch(e) {
                     console.error("Error encoding object (JsonStream compatibility)", e, meta);
                     throw e;
                 }
 
                 try {
-                    message.setData(JSON.parse(data));
+                    message.setData(JSON.stringify(data));
                 } catch(e) {
                     console.error("Error encoding object (JsonStream compatibility)", e, data);
                     throw e;
@@ -10314,13 +10314,13 @@ var CallbackStream = exports.CallbackStream = function CallbackStream()
                     message.meta[".action"] = "respond";
 
                     try {
-                        msg.setMeta(JSON.parse(message.meta));
+                        msg.setMeta(JSON.stringify(message.meta));
                     } catch(e) {
                         console.warn("Error JSON encoding meta", e);
                         throw new Error("Error JSON encoding meta: " + e);
                     }
                     try {
-                        msg.setData(JSON.parse(message.data));
+                        msg.setData(JSON.stringify(message.data));
                     } catch(e) {
                         console.warn("Error JSON encoding data", e);
                         throw new Error("Error JSON encoding data: " + e);

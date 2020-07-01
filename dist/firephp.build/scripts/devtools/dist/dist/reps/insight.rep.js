@@ -3053,8 +3053,8 @@ Encoder.prototype.encodeArray = function (meta, variable, objectDepth, arrayDept
 
   var self = this,
       items = [];
-  Object.keys(variable).forEach(function (name) {
-    items.push(self.encodeVariable(meta, [name, variable[name]], 1, arrayDepth + 1, overallDepth + 1));
+  variable.forEach(function (item) {
+    items.push(self.encodeVariable(meta, item, 1, arrayDepth + 1, overallDepth + 1));
   });
   return items;
 };
