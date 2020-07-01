@@ -16,8 +16,7 @@ jobs:
               env:
                 cache-name: cache-node-modules
               with:
-                # npm cache files are stored in `~/.npm` on Linux/macOS
-                path: ~/.npm
+                path: node_modules
                 key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('package.json') }}-${{ hashFiles('npm-shrinkwrap.json') }}
                 restore-keys: |
                   ${{ runner.os }}-build-${{ env.cache-name }}-
@@ -38,7 +37,7 @@ jobs:
 
             - name: Upload Release
               uses: fnkr/github-action-ghr@v1
-#              if: startsWith(github.ref, 'refs/tags/')
+              if: startsWith(github.ref, 'refs/tags/')
               env:
                 GHR_PATH: dist/firephp.zip
                 GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
