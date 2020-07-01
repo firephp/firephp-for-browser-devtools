@@ -11,9 +11,22 @@ node_modules/
 /dist/firephp.build/.web-extension-id
 .~*
 /dist/firephp.build.zip
-
-
-/dist/firephp.build/run.config.json
+/tests/*/.extension.built
 
 /dist/firephp.build-docker
-/tests/*/.extension.built
+
+# Files that we do not need
+/dist/firephp.build/scripts/devtools/dist/dist/riot.min.js
+/dist/firephp.build/scripts/devtools/dist/dist/riot.js
+/dist/firephp.build/scripts/devtools/dist/dist/babel-regenerator-runtime.js
+/dist/firephp.build/scripts/devtools/dist/dist/reps/insight.domplate.reps/dist/reps/dist/domplate.browser.js
+/dist/firephp.build/scripts/devtools/dist/dist/reps/insight.domplate.reps/dist/reps/dist/domplate-eval.browser.js
+/dist/firephp.build/lib/github.com~pinf~pinf-for-mozilla-web-ext/scripts/lib/pinf-loader-core.browser.js
+/dist/firephp.build/lib/github.com~pinf~pinf-for-mozilla-web-ext/scripts/lib/babel-regenerator-runtime.js
+/dist/firephp.build/scripts/devtools/dist/dist/reps/insight.domplate.reps/dist/reps/*/*.preview.htm
+/dist/firephp.build/scripts/devtools/dist/dist/reps/insight.domplate.reps/dist/reps/reps.json
+/dist/firephp.build/scripts/devtools/dist/dist/reps/io.shields.img.rep.js
+/dist/firephp.build/scripts/devtools/dist/dist/reps/div.rep.js
+/dist/firephp.build/scripts/devtools/dist/dist/reps/golden-layout.rep.js
+/dist/firephp.build/skin/box.png
+/dist/firephp.build/run.config.json
