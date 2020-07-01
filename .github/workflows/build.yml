@@ -28,7 +28,7 @@ jobs:
               run: npm install
 
             - name: Build
-              run: npm build
+              run: npm run build
 
             - name: Upload extension build
               uses: actions/upload-artifact@v1
