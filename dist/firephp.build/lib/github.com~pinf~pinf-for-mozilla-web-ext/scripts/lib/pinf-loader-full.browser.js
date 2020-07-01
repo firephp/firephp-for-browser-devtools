@@ -110,7 +110,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
       };
     }
 
-    function loadInBrowser(uri, loadedCallback) {
+    function loadInBrowser(uri, loadedCallback, sandboxOptions) {
       try {
         if (typeof importScripts !== "undefined") {
           importScripts(uri.replace(/^\/?\{host\}/, ""));
@@ -144,7 +144,9 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
           if (ev.type === "load" || readyStates[this.readyState]) {
             this.onload = this.onreadystatechange = this.onerror = null;
             loadedCallback(null, function () {
-              element.parentNode.removeChild(element);
+              if (!sandboxOptions || sandboxOptions.keepScriptTags !== true) {
+                element.parentNode.removeChild(element);
+              }
             });
           }
         };
@@ -244,7 +246,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
                     cleanupCallback();
                   }
                 });
-              });
+              }, sandboxOptions);
             }
           }
         } catch (err) {
@@ -290,7 +292,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
                   loadInBrowser(rebaseUri(loadedModuleInitializers[key][0].mappings[alias].replace(/^@script:/, "")), function () {
                     pending -= 1;
                     finalize();
-                  });
+                  }, sandboxOptions);
                 }
               }
             }
@@ -739,7 +741,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
             return;
           }
 
-          return fallbackLoad(uri, loadedCallback);
+          return fallbackLoad(uri, loadedCallback, options);
         };
 
         programIdentifier = bundle.uri || "#pinf:" + Math.random().toString(36).substr(2, 9);

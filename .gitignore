@@ -11,4 +11,5 @@ node_modules/
 /dist/firephp.build/.web-extension-id
 .~*
 /dist/firephp.build.zip
+/dist/firephp.build-docker
 /tests/*/.extension.built

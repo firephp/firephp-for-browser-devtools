@@ -1,39 +1,38 @@
 
 
-                DIV[data-is="tag_a8a74b856933412a25bf8fc852d97df15dbce804"] TABLE {
-                    height: 100vh;
-                    width: 100vw;
-                }
+    DIV[data-is="tag_e7ce2eb402dcaff08a8df09ee619bef75dd33153"] TABLE {
+        height: 100vh;
+        width: 100vw;
+    }
 
-                DIV[data-is="tag_a8a74b856933412a25bf8fc852d97df15dbce804"] TD.menu {
-                    background-color: #efefef;
-                    border-bottom: 1px solid #bcbcbc;
-                    padding: 3px;
-                    padding-left: 10px;
-                    padding-right: 10px;
-                }
+    DIV[data-is="tag_e7ce2eb402dcaff08a8df09ee619bef75dd33153"] TD.menu {
+        background-color: #efefef;
+        border-bottom: 1px solid #bcbcbc;
+        padding: 3px;
+        padding-left: 10px;
+        padding-right: 10px;
+    }
 
-                DIV[data-is="tag_a8a74b856933412a25bf8fc852d97df15dbce804"] TD.menu-right {
-                    text-align: right;
-                }
+    DIV[data-is="tag_e7ce2eb402dcaff08a8df09ee619bef75dd33153"] TD.menu-right {
+        text-align: right;
+    }
 
-                DIV[data-is="tag_a8a74b856933412a25bf8fc852d97df15dbce804"] TD.filetree {
-                    border-right: 1px solid #bcbcbc;
-                    padding: 10px;
-                    vertical-align: top;
-                    height: 100%;
-                    min-width: 20%;
-                }
+    DIV[data-is="tag_e7ce2eb402dcaff08a8df09ee619bef75dd33153"] TD.filetree {
+        border-right: 1px solid #bcbcbc;
+        padding: 10px;
+        vertical-align: top;
+        height: 100%;
+        min-width: 20%;
+    }
 
-                DIV[data-is="tag_a8a74b856933412a25bf8fc852d97df15dbce804"] TD.editor {
-                    min-width: 80%;
-                    vertical-align: top;
-                    position: relative;
-                    box-sizing: border-box;
-                }
+    DIV[data-is="tag_e7ce2eb402dcaff08a8df09ee619bef75dd33153"] TD.editor {
+        min-width: 80%;
+        vertical-align: top;
+        position: relative;
+        box-sizing: border-box;
+    }
 
-                DIV[data-is="tag_a8a74b856933412a25bf8fc852d97df15dbce804"] DIV.CodeMirror {
-                    position: absolute;
-                }
+    DIV[data-is="tag_e7ce2eb402dcaff08a8df09ee619bef75dd33153"] DIV.CodeMirror {
+        position: absolute;
+    }
 
-            
