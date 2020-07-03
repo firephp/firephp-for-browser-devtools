@@ -1,4 +1,4 @@
-![FirePHP Logo](https://github.com/firephp/firephp-for-browser-devtools/blob/master/src/skin/Logo.png?raw=true "FirePHP Logo")
+![FirePHP Logo](https://github.com/firephp/firephp-for-browser-devtools/blob/master/src/skin/Icon_128.png?raw=true "FirePHP Logo")
 
 FirePHP for Browser Developer Tools ![Build](https://github.com/firephp/firephp-for-browser-devtools/workflows/Build/badge.svg)
 ===================================
