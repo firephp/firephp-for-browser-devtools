@@ -96,7 +96,7 @@ Run from source:
 Provenance
 ==========
 
-Copyright 2016 [Christoph Dorn](http://christophdorn.com).
+Copyright &copy; 2016-2020 [Christoph Dorn](http://christophdorn.com).
 Licensed under the [Open Software License (OSL 3.0)](https://opensource.org/licenses/OSL-3.0).
 Contributions must be licensed under the [Academic Free License (AFL 3.0)](https://opensource.org/licenses/AFL-3.0).
 Learn about the OSL & AFL Licenses [here](http://rosenlaw.com/OSL3.0-explained.htm).
