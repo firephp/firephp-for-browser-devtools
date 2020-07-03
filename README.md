@@ -26,18 +26,18 @@ Preview
 
 
 Install
--------
+=======
 
-### Published
+## Published
 
   * Firefox: [addons.mozilla.org/en-US/firefox/addon/firephp](https://addons.mozilla.org/en-US/firefox/addon/firephp/)
   * Chrome & Brave: [chrome.google.com/webstore/detail/firephp/ikfbpappjhegehjflebknjbhdocbgkdi](https://chrome.google.com/webstore/detail/firephp/ikfbpappjhegehjflebknjbhdocbgkdi)
 
-### Local
+## Local
 
   * Firefox & Chrome unpacked: [firephp.zip](https://github.com/firephp/firephp-for-browser-devtools/releases) (downloads do **NOT** auto-update)
 
-### Source
+## Source
 
 Requirements (tested on macOS):
 
@@ -60,7 +60,7 @@ Run from source:
     npm install
     npm run dev
 
-### Notes for build reviewers
+## Notes for build reviewers
 
   * Releases for this extension are built using [github.com/pinf-to/to.pinf.org.mozilla.web-ext](https://github.com/pinf-to/to.pinf.org.mozilla.web-ext).
     * The tool provides a runtime framework for browser extensions as well as a build tool.
