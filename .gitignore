@@ -4,9 +4,9 @@
 *~.compiled.bash
 .actual.*
 node_modules/
+/package-lock.json
 .rt/
 ~.rt_*
-/dist/firephp.zip
-/dist/firephp.build/.web-extension-id
+/dist/
 .~*
-/dist/firephp.build.zip
+/tests/*/.extension.built

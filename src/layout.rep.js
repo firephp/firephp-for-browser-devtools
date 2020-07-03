@@ -99,6 +99,9 @@ exports.main = function (JSONREP, node, options) {
                     <div class="uninitialized" style="display: none;">
                         <p><button action="reload">Reload</button> to initialize FirePHP</p>
                     </div>
+                    <div class="editor" style="display: none;">
+                        %%%variables.panels.editor%%%
+                    </div>
                 </div>
             <<<),
             css: (css () >>>
@@ -138,6 +141,10 @@ exports.main = function (JSONREP, node, options) {
                     height: 100%;
                     padding: 20px;
                     background-color: #efefef;
+                }
+
+                :scope .editor {
+                    height: 100%;
                 }
 
                 :scope .manage TABLE.header {
@@ -194,6 +201,7 @@ exports.main = function (JSONREP, node, options) {
                     const COMPONENT = require("./component");
 
                     let forceManage = false;
+                    let forceEditor = false;
 
                     const comp = COMPONENT.for({
                         browser: WINDOW.crossbrowser
@@ -202,6 +210,7 @@ exports.main = function (JSONREP, node, options) {
 
                     comp.on("changed.context", function () {
                         comp.contextChangeAcknowledged();
+                        forceEditor = false;
                         sync();
                     });
 
@@ -210,10 +219,20 @@ exports.main = function (JSONREP, node, options) {
                     });
 
                     comp.on("message", function (message) {
+//console.log("message in layout", message);                            
                         if (message.event === "manage") {
                             forceManage = true;
                             sync();
-                        }
+                        } else
+                        if (message.event === "editor") {
+                            if (typeof message.value !== 'undefined') {
+                                forceEditor = message.value;
+                            } else {
+                                forceEditor = true;
+                            }
+//console.log("forceEditor in layout", forceEditor);                            
+                            sync();
+                        }                        
                     });
 
 
@@ -241,6 +260,10 @@ exports.main = function (JSONREP, node, options) {
                                 if (forceManage) {
                                     view = "manage";
                                 } else
+                                // The editor should be open
+                                if (forceEditor) {
+                                    view = "editor";
+                                } else
                                 // Default state when first opening
                                 if (
                                     !configured &&
@@ -262,18 +285,21 @@ exports.main = function (JSONREP, node, options) {
                             } else {
                                 view = "uninitialized";                            
                             }
-
 //console.log("VIEW DETAIS", view, "configured", configured, "enabled", enabled);
 
                             var toggles = {
                                 ui: false,
                                 manage: false,
-                                uninitialized: false
+                                uninitialized: false,
+                                editor: false
                             };
 
                             const versionEl = el.querySelector("DIV.manage TABLE.header DIV.version");
                             versionEl.style.display = "none";
-                            versionEl.innerHTML = "v" + WINDOW.crossbrowser.runtime.getManifest().version;
+                            versionEl.innerHTML = "v" + (
+                                WINDOW.crossbrowser.runtime.getManifest().version_name ||
+                                WINDOW.crossbrowser.runtime.getManifest().version
+                            );
 
                             if (view === "uninitialized") {
                                 toggles.uninitialized = true;
@@ -295,6 +321,9 @@ exports.main = function (JSONREP, node, options) {
                             } else
                             if (view === "console") {
                                 toggles.ui = true;
+                            } else
+                            if (view === "editor") {
+                                toggles.editor = true;
                             } else {
                                 throw new Error(`'view' with value '${view}' not implemented!`);
                             }
@@ -302,6 +331,7 @@ exports.main = function (JSONREP, node, options) {
                             el.querySelector("DIV.ui").style.display = toggles.ui ? "block" : "none";
                             el.querySelector("DIV.manage").style.display = toggles.manage ? "block" : "none";
                             el.querySelector("DIV.uninitialized").style.display = toggles.uninitialized ? "block" : "none";
+                            el.querySelector("DIV.editor").style.display = toggles.editor ? "block" : "none";
 
                         } catch (err) {
                             console.error("Error during sync():", err.message || err.stack || err);

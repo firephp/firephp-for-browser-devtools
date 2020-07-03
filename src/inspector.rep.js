@@ -98,9 +98,9 @@ exports.main = function (JSONREP, node, options) {
                     });
                         
                     window.FC.on("inspectFile", function (info) {
-                        showMessage({
-                            type: "string",
-                            value: "Viewing of files is not yet implemented."
+
+                        comp.showView("editor", {
+                            show: info
                         });
                     });
 

@@ -4,12 +4,53 @@ const WILDFIRE = exports.WILDFIRE = require("./wildfire");
 
 const LIB = require("./lib");
 
-WILDFIRE.VERBOSE = true;
+
+const COMPONENT = require("./component");
+
+const comp = COMPONENT.for({
+    browser: WINDOW.crossbrowser,
+    getOwnTabId: function () {
+        if (!currentContext) {
+            return null;
+        }
+        return currentContext.tabId;
+    }
+});
 
 
-WILDFIRE.once("error", function (err) {
+const wildfire = new WILDFIRE.Client(comp, {
+    verbose: false
+});
+
+wildfire.once("error", function (err) {
     console.error(err);
 });
+
+
+
+function syncDebugSetting () {
+    LIB.browser.storage.local.get('verbose').then(function (value) {
+        if (typeof value.verbose === 'undefined') {
+            LIB.browser.storage.local.set({
+                verbose: false
+            }).catch(function () {});
+        } else
+        if (!value.verbose || value.verbose === 'false') {
+            wildfire.VERBOSE = false;
+        } else
+        if (value.verbose) {
+            wildfire.VERBOSE = true;
+        }
+    }).catch(function () {});
+}
+syncDebugSetting();
+
+LIB.browser.storage.onChanged.addListener(function (changes, area) {
+    if (typeof changes.verbose !== 'undefined') {
+        syncDebugSetting();
+    }
+});
+
 
 
 async function initCurrentContext () {
@@ -43,21 +84,27 @@ setImmediate(initCurrentContext);
 
 
 // TODO: Emit destroy when unloaded to proactively cleanup. Do we need to do that?
-//WILDFIRE.emit("destroy");
+//wildfire.emit("destroy");
 
+
+let serverUrl = null;
 
 function broadcastForContext (context, message) {
     message.context = context;
-    message.to = "message-listener";
+    message.to = message.forceTo || "message-listener";
 
+    comp.handleBroadcastMessage(message);
     return LIB.browser.runtime.sendMessage(message).catch(function (err) {
-        if (WILDFIRE.VERBOSE) console.log("WARNING", err);
+        if (wildfire.VERBOSE) console.log("WARNING", err);
     });
 }
 
-WILDFIRE.on("message.firephp", function (message) {
-    
-    if (WILDFIRE.VERBOSE) console.log("[background] WILDFIRE.on -| message.firephp (message):", message);
+wildfire.on("message.firephp", function (message) {
+    if (wildfire.VERBOSE) console.log("[background] WILDFIRE.on -| message.firephp (message):", message);
+
+    if (message.context.serverUrl) {
+        serverUrl = message.context.serverUrl;
+    }
 
     broadcastForContext(message.context, {
         message: {
@@ -69,6 +116,28 @@ WILDFIRE.on("message.firephp", function (message) {
     });
 });
 
+wildfire.on("message.insight.selective", function (message) {    
+    if (wildfire.VERBOSE) console.log("[background] WILDFIRE.on -| message.insight.selective (message):", message);
+
+});
+
+wildfire.on("message.insight.request", function (message) {
+    if (wildfire.VERBOSE) console.log("[background] WILDFIRE.on -| message.insight.request (message):", message);
+
+//console.log("REQUEST message:", message);
+
+    broadcastForContext(message.context, {
+        forceTo: "protocol",
+        message: {
+            sender: message.sender,
+            receiver: message.receiver,
+            meta: message.meta,
+            data: message.data            
+        }
+    });
+});
+
+
 
 let currentContext = null;
 //let broadcastCurrentContext = false;
@@ -78,7 +147,10 @@ let lastDetailsForTabId = {};
 function setCurrentContextFromDetails (details, clearIfNew) {
     if (!details) {
         if (currentContext) {
+            if (wildfire.VERBOSE) console.log("CLEAR CONTEXT", "reset serverUrl");            
+
             currentContext = null;
+            serverUrl = null;
             broadcastForContext(currentContext, {
                 event: "currentContext"
             });
@@ -98,8 +170,10 @@ function setCurrentContextFromDetails (details, clearIfNew) {
                 newCtx.pageUid !== currentContext.pageUid
             )
         ) {
+            if (wildfire.VERBOSE) console.log("NEW CONTEXT", "reset serverUrl", currentContext, newCtx);            
+            serverUrl = null;
 
-//console.log("NEW CONTEXT", newCtx, details);
+            if (wildfire.VERBOSE) console.log("NEW CONTEXT", newCtx, details);
 
             currentContext = newCtx;
             lastDetailsForTabId[currentContext.tabId] = details;
@@ -114,7 +188,7 @@ function setCurrentContextFromDetails (details, clearIfNew) {
         }
 
         if (clearIfNew) {
-//console.log("SEND PREPARE DUE TO NEW CONTEXT", details);
+            if (wildfire.VERBOSE) console.log("SEND PREPARE DUE TO NEW CONTEXT", details);
             broadcastForContext(currentContext, {
                 event: "prepare"
             });
@@ -124,7 +198,7 @@ function setCurrentContextFromDetails (details, clearIfNew) {
 
 async function runtime_onMessage (message) {
 
-    if (WILDFIRE.VERBOSE) console.log("[background] BROWSER.runtime -| onMessage (message):", message);
+    if (wildfire.VERBOSE) console.log("[background] BROWSER.runtime -| onMessage (message):", message);
 
     if (message.to === "broadcast") {
         if (message.event === "currentContext") {
@@ -139,6 +213,7 @@ async function runtime_onMessage (message) {
             ) {
                 await initCurrentContext();
             }
+//console.log("FORWARD in BACKGROUD", message);            
             broadcastForContext(message.context || currentContext || null, message);
         }
     } else
@@ -147,25 +222,69 @@ async function runtime_onMessage (message) {
             LIB.browser.tabs.reload(message.context.tabId, {
                 bypassCache: true
             });
+        } else
+        if (message.event === "load-file") {
+
+            if (wildfire.VERBOSE) console.log("LOAD FILE FROM:::", serverUrl);
+
+            const file = message.file;
+            const line = message.line;
+
+            if (!serverUrl) {
+
+                if (wildfire.VERBOSE) console.log("SLIP LOAD FILE FROM::: DUE TO NO serverUrl");
+
+                // TODO: Show error 'Server URL not available!' in UI
+                return;
+            }
+
+            try {
+                const response = await wildfire.callServer(serverUrl, {
+                    target: 'Insight_Plugin_FileViewer',
+                    action: 'GetFile',
+                    args: {
+                        path: file
+                    }
+                });
+
+                if (wildfire.VERBOSE) console.log("SERVER response:", response);
+
+                if (!response) {
+                    return;
+                }
+
+                broadcastForContext(currentContext || null, {
+                    action: "show-file",
+                    args: {
+                        file: file,
+                        line: line,
+                        content: response
+                    }
+                });
+
+            } catch (err) {
+                // TODO: Show error message in UI
+                console.error("Error calling server:", err);
+            }
         }
     }
 }
 BROWSER.runtime.onMessage.addListener(runtime_onMessage);
-WILDFIRE.on("destroy", function () {
+wildfire.on("destroy", function () {
     BROWSER.runtime.onMessage.removeListener(runtime_onMessage);
 });
 
 
 
 function webNavigation_onBeforeNavigate (details) {
-    if (WILDFIRE.VERBOSE) console.log("[background] BROWSER.webNavigation -| onBeforeNavigate (details):", details);
+    if (wildfire.VERBOSE) console.log("[background] BROWSER.webNavigation -| onBeforeNavigate (details):", details);
 
     // We only care about the page frame event.
     if (details.parentFrameId !== -1) {
         return;
     }
 
-//console.log("ON BEFORE NAVIGATE", details);
+    if (wildfire.VERBOSE) console.log("ON BEFORE NAVIGATE", details);
 
     setCurrentContextFromDetails(details);
 }
@@ -174,84 +293,58 @@ BROWSER.webNavigation.onBeforeNavigate.addListener(webNavigation_onBeforeNavigat
         {}
     ]
 });
-WILDFIRE.on("destroy", function () {
+wildfire.on("destroy", function () {
     BROWSER.webNavigation.onBeforeNavigate.removeListener(webNavigation_onBeforeNavigate);
 });
 
 
-function webRequest_onBeforeRequest (details) {
-    if (WILDFIRE.VERBOSE) console.log("[background] BROWSER.webRequest -| onBeforeRequest (details):", details);
 
-    // We only care about the page frame event.
+function webRequest_onBeforeRequest (details) {
+    if (wildfire.VERBOSE) console.log("[background] BROWSER.webRequest -| onBeforeRequest (details):", details);
+
+    // We only care about the page frame event so we can reset the console.
     if (
-        (
-            // Firefox
-            typeof details.documentUrl !== "undefined" ||
-            // Google Chrome
-            typeof details.initiator !== "undefined"
-        ) ||
-        details.parentFrameId !== -1
+        // Works for FF & Chrome when reloading page.
+        // LIMITATION: In Chrome, there is no way to distinguish between a reload, forward navigate or backward navigate
+        //             so the console will clear with back button where on FF the event does not fire so the
+        //             previous console content for the URL re-appears. This latter behaviour is desired.
+        // TODO: Once Chrome provides property to determine type of navigation we can lift the limitation.
+        details.type === "main_frame"
     ) {
-        // These are resource or sub-frame events
-        return;
+        if (wildfire.VERBOSE) console.log("ON BEFORE PAGE REQUEST (should clear console)", details);
+
+        setCurrentContextFromDetails(details, true);    
     }
 
-//console.log("ON BEFORE REQUEST", details);
+    // if (
+    //     (
+    //         // Firefox
+    //         typeof details.documentUrl !== "undefined" ||
+    //         // Google Chrome
+    //         typeof details.initiator !== "undefined"
+    //     ) ||
+    //     details.parentFrameId !== -1
+    // ) {
+    //     // These are resource or sub-frame events
+    //     return;
+    // }
 
-    setCurrentContextFromDetails(details, true);
+    // console.log("ON BEFORE REQUEST", details);
+
+    // setCurrentContextFromDetails(details, true);
 }
 BROWSER.webRequest.onBeforeRequest.addListener(webRequest_onBeforeRequest, {
     urls: [
         "<all_urls>"
     ]
 });
-WILDFIRE.on("destroy", function () {
+wildfire.on("destroy", function () {
     BROWSER.webRequest.onBeforeRequest.removeListener(webRequest_onBeforeRequest);
 });
 
 
-/*
-function webNavigation_onCommitted (details) {
-    if (WILDFIRE.VERBOSE) console.log("[background] BROWSER.webNavigation -| onCommitted (details):", details);
-
-    // We only care about the page frame event.
-    if (details.parentFrameId !== -1) {
-        return;
-    }
-
-console.log("ON COMITTED", details);
-
-    setCurrentContextFromDetails(details, true);
-}
-BROWSER.webNavigation.onCommitted.addListener(webNavigation_onCommitted, {
-    url: [
-        {}
-    ]
-});
-WILDFIRE.on("destroy", function () {
-    BROWSER.webNavigation.onCommitted.removeListener(webNavigation_onCommitted);
-});
-*/
-
-
-
-/*
-function tabs_onActivated (details) {
-    if (WILDFIRE.VERBOSE) console.log("[background] BROWSER.tabs -| onActivated (details):", details);
-
-console.log("TABS on ACTIVATE", details);
-
-    setCurrentContextFromDetails(lastDetailsForTabId[details.tabId] || null);
-}
-BROWSER.tabs.onActivated.addListener(tabs_onActivated);
-WILDFIRE.on("destroy", function () {
-    BROWSER.tabs.onActivated.removeListener(tabs_onActivated);
-});
-*/
-
-
 function tabs_onRemoved (tabId) {
-    if (WILDFIRE.VERBOSE) console.log("[background] BROWSER.tabs -| onRemoved (tabId):", tabId);
+    if (wildfire.VERBOSE) console.log("[background] BROWSER.tabs -| onRemoved (tabId):", tabId);
     
     if (
         currentContext &&
@@ -267,11 +360,53 @@ function tabs_onRemoved (tabId) {
     });
 }
 BROWSER.tabs.onRemoved.addListener(tabs_onRemoved);
-WILDFIRE.on("destroy", function () {
+wildfire.on("destroy", function () {
     BROWSER.tabs.onRemoved.removeListener(tabs_onRemoved);
 });
 
 
+
+
+
+
+/*
+function webNavigation_onCommitted (details) {
+    if (wildfire.VERBOSE) console.log("[background] BROWSER.webNavigation -| onCommitted (details):", details);
+
+    // We only care about the page frame event.
+    if (details.parentFrameId !== -1) {
+        return;
+    }
+
+console.log("ON COMITTED", details);
+
+    setCurrentContextFromDetails(details, true);
+}
+BROWSER.webNavigation.onCommitted.addListener(webNavigation_onCommitted, {
+    url: [
+        {}
+    ]
+});
+wildfire.on("destroy", function () {
+    BROWSER.webNavigation.onCommitted.removeListener(webNavigation_onCommitted);
+});
+*/
+
+
+
+/*
+function tabs_onActivated (details) {
+    if (wildfire.VERBOSE) console.log("[background] BROWSER.tabs -| onActivated (details):", details);
+
+console.log("TABS on ACTIVATE", details);
+
+    setCurrentContextFromDetails(lastDetailsForTabId[details.tabId] || null);
+}
+BROWSER.tabs.onActivated.addListener(tabs_onActivated);
+wildfire.on("destroy", function () {
+    BROWSER.tabs.onActivated.removeListener(tabs_onActivated);
+});
+*/
 
 /*
 function webNavigation_onBeforeNavigate (details) {
@@ -280,7 +415,7 @@ function webNavigation_onBeforeNavigate (details) {
         return;
     }
 
-    if (WILDFIRE.VERBOSE) console.log("[background] BROWSER.webNavigation -| onBeforeNavigate (details):", details);
+    if (wildfire.VERBOSE) console.log("[background] BROWSER.webNavigation -| onBeforeNavigate (details):", details);
 
     // We only care about the page frame event.
     if (details.parentFrameId !== -1) {
@@ -305,7 +440,7 @@ BROWSER.webNavigation.onBeforeNavigate.addListener(webNavigation_onBeforeNavigat
         {}
     ]
 });
-WILDFIRE.on("destroy", function () {
+wildfire.on("destroy", function () {
     BROWSER.webNavigation.onBeforeNavigate.removeListener(webNavigation_onBeforeNavigate);
 });
 
@@ -315,7 +450,7 @@ function webNavigation_onDOMContentLoaded (details) {
         return;        
     }
     
-    if (WILDFIRE.VERBOSE) console.log("[background] BROWSER.webNavigation -| onDOMContentLoaded (details):", details);
+    if (wildfire.VERBOSE) console.log("[background] BROWSER.webNavigation -| onDOMContentLoaded (details):", details);
 
     // We only care about the page frame event.
     if (details.parentFrameId !== -1) {
@@ -335,7 +470,7 @@ BROWSER.webNavigation.onDOMContentLoaded.addListener(webNavigation_onDOMContentL
         {}
     ]
 });
-WILDFIRE.on("destroy", function () {
+wildfire.on("destroy", function () {
     BROWSER.webNavigation.onDOMContentLoaded.removeListener(webNavigation_onDOMContentLoaded);
 });
 */

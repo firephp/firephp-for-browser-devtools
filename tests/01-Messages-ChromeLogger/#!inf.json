@@ -1,0 +1,97 @@
+{
+    "#": "gi0.PINF.it/core/v0",
+
+    "#": {
+        "/.extension.built": "to.pinf.org.mozilla.web-ext",
+        "runner": "it.pinf.org.mozilla.web-ext"
+    },
+    ":builder:": "/.extension.built @ builder/v1",
+    ":runner:": "runner @ runner/v0",
+
+    "gi0.PINF.it/build/v0 @ # /.extension.built": (inf () >>>
+        {
+            "gi0.PINF.it/build/v0 @ # :builder: build() /": {
+                "homepage": ":3000/",
+                "port": 3001,
+                "manifest": {
+                    "permissions": [
+                        "storage",
+                        "webRequest",
+                        "webRequestBlocking",
+                        "<all_urls>"
+                    ],
+                    "background": {
+                        "scripts": [
+                            {
+                                "worker.js": {
+                                    "gi0.PINF.it/build/v0 # /scripts # /": {
+                                        "@it.pinf.org.mochajs # router/v1": {
+                                            "suite": "worker",
+                                            "apiBaseUrl": "/tests",
+                                            "tests": {
+                                                "01-HelloWorld": function /* CodeBlock */ (build) {
+
+                                                    var WILDFIRE = require("../../src/wildfire");
+                                                    WILDFIRE.forcedEnable(true);
+
+                                                    describe('Wait for messages', function () {
+                                                        this.timeout(5 * 1000);
+                
+                                                        it('received', function (done) {
+                
+                                                            WILDFIRE.on("message.chromelogger", function (message) {
+                
+                                                                chai.assert.equal(message.rows.length, 3);
+                                                                chai.assert.equal(message.rows[0][0][0], "Hello console!");
+                                                                chai.assert.equal(message.rows[2][0][0], "something went wrong!");
+                                                                chai.assert.equal(message.rows[2][2], "warn");
+                
+                                                                done();
+                                                            });
+                
+                                                            browser.tabs.reload();
+                                                        });
+                                                    });
+                                                }
+                                            },
+                                            "babel": {
+                                                "presets": {
+                                                    "@babel/preset-env": {
+                                                        "targets": "last 1 Firefox versions"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                },
+                "expect": {
+                    "exit": true,
+                    "conditions": [
+                        {
+                            "gi0.PINF.it/build/v0 # /testpage # /": {
+                                "@it.pinf.org.mochajs # expect/v1": {
+                                    "wait": true,
+                                    "suites": [
+                                        "worker"
+                                    ]
+                                }
+                            }
+                        }        
+                    ]
+                }                
+            }
+        }
+    <<<),
+
+    "gi0.PINF.it/build/v0 @ # onDone()": (inf () >>>
+        {
+            "gi0.PINF.it/core/v0 @ # :runner: set() extensionPath": ".extension.built",
+
+            "gi0.PINF.it/core/v0 @ # :runner: run()": ""
+        }
+    <<<)
+}

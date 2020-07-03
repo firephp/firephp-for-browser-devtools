@@ -1,0 +1,43 @@
+name: Build
+on:
+    - push
+jobs:
+    Build:
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                node-version:
+                    - 13.x
+        steps:
+            - uses: actions/checkout@v2
+
+            - name: Cache node modules
+              uses: actions/cache@v2
+              env:
+                cache-name: cache-node-modules
+              with:
+                path: node_modules
+                key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('package.json') }}-${{ hashFiles('npm-shrinkwrap.json') }}
+                restore-keys: |
+                  ${{ runner.os }}-build-${{ env.cache-name }}-
+                  ${{ runner.os }}-build-
+                  ${{ runner.os }}-
+
+            - name: Install Dependencies
+              run: npm install
+
+            - name: Build
+              run: npm run build
+
+            - name: Upload extension as build artifact
+              uses: actions/upload-artifact@v1
+              with:
+                name: firephp
+                path: dist/firephp.zip
+
+            - name: Upload Release if tagging
+              uses: fnkr/github-action-ghr@v1
+              if: startsWith(github.ref, 'refs/tags/')
+              env:
+                GHR_PATH: dist/firephp.zip
+                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

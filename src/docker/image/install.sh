@@ -12,14 +12,15 @@ echo "npm version: $(npm --version)"
 
 echo "Cloning ..."
 
-git clone https://github.com/firephp/firephp-for-firefox-devtools.git firephp
+git clone file:///source/.git firephp
+#git clone https://github.com/firephp/firephp-for-firefox-devtools.git firephp
 
 pushd "firephp"
 
-    git checkout amo
+    git checkout pre
 
     echo "Installing ..."
 
-    npm install --unsafe-perm
+    npm install
 
 popd
