@@ -219,7 +219,7 @@ exports.main = function (JSONREP, node, options) {
                     });
 
                     comp.on("message", function (message) {
-console.log("message in layout", message);                            
+//console.log("message in layout", message);                            
                         if (message.event === "manage") {
                             forceManage = true;
                             sync();
@@ -230,7 +230,7 @@ console.log("message in layout", message);
                             } else {
                                 forceEditor = true;
                             }
-console.log("forceEditor in layout", forceEditor);                            
+//console.log("forceEditor in layout", forceEditor);                            
                             sync();
                         }                        
                     });

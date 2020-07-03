@@ -179,7 +179,7 @@ console.log("CLEAR lastRequestConsole CONSOLE!!");
 
 //console.log("APPEND MESSAGE TO REQUEST CONSOLE");
 
-console.log("LOG TO CONSOLE 1", message.message);
+//console.log("LOG TO CONSOLE 1", message.message);
                                     message.message.meta = (
                                         message.message.meta &&
                                         JSON.parse(message.message.meta)

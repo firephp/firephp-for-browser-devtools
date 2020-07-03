@@ -16,6 +16,7 @@ exports.main = function (JSONREP, node, options) {
 
                             <ul>
                                 <li><input type="checkbox" name="reloadOnEnable" scope="global" onchange={syncCheckbox}/> Reload page on <b>Enable</b></li>
+                                <li><input type="checkbox" name="verbose" scope="global" onchange={syncCheckbox}/> Enable internal extension logging for debugging purposes</li>
                             </ul>
             
                             <h2>Settings for: { hostname }</h2>

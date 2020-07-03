@@ -124,6 +124,15 @@ exports.for = function (ctx) {
         ctx.browser.runtime.sendMessage({
             to: "broadcast",
             event: "currentContext"
+        }).catch(function (err) {
+            if (/Receiving end does not exist/.test(err.message)) {
+                // Silence error as it is expected once in the beginning.
+                // TODO: Make establishing a connection more deterministic so we do not need to slicence any errors.
+                // TODO: Display error when in dev mode.
+                return;
+            }
+            // TODO: Only log when in dev mode.
+            console.error('WARNING: Error while broadcasting current context:', err.message);
         });
     }, 250);
 

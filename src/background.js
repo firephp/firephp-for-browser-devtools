@@ -28,6 +28,30 @@ wildfire.once("error", function (err) {
 
 
 
+function syncDebugSetting () {
+    LIB.browser.storage.local.get('verbose').then(function (value) {
+        if (typeof value.verbose === 'undefined') {
+            LIB.browser.storage.local.set({
+                verbose: false
+            }).catch(function () {});
+        } else
+        if (!value.verbose || value.verbose === 'false') {
+            wildfire.VERBOSE = false;
+        } else
+        if (value.verbose) {
+            wildfire.VERBOSE = true;
+        }
+    }).catch(function () {});
+}
+syncDebugSetting();
+
+LIB.browser.storage.onChanged.addListener(function (changes, area) {
+    if (typeof changes.verbose !== 'undefined') {
+        syncDebugSetting();
+    }
+});
+
+
 
 async function initCurrentContext () {
     if (currentContext) {
@@ -123,7 +147,7 @@ let lastDetailsForTabId = {};
 function setCurrentContextFromDetails (details, clearIfNew) {
     if (!details) {
         if (currentContext) {
-console.log("CLEAR CONTEXT", "reset serverUrl");            
+            if (wildfire.VERBOSE) console.log("CLEAR CONTEXT", "reset serverUrl");            
 
             currentContext = null;
             serverUrl = null;
@@ -146,10 +170,10 @@ console.log("CLEAR CONTEXT", "reset serverUrl");
                 newCtx.pageUid !== currentContext.pageUid
             )
         ) {
-console.log("NEW CONTEXT", "reset serverUrl", currentContext, newCtx);            
+            if (wildfire.VERBOSE) console.log("NEW CONTEXT", "reset serverUrl", currentContext, newCtx);            
             serverUrl = null;
 
-//console.log("NEW CONTEXT", newCtx, details);
+            if (wildfire.VERBOSE) console.log("NEW CONTEXT", newCtx, details);
 
             currentContext = newCtx;
             lastDetailsForTabId[currentContext.tabId] = details;
@@ -164,7 +188,7 @@ console.log("NEW CONTEXT", "reset serverUrl", currentContext, newCtx);
         }
 
         if (clearIfNew) {
-//console.log("SEND PREPARE DUE TO NEW CONTEXT", details);
+            if (wildfire.VERBOSE) console.log("SEND PREPARE DUE TO NEW CONTEXT", details);
             broadcastForContext(currentContext, {
                 event: "prepare"
             });
@@ -201,15 +225,14 @@ async function runtime_onMessage (message) {
         } else
         if (message.event === "load-file") {
 
-
-console.log("LOAD FILE FROM:::", serverUrl);
+            if (wildfire.VERBOSE) console.log("LOAD FILE FROM:::", serverUrl);
 
             const file = message.file;
             const line = message.line;
 
             if (!serverUrl) {
 
-console.log("SLIP LOAD FILE FROM::: DUE TO NO serverUrl");
+                if (wildfire.VERBOSE) console.log("SLIP LOAD FILE FROM::: DUE TO NO serverUrl");
 
                 // TODO: Show error 'Server URL not available!' in UI
                 return;
@@ -224,7 +247,7 @@ console.log("SLIP LOAD FILE FROM::: DUE TO NO serverUrl");
                     }
                 });
 
-console.log("SERVER response:", response);
+                if (wildfire.VERBOSE) console.log("SERVER response:", response);
 
                 if (!response) {
                     return;
@@ -261,7 +284,7 @@ function webNavigation_onBeforeNavigate (details) {
         return;
     }
 
-console.log("ON BEFORE NAVIGATE", details);
+    if (wildfire.VERBOSE) console.log("ON BEFORE NAVIGATE", details);
 
     setCurrentContextFromDetails(details);
 }
@@ -279,23 +302,36 @@ wildfire.on("destroy", function () {
 function webRequest_onBeforeRequest (details) {
     if (wildfire.VERBOSE) console.log("[background] BROWSER.webRequest -| onBeforeRequest (details):", details);
 
-    // We only care about the page frame event.
+    // We only care about the page frame event so we can reset the console.
     if (
-        (
-            // Firefox
-            typeof details.documentUrl !== "undefined" ||
-            // Google Chrome
-            typeof details.initiator !== "undefined"
-        ) ||
-        details.parentFrameId !== -1
+        // Works for FF & Chrome when reloading page.
+        // LIMITATION: In Chrome, there is no way to distinguish between a reload, forward navigate or backward navigate
+        //             so the console will clear with back button where on FF the event does not fire so the
+        //             previous console content for the URL re-appears. This latter behaviour is desired.
+        // TODO: Once Chrome provides property to determine type of navigation we can lift the limitation.
+        details.type === "main_frame"
     ) {
-        // These are resource or sub-frame events
-        return;
+        if (wildfire.VERBOSE) console.log("ON BEFORE PAGE REQUEST (should clear console)", details);
+
+        setCurrentContextFromDetails(details, true);    
     }
 
-console.log("ON BEFORE REQUEST", details);
+    // if (
+    //     (
+    //         // Firefox
+    //         typeof details.documentUrl !== "undefined" ||
+    //         // Google Chrome
+    //         typeof details.initiator !== "undefined"
+    //     ) ||
+    //     details.parentFrameId !== -1
+    // ) {
+    //     // These are resource or sub-frame events
+    //     return;
+    // }
 
-    setCurrentContextFromDetails(details, true);
+    // console.log("ON BEFORE REQUEST", details);
+
+    // setCurrentContextFromDetails(details, true);
 }
 BROWSER.webRequest.onBeforeRequest.addListener(webRequest_onBeforeRequest, {
     urls: [
