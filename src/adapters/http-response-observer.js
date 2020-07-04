@@ -67,6 +67,7 @@ exports.forAPI = function (API) {
 
             self.ensureHooked = function () {
                 if (!isHooked) {    
+                    API.BROWSER.remap();
                     API.BROWSER.webRequest.onHeadersReceived.addListener(
                         onHeadersReceived,
                         {
@@ -83,8 +84,10 @@ exports.forAPI = function (API) {
             }
 
             self.ensureUnhooked = function () {
-                API.BROWSER.webRequest.onHeadersReceived.removeListener(onHeadersReceived);
-                isHooked = false;
+                if (isHooked) {
+                    API.BROWSER.webRequest.onHeadersReceived.removeListener(onHeadersReceived);
+                    isHooked = false;
+                }
                 pageUrlByTabId = {};
                 pageTimestampByTabId = {};
             }

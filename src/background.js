@@ -44,7 +44,6 @@ function syncDebugSetting () {
     }).catch(function () {});
 }
 syncDebugSetting();
-
 LIB.browser.storage.onChanged.addListener(function (changes, area) {
     if (typeof changes.verbose !== 'undefined') {
         syncDebugSetting();
@@ -83,6 +82,60 @@ setImmediate(initCurrentContext);
 
 
 
+
+
+
+
+// ##################################################
+// # Address-bar based enable
+// ##################################################
+function syncPageActionState (tabId) {
+    if (
+        currentContext &&
+        currentContext.tabId === tabId
+    ) {
+        // Make the icon show in the address bar so the user can enable.
+        comp.hasGrants().then(function (granted) {
+            if (granted) {
+                LIB.browser.pageAction.setIcon({
+                    tabId: tabId,
+                    path: "skin/Icon_48_enabled.png"                    
+                });
+            } else {
+                LIB.browser.pageAction.setIcon({
+                    tabId: tabId,
+                    path: "skin/Icon_48_disabled.png"                    
+                });
+            }
+            LIB.browser.pageAction.show(tabId);
+        });
+    } else {
+        LIB.browser.pageAction.hide(tabId);
+    }
+}
+// sync state when background page loads
+setImmediate(function () {
+    LIB.browser.tabs.query({active: true}).then(function (details) {
+        if (details.length === 1 && details[0].id) syncPageActionState(details[0].id);
+    });
+});
+// sync state when a tab is selected
+LIB.browser.tabs.onActivated.addListener(function (activeInfo) {
+    syncPageActionState(activeInfo.tabId);
+});
+// sync state when a tab status updates
+LIB.browser.tabs.onUpdated.addListener(syncPageActionState);
+// destroy sync state when tab closes
+LIB.browser.tabs.onRemoved.addListener(function (tabId) {
+    delete pageActionState[tabId];
+});
+
+
+
+
+
+
+
 // TODO: Emit destroy when unloaded to proactively cleanup. Do we need to do that?
 //wildfire.emit("destroy");
 
@@ -90,6 +143,9 @@ setImmediate(initCurrentContext);
 let serverUrl = null;
 
 function broadcastForContext (context, message) {
+
+    if (context) syncPageActionState(context.tabId);
+
     message.context = context;
     message.to = message.forceTo || "message-listener";
 
@@ -156,11 +212,26 @@ function setCurrentContextFromDetails (details, clearIfNew) {
             });
         }
     } else {
+        if (details.tabId === -1) {
+            return;
+        }
+
+// console.log("SET CONTEXT FROM DETAILS", details);
+//         LIB.browser.tabs.query({
+//             currentWindow: true,
+//             active: true
+//         }).then(function (searchResult) {
+
+//             console.log("ACTIVE TAB", searchResult[0].id);
+
+//         });
+
         let newCtx = {
             url: details.url,
             tabId: details.tabId
         };
         newCtx.pageUid = JSON.stringify(newCtx);
+        newCtx.urlSelector = details.url.replace(/^(https?:\/\/[^\/]+)(\/.*)?$/, '$1/*');
         newCtx.hostname = details.url.replace(/^[^:]+:\/\/([^:\/]+)(:\d+)?\/.*?$/, "$1");
         if (
             newCtx !== currentContext &&
@@ -181,6 +252,7 @@ function setCurrentContextFromDetails (details, clearIfNew) {
             broadcastForContext(currentContext, {
                 event: "currentContext"
             });
+
         } else {
             broadcastForContext(currentContext, {
                 event: "currentContext"
@@ -218,6 +290,19 @@ async function runtime_onMessage (message) {
         }
     } else
     if (message.to === "background") {
+
+        if (message.event === "getCurrentContext") {
+
+            message.event = "currentContext";
+            message.forceTo = message.from;
+            delete message.from;
+
+            if (!currentContext) {
+                await initCurrentContext();
+            }
+            broadcastForContext(currentContext, message);
+
+        } else
         if (message.event === "reload") {
             LIB.browser.tabs.reload(message.context.tabId, {
                 bypassCache: true
@@ -288,59 +373,146 @@ function webNavigation_onBeforeNavigate (details) {
 
     setCurrentContextFromDetails(details);
 }
-BROWSER.webNavigation.onBeforeNavigate.addListener(webNavigation_onBeforeNavigate, {
-    url: [
-        {}
-    ]
-});
+BROWSER.webNavigation.onBeforeNavigate.addListener(webNavigation_onBeforeNavigate);
 wildfire.on("destroy", function () {
     BROWSER.webNavigation.onBeforeNavigate.removeListener(webNavigation_onBeforeNavigate);
 });
 
 
 
-function webRequest_onBeforeRequest (details) {
-    if (wildfire.VERBOSE) console.log("[background] BROWSER.webRequest -| onBeforeRequest (details):", details);
 
-    // We only care about the page frame event so we can reset the console.
-    if (
-        // Works for FF & Chrome when reloading page.
-        // LIMITATION: In Chrome, there is no way to distinguish between a reload, forward navigate or backward navigate
-        //             so the console will clear with back button where on FF the event does not fire so the
-        //             previous console content for the URL re-appears. This latter behaviour is desired.
-        // TODO: Once Chrome provides property to determine type of navigation we can lift the limitation.
-        details.type === "main_frame"
-    ) {
-        if (wildfire.VERBOSE) console.log("ON BEFORE PAGE REQUEST (should clear console)", details);
 
-        setCurrentContextFromDetails(details, true);    
+
+
+let webRequest_onBeforeRequest = null;
+
+comp.on("changed.context", function () {
+    syncWebRequestListener();
+});    
+comp.on("changed.setting", function () {
+    syncWebRequestListener();
+});
+async function syncWebRequestListener () {
+    const enabled = await comp.isEnabled();
+
+    // Once added we never remove it again.
+    if (enabled) {
+        if (!webRequest_onBeforeRequest) {
+            webRequest_onBeforeRequest = function (details) {
+                if (wildfire.VERBOSE) console.log("[background] BROWSER.webRequest -| onBeforeRequest (details):", details);
+            
+                // We only care about the page frame event so we can reset the console.
+                if (
+                    // Works for FF & Chrome when reloading page.
+                    // LIMITATION: In Chrome, there is no way to distinguish between a reload, forward navigate or backward navigate
+                    //             so the console will clear with back button where on FF the event does not fire so the
+                    //             previous console content for the URL re-appears. This latter behaviour is desired.
+                    // TODO: Once Chrome provides property to determine type of navigation we can lift the limitation.
+                    details.type === "main_frame"
+                ) {
+                    if (wildfire.VERBOSE) console.log("ON BEFORE PAGE REQUEST (should clear console)", details);
+            
+                    setCurrentContextFromDetails(details, true);    
+                }
+
+                // if (
+                //     (
+                //         // Firefox
+                //         typeof details.documentUrl !== "undefined" ||
+                //         // Google Chrome
+                //         typeof details.initiator !== "undefined"
+                //     ) ||
+                //     details.parentFrameId !== -1
+                // ) {
+                //     // These are resource or sub-frame events
+                //     return;
+                // }
+            
+                // console.log("ON BEFORE REQUEST", details);
+            
+                // setCurrentContextFromDetails(details, true);
+            };
+
+console.log("[background] Adding webRequest listener", comp.currentContext.urlSelector);            
+
+            WINDOW.crossbrowser.remap();
+            // TODO: Only hook web request for applicable hostname.
+            BROWSER.webRequest.onBeforeRequest.addListener(webRequest_onBeforeRequest, {
+                urls: [
+                    "<all_urls>"
+                    //comp.currentContext.urlSelector
+                ]
+            });
+//            BROWSER.webRequest.handlerBehaviorChanged();
+
+console.log("[background] Adding webRequest listener", comp.currentContext.urlSelector, 'ADDED))))))');            
+        }
+
+//     } else {
+//         if (webRequest_onBeforeRequest) {
+
+// console.log("[background] Removing webRequest listener (1)");            
+
+//             BROWSER.webRequest.onBeforeRequest.removeListener(webRequest_onBeforeRequest);
+//             webRequest_onBeforeRequest = null;
+//         }        
     }
-
-    // if (
-    //     (
-    //         // Firefox
-    //         typeof details.documentUrl !== "undefined" ||
-    //         // Google Chrome
-    //         typeof details.initiator !== "undefined"
-    //     ) ||
-    //     details.parentFrameId !== -1
-    // ) {
-    //     // These are resource or sub-frame events
-    //     return;
-    // }
-
-    // console.log("ON BEFORE REQUEST", details);
-
-    // setCurrentContextFromDetails(details, true);
 }
-BROWSER.webRequest.onBeforeRequest.addListener(webRequest_onBeforeRequest, {
-    urls: [
-        "<all_urls>"
-    ]
-});
-wildfire.on("destroy", function () {
-    BROWSER.webRequest.onBeforeRequest.removeListener(webRequest_onBeforeRequest);
-});
+
+// wildfire.on("destroy", function () {
+//     if (webRequest_onBeforeRequest) {
+
+// console.log("[background] Removing webRequest listener (2)");            
+        
+//         BROWSER.webRequest.onBeforeRequest.removeListener(webRequest_onBeforeRequest);
+//         webRequest_onBeforeRequest = null;
+//     }
+// });
+
+
+
+// let webRequest_onBeforeRequest = function (details) {
+//     if (wildfire.VERBOSE) console.log("[background] BROWSER.webRequest -| onBeforeRequest (details):", details);
+
+//     // We only care about the page frame event so we can reset the console.
+//     if (
+//         // Works for FF & Chrome when reloading page.
+//         // LIMITATION: In Chrome, there is no way to distinguish between a reload, forward navigate or backward navigate
+//         //             so the console will clear with back button where on FF the event does not fire so the
+//         //             previous console content for the URL re-appears. This latter behaviour is desired.
+//         // TODO: Once Chrome provides property to determine type of navigation we can lift the limitation.
+//         details.type === "main_frame"
+//     ) {
+//         if (wildfire.VERBOSE) console.log("ON BEFORE PAGE REQUEST (should clear console)", details);
+
+//         setCurrentContextFromDetails(details, true);    
+//     }
+
+//     // if (
+//     //     (
+//     //         // Firefox
+//     //         typeof details.documentUrl !== "undefined" ||
+//     //         // Google Chrome
+//     //         typeof details.initiator !== "undefined"
+//     //     ) ||
+//     //     details.parentFrameId !== -1
+//     // ) {
+//     //     // These are resource or sub-frame events
+//     //     return;
+//     // }
+
+//     // console.log("ON BEFORE REQUEST", details);
+
+//     // setCurrentContextFromDetails(details, true);
+// };
+
+// BROWSER.webRequest.onBeforeRequest.addListener(webRequest_onBeforeRequest, {
+//     urls: [
+//         "<all_urls>"
+//     ]
+// });
+
+
 
 
 function tabs_onRemoved (tabId) {
@@ -360,9 +532,9 @@ function tabs_onRemoved (tabId) {
     });
 }
 BROWSER.tabs.onRemoved.addListener(tabs_onRemoved);
-wildfire.on("destroy", function () {
-    BROWSER.tabs.onRemoved.removeListener(tabs_onRemoved);
-});
+// wildfire.on("destroy", function () {
+//     BROWSER.tabs.onRemoved.removeListener(tabs_onRemoved);
+// });
 
 
 
@@ -391,8 +563,6 @@ wildfire.on("destroy", function () {
     BROWSER.webNavigation.onCommitted.removeListener(webNavigation_onCommitted);
 });
 */
-
-
 
 /*
 function tabs_onActivated (details) {

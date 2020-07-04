@@ -13,28 +13,47 @@
         {
             "gi0.PINF.it/build/v0 @ # :builder: build() /": {
                 "port": 9000,
+                "targetApplication": "firefox",
                 "manifest": {
                     "name": "FirePHP (Official)",
+                    "short_name": "FirePHP",
                     "version": "${version}",
                     "description": "Log from PHP to a devtools panel.",
-                    "applications": {
+                    "homepage_url": "http://firephp.org",
+                    "author": "Christoph Dorn",
+                    "icons": {
+                        "16": "./src/skin/Icon_16.png",
+                        "48": "./src/skin/Icon_48.png",
+                        "128": "./src/skin/Icon_128.png"
+                    },
+                    "files": {
+                        "skin/Icon_48_enabled.png": "./src/skin/Icon_48_enabled.png",
+                        "skin/Icon_48_disabled.png": "./src/skin/Icon_48_disabled.png"
+                    },
+                    "permissions": [
+                        "activeTab",
+                        "storage",
+                        "webNavigation"
+                    ],
+                    "permissions[firefox]": [
+                        "webRequest",
+                        "webRequestBlocking",
+                        "http://*/",
+                        "https://*/"
+                    ],
+                    "optional_permissions[chrome]": [
+                        "webRequest",
+                        "webRequestBlocking",
+                        "http://*/",
+                        "https://*/"
+                    ],
+                    "content_security_policy": "script-src 'self'; style-src 'self'; object-src 'self'; img-src 'self'",
+                    "applications[firefox]": {
                         "gecko": {
                             "id": "FirePHPExtension-Build@firephp.org",
                             "strict_min_version": "56.0"
                         }
                     },
-                    "icons": {
-                        "48": "./src/skin/Logo.png"
-                    },
-                    "permissions": [
-                        "activeTab",
-                        "storage",
-                        "webRequest",
-                        "webNavigation",
-                        "webRequestBlocking",            
-                        "<all_urls>"
-                    ],
-                    "content_security_policy": "script-src 'self'; style-src 'self'; object-src 'self'; img-src 'self'",
                     "background": {
                         "scripts": [
                             {
@@ -56,12 +75,47 @@
                             }
                         ]
                     },
+                    "page": {
+                        "action": {
+                            "devtools/dist/page-action.js": {
+                                "code": {
+                                    "gi0.PINF.it/build/v0 # /scripts/devtools/dist # /": {
+                                        "@jsonrep # builder/v1": {
+                                            "externalizeCss": true,
+                                            "indexFilename": "page-action",
+                                            "indexFormat": "js",
+                                            "include": {
+                                                "jquery": false,
+                                                "regenerator-runtime": false,
+                                                "riot.csp.js": true,
+                                                "riot.js": false,
+                                                "riot.min.js": false
+                                            },
+                                            "page": {
+                                                "@page-action": {}
+                                            },
+                                            "reps": {
+                                                "page-action": "./src/page-action.rep.js"
+                                            },
+                                            "babel": {
+                                                "presets": {
+                                                    "@babel/preset-env": {
+                                                        "targets": "last 1 Firefox versions"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },                    
                     "devtools": {
                         "panels": [
                             {
                                 "devtools/dist/index.js": {
                                     "label": "FirePHP",
-                                    "icon": "./src/skin/Logo.png",
+                                    "icon": "./src/skin/Icon_48.png",
                                     "include": {
                                         "codemirror.js": "codemirror/lib/codemirror.js",
                                         "codemirror.css": "codemirror/lib/codemirror.css",

@@ -215,10 +215,14 @@ console.log("CLEAR lastRequestConsole CONSOLE!!");
 
                             } else
                             if (message.event === "clear") {
-//console.log("CLEAR CONSOLE!!!", message.context);
+
+
+// console.log("CLEAR CONSOLE!!!  message.context", message.context);
+// console.log("CLEAR CONSOLE!!! consoles", consoles);
 
                                 Object.keys(consoles).forEach(function (id) {
-//console.log("console id", id);                                    
+
+// console.log("console id match?", id, message.context.pageUid);                                    
                                     if (id == message.context.pageUid) {
 //                                        if (consoles[id].isShowing()) {
                                         consoles[id].getAPI().clear();

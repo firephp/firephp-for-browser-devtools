@@ -99,6 +99,9 @@ exports.main = function (JSONREP, node, options) {
                     <div class="uninitialized" style="display: none;">
                         <p><button action="reload">Reload</button> to initialize FirePHP</p>
                     </div>
+                    <div class="grant" style="display: none;">
+                        <p>You must grant FirePHP permission to intercept requests.</br><b>Click on the FirePHP icon in the address bar.</b></p>
+                    </div>
                     <div class="editor" style="display: none;">
                         %%%variables.panels.editor%%%
                     </div>
@@ -170,19 +173,21 @@ exports.main = function (JSONREP, node, options) {
                     color: #acacac;
                 }
 
-                :scope .uninitialized {
+                :scope .uninitialized,
+                :scope .grant {
                     text-align: center;
                     padding-top: 50px;
                     height: 100%;
                 }
-                :scope .uninitialized > P {
+                :scope .uninitialized > P,
+                :scope .grant > P {
                     font-weight: bold;
                     font-size: 16px;
-                    color: #dcdcdc;
+                    color: #bcbcbc;
                 }
                 :scope .uninitialized BUTTON {
                     font-size: 16px;
-                    color: #dcdcdc;
+                    color: #bcbcbc;
                     cursor: pointer;
 
                     border-radius: 5px;
@@ -193,7 +198,7 @@ exports.main = function (JSONREP, node, options) {
                     background-color: rgb(255, 255, 255);
                     box-sizing: border-box;
                 }
-                    
+
             <<<),
             on: {
                 mount: function (el) {
@@ -247,15 +252,21 @@ exports.main = function (JSONREP, node, options) {
                     });
 
                     let view = null;
+                    let granted = false;
                     let configured = false;
                     let enabled = false;
 
                     async function sync () {
                         try {
                             if (comp.currentContext) {
+                                granted = await comp.hasGrants();
                                 configured = await comp.isConfigured();
                                 enabled = await comp.getSetting("enabled");
 
+                                // User must first grant permissions
+                                if (!granted) {
+                                    view = "grant";
+                                } else
                                 // User requested to manage settings
                                 if (forceManage) {
                                     view = "manage";
@@ -291,6 +302,7 @@ exports.main = function (JSONREP, node, options) {
                                 ui: false,
                                 manage: false,
                                 uninitialized: false,
+                                grant: false,
                                 editor: false
                             };
 
@@ -301,6 +313,9 @@ exports.main = function (JSONREP, node, options) {
                                 WINDOW.crossbrowser.runtime.getManifest().version
                             );
 
+                            if (view === "grant") {
+                                toggles.grant = true;
+                            } else
                             if (view === "uninitialized") {
                                 toggles.uninitialized = true;
                             } else
@@ -331,6 +346,7 @@ exports.main = function (JSONREP, node, options) {
                             el.querySelector("DIV.ui").style.display = toggles.ui ? "block" : "none";
                             el.querySelector("DIV.manage").style.display = toggles.manage ? "block" : "none";
                             el.querySelector("DIV.uninitialized").style.display = toggles.uninitialized ? "block" : "none";
+                            el.querySelector("DIV.grant").style.display = toggles.grant ? "block" : "none";
                             el.querySelector("DIV.editor").style.display = toggles.editor ? "block" : "none";
 
                         } catch (err) {

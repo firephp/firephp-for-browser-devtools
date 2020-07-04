@@ -33,21 +33,21 @@ exports.Client = function (comp, options) {
     async function syncListeners () {
         const enabled = await comp.isEnabled();
         if (enabled) {
-            ensureListenersHooked();
+            ensureListenersHooked(comp.currentContext);
         } else {
-            ensureListenersUnhooked();
+            ensureListenersUnhooked(comp.currentContext);
         }
     }
 
 
-    function ensureListenersHooked () {
-        requestObserver.ensureHooked();
-        responseObserver.ensureHooked();
+    function ensureListenersHooked (currentContext) {
+        requestObserver.ensureHooked(currentContext);
+        responseObserver.ensureHooked(currentContext);
     }
 
-    function ensureListenersUnhooked () {
-        requestObserver.ensureUnhooked();
-        responseObserver.ensureUnhooked();
+    function ensureListenersUnhooked (currentContext) {
+        requestObserver.ensureUnhooked(currentContext);
+        responseObserver.ensureUnhooked(currentContext);
     }
 
 
