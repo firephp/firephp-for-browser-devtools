@@ -2,7 +2,7 @@
 
 # TODO: Move to '#!inf.json' once pinf.it/build/v0 executes instructions in sequence.
 
-pushd "dist/firephp.build" > /dev/null
+function removeFiles {
 
     # Remove files that we do not need
     # TODO: Do this in a better way and coordinate with .gitignore
@@ -20,19 +20,35 @@ pushd "dist/firephp.build" > /dev/null
     rm -Rf scripts/devtools/dist/dist/reps/golden-layout.rep.js
     rm -Rf skin/box.png
     rm -Rf run.config.json
+}
+
+
+pushd "dist/firephp.build.firefox" > /dev/null
+
+    removeFiles
 
     # Remove signed archive as it needs to be re-signed
-    rm -f ../firephp.build.xpi 2> /dev/null || true
-
+    # rm -f ../firephp.build.xpi 2> /dev/null || true
 popd > /dev/null
+
+pushd "dist/firephp.build.chrome" > /dev/null
+    removeFiles
+popd > /dev/null
+
 
 pushd "dist" > /dev/null
 
-    mv firephp.build firephp
-    zip -r firephp.zip firephp/
-    mv firephp firephp.build
+    # TODO: Include version number in folder name
+
+    mv firephp.build.firefox firephp-firefox
+    zip -r firephp-firefox.zip firephp-firefox/
+    mv firephp-firefox firephp.build.firefox
+
+    mv firephp.build.chrome firephp-chrome
+    zip -r firephp-chrome.zip firephp-chrome/
+    mv firephp-chrome firephp.build.chrome
 
 popd > /dev/null
 
-BO_cecho "\nBuilt extension source can be found at: dist/firephp.build/" YELLOW BOLD
+BO_cecho "\nBuilt extension source can be found at 'dist/firephp.build.firefox/' and 'dist/firephp.build.chrome/'" YELLOW BOLD
 BO_cecho "This source can be loaded into a browser when running in extension development mode.\n" YELLOW BOLD

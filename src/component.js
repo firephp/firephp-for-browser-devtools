@@ -261,7 +261,7 @@ exports.for = function (ctx) {
 
     events.hasGrants = async function () {
         if (!events.currentContext) {
-            throw new Error(`Cannot get settings due to no 'currentContext'!`);
+            return false;
         }
         const settings = await events._getHostnameSettingsFor(events.currentContext.hostname);
         return settings.permissionGranted || false;

@@ -121,55 +121,40 @@ exports.main = function (JSONREP, node, options) {
                 }
 
 
-                function ensurePermissions (granted, callback) {
+                tag.syncCheckbox = function (event) {
 
                     // TODO: Remove once optional permissions work properly on firefox.
                     if (window.crossbrowser.browserType === 'firefox') {
-                        callback(true);
-                        return;
-                    }
 
-                    if (granted) {
-                        window.crossbrowser.permissions.request({
-                            permissions: [
-                                'webRequest',
-                                'webRequestBlocking'
-                            ],
-                            origins: [
-                                comp.currentContext.urlSelector
-                            ]
-                        }, callback);
-                    } else {
-                        // NOTE: This does not seem to have any effect.
-                        window.crossbrowser.permissions.remove({
-                            permissions: [
-                                'webRequest',
-                                'webRequestBlocking'
-                            ],
-                            origins: [
-                                comp.currentContext.urlSelector
-                            ]
-                        }, callback);
-                    }
-                }
-
-                tag.syncCheckbox = function (event) {
-                    if (event.target.checked) {
-                        ensurePermissions(true, function (granted) {
-                            if (!granted) {
-                                // TODO: Show grant error.
-                                return;
-                            }
-                            comp.setSetting(event.target.getAttribute("name"), event.target.checked).then(function () {
-                                sync();
-                            });
-                        });                            
-                    } else {
-                        ensurePermissions(false, function (removed) {
-                            comp.setSetting(event.target.getAttribute("name"), event.target.checked).then(function () {
-                                sync();
-                            });
+                        comp.setSetting(event.target.getAttribute("name"), event.target.checked).then(function () {
+                            sync();
                         });
+
+                    } else {
+
+                        if (event.target.checked) {
+                            // The background page will act on this modification and set the 'permissionGranted' setting
+                            window.crossbrowser.permissions.request({
+                                permissions: [
+                                    'webRequest',
+                                    'webRequestBlocking'
+                                ],
+                                origins: [
+                                    comp.currentContext.urlSelector
+                                ]
+                            });
+                        } else {
+                            // The background page will act on this modification and set the 'permissionGranted' setting
+                            window.crossbrowser.permissions.remove({
+                                permissions: [
+                                    'webRequest',
+                                    'webRequestBlocking'
+                                ],
+                                origins: [
+                                    comp.currentContext.urlSelector
+                                ]
+                            });
+                        }
                     }
                 }
 

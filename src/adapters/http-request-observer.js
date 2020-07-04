@@ -74,6 +74,7 @@ exports.forAPI = function (API) {
                             "requestHeaders"
                         ]
                     );
+                    // API.BROWSER.webRequest.handlerBehaviorChanged();
                     isHooked = true;
                 }        
             }

@@ -382,6 +382,39 @@ wildfire.on("destroy", function () {
 
 
 
+BROWSER.permissions.onAdded.addListener(function (permissions) {
+    if (
+        permissions.origins.length === 1 &&
+        currentContext
+    ) {
+        if (permissions.origins[0].substring(0, currentContext.urlSelector.length) === currentContext.urlSelector) {
+
+            if (wildfire.VERBOSE) console.log('set permission granted!');
+
+            comp.setSetting("permissionGranted", true).then(function () {
+                syncPageActionState(currentContext.tabId);
+            });
+        }
+    }
+});
+BROWSER.permissions.onRemoved.addListener(function (permissions) {
+    if (
+        permissions.origins.length === 1 &&
+        currentContext
+    ) {
+        if (permissions.origins[0].substring(0, currentContext.urlSelector.length) === currentContext.urlSelector) {
+
+            if (wildfire.VERBOSE) console.log('set permission removed!');
+
+            comp.setSetting("permissionGranted", false).then(function () {
+
+                syncPageActionState(currentContext.tabId);
+            });
+        }
+    }
+});
+
+
 
 
 let webRequest_onBeforeRequest = null;
@@ -393,10 +426,11 @@ comp.on("changed.setting", function () {
     syncWebRequestListener();
 });
 async function syncWebRequestListener () {
+    const grants = await comp.hasGrants();
     const enabled = await comp.isEnabled();
 
     // Once added we never remove it again.
-    if (enabled) {
+    if (grants && enabled) {
         if (!webRequest_onBeforeRequest) {
             webRequest_onBeforeRequest = function (details) {
                 if (wildfire.VERBOSE) console.log("[background] BROWSER.webRequest -| onBeforeRequest (details):", details);
@@ -433,7 +467,7 @@ async function syncWebRequestListener () {
                 // setCurrentContextFromDetails(details, true);
             };
 
-console.log("[background] Adding webRequest listener", comp.currentContext.urlSelector);            
+            if (wildfire.VERBOSE) console.log("[background] Adding webRequest listener");            
 
             WINDOW.crossbrowser.remap();
             // TODO: Only hook web request for applicable hostname.
@@ -443,9 +477,9 @@ console.log("[background] Adding webRequest listener", comp.currentContext.urlSe
                     //comp.currentContext.urlSelector
                 ]
             });
-//            BROWSER.webRequest.handlerBehaviorChanged();
+            // BROWSER.webRequest.handlerBehaviorChanged();
 
-console.log("[background] Adding webRequest listener", comp.currentContext.urlSelector, 'ADDED))))))');            
+            if (wildfire.VERBOSE) console.log("[background] Added webRequest listener");            
         }
 
 //     } else {
