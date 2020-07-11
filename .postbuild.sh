@@ -38,15 +38,28 @@ popd > /dev/null
 
 pushd "dist" > /dev/null
 
-    # TODO: Include version number in folder name
+    filename="firephp-"
+    if [ ! -z "${SM_ACT_GIT_BRANCH}" ]; then
+        filename="${filename}-${SM_ACT_GIT_BRANCH}-${SM_ACT_GIT_SHA7}"
+    else
+        filename="${filename}-${SM_ACT_GIT_TAG}"
+    fi
 
-    mv firephp.build.firefox firephp-firefox
-    zip -r firephp-firefox.zip firephp-firefox/
-    mv firephp-firefox firephp.build.firefox
+    echo "::set-env name=FIREPHP_BUILD_FILENAME_PREFIX::${filename}"
 
-    mv firephp.build.chrome firephp-chrome
-    zip -r firephp-chrome.zip firephp-chrome/
-    mv firephp-chrome firephp.build.chrome
+    pushd "firephp.build.firefox" > /dev/null
+        zip -r -FS "../${filename}-firefox-flat.zip" * --exclude '.DS_Store'
+    popd > /dev/null
+
+    cp -R firephp.build.firefox "${filename}-firefox"
+    zip -r "${filename}-firefox.zip" "${filename}-firefox/"
+
+    pushd "firephp.build.chrome" > /dev/null
+        zip -r -FS "../${filename}-chrome-flat.zip" * --exclude '.DS_Store'
+    popd > /dev/null
+
+    cp -R firephp.build.chrome "${filename}-chrome"
+    zip -r "${filename}-chrome.zip" "${filename}-chrome/"
 
 popd > /dev/null
 
