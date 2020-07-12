@@ -40,39 +40,39 @@ jobs:
       - name: Upload firefox extension as build artifact
         uses: actions/upload-artifact@v1
         with:
-          name: ${{ FIREPHP_BUILD_FILENAME_PREFIX }}-firefox.zip
-          path: dist/${{ FIREPHP_BUILD_FILENAME_PREFIX }}-firefox.zip
+          name: ${{ env.FIREPHP_BUILD_FILENAME_PREFIX }}-firefox.zip
+          path: dist/${{ env.FIREPHP_BUILD_FILENAME_PREFIX }}-firefox.zip
 
       - name: Upload firefox extension as build artifact (flat)
         uses: actions/upload-artifact@v1
         with:
-          name: ${{ FIREPHP_BUILD_FILENAME_PREFIX }}-firefox-flat.zip
-          path: dist/${{ FIREPHP_BUILD_FILENAME_PREFIX }}-firefox-flat.zip
+          name: ${{ env.FIREPHP_BUILD_FILENAME_PREFIX }}-firefox-flat.zip
+          path: dist/${{ env.FIREPHP_BUILD_FILENAME_PREFIX }}-firefox-flat.zip
 
       - name: Upload chrome extension as build artifact
         uses: actions/upload-artifact@v1
         with:
-          name: ${{ FIREPHP_BUILD_FILENAME_PREFIX }}-chrome.zip
-          path: dist/${{ FIREPHP_BUILD_FILENAME_PREFIX }}-chrome.zip
+          name: ${{ env.FIREPHP_BUILD_FILENAME_PREFIX }}-chrome.zip
+          path: dist/${{ env.FIREPHP_BUILD_FILENAME_PREFIX }}-chrome.zip
 
       - name: Upload chrome extension as build artifact (flat)
         uses: actions/upload-artifact@v1
         with:
-          name: ${{ FIREPHP_BUILD_FILENAME_PREFIX }}-chrome-flat.zip
-          path: dist/${{ FIREPHP_BUILD_FILENAME_PREFIX }}-chrome-flat.zip
+          name: ${{ env.FIREPHP_BUILD_FILENAME_PREFIX }}-chrome-flat.zip
+          path: dist/${{ env.FIREPHP_BUILD_FILENAME_PREFIX }}-chrome-flat.zip
 
       - name: Upload firefox release if tagging
         uses: fnkr/github-action-ghr@v1
         if: startsWith(github.ref, 'refs/tags/')
         env:
-          GHR_PATH: dist/${{ FIREPHP_BUILD_FILENAME_PREFIX }}-firefox.zip
+          GHR_PATH: dist/${{ env.FIREPHP_BUILD_FILENAME_PREFIX }}-firefox.zip
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload chrome release if tagging
         uses: fnkr/github-action-ghr@v1
         if: startsWith(github.ref, 'refs/tags/')
         env:
-          GHR_PATH: dist/${{ FIREPHP_BUILD_FILENAME_PREFIX }}-chrome.zip
+          GHR_PATH: dist/${{ env.FIREPHP_BUILD_FILENAME_PREFIX }}-chrome.zip
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: "[sm.act] Write snapshot report"
