@@ -1,8 +1,4 @@
 name: Build
-on:
-  push:
-    branches-ignore:
-      - 'master'
 jobs:
   Build:
     runs-on: ubuntu-latest
