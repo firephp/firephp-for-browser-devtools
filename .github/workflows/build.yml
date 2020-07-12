@@ -29,10 +29,10 @@ jobs:
         run: npm install
 
       - name: "[sm.act] Set env"
-        uses: sourcemint/sm.act.github.actions/.github/actions/sm-act-set-env@v0.1.25
+        uses: sourcemint/sm.act.github.actions/.github/actions/sm-act-set-env@v0.1.26
 
       - name: "[sm.act] Show env"
-        uses: sourcemint/sm.act.github.actions/.github/actions/sm-act-show-env@v0.1.25
+        uses: sourcemint/sm.act.github.actions/.github/actions/sm-act-show-env@v0.1.26
 
       - name: Build
         run: npm run build
@@ -77,4 +77,4 @@ jobs:
 
       - name: "[sm.act] Write snapshot report"
         id: snapshot
-        uses: sourcemint/sm.act.github.actions/.github/actions/sm-act-write-snapshot@v0.1.25
+        uses: sourcemint/sm.act.github.actions/.github/actions/sm-act-write-snapshot@v0.1.26
