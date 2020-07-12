@@ -100,10 +100,9 @@ Release
   2. Push branch and verify build
   3. Merge to master
   4. Tag commit and push
-  5. Download release & extract
-  6. Compress with `zip -r ../firephp.zip ./`
-  7. Upload to https://addons.mozilla.org/en-US/developers/
-  8. Upload to https://chrome.google.com/u/2/webstore/devconsole
+  5. Download releases
+  6. Upload to https://addons.mozilla.org/en-US/developers/
+  7. Upload to https://chrome.google.com/u/2/webstore/devconsole
 
 
 Provenance
