@@ -125,10 +125,6 @@ LIB.browser.tabs.onActivated.addListener(function (activeInfo) {
 });
 // sync state when a tab status updates
 LIB.browser.tabs.onUpdated.addListener(syncPageActionState);
-// destroy sync state when tab closes
-LIB.browser.tabs.onRemoved.addListener(function (tabId) {
-    delete pageActionState[tabId];
-});
 
 
 

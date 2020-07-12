@@ -74,6 +74,9 @@
         "page": {
             "action": {
                 "devtools/dist/page-action.js": {
+                    "icons": {
+                        "48": "./src/skin/Icon_48_disabled.png"
+                    },
                     "code": {
                         "gi0.PINF.it/build/v0 # /scripts/devtools/dist # /": {
                             "@jsonrep # builder/v1": {
