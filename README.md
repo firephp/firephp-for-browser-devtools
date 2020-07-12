@@ -35,7 +35,7 @@ Install
 
 ## Local
 
-  * Firefox & Chrome unpacked: [firephp.zip](https://github.com/firephp/firephp-for-browser-devtools/releases) (downloads do **NOT** auto-update)
+  * [Firefox & Chrome unpacked](https://github.com/firephp/firephp-for-browser-devtools/releases) (downloads do **NOT** auto-update)
 
 ## Source
 
@@ -50,7 +50,7 @@ Build from source:
     npm install
     npm run build
 
-*Load unpacked Addon* from `dist/firephp.build/` into Firefox, Chrome or Brave.
+*Load unpacked Addon* from `dist/firephp.build.*/` into Firefox, Chrome or Brave.
 
 Run from source:
 
