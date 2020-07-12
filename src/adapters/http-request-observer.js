@@ -60,7 +60,8 @@ exports.forAPI = function (API) {
 
 
             self.ensureHooked = function () {
-                if (!isHooked) {    
+                if (!isHooked) {
+                    API.BROWSER.remap();
                     API.BROWSER.webRequest.onBeforeSendHeaders.addListener(
                         onRequest,
                         {
@@ -73,13 +74,16 @@ exports.forAPI = function (API) {
                             "requestHeaders"
                         ]
                     );
+                    // API.BROWSER.webRequest.handlerBehaviorChanged();
                     isHooked = true;
                 }        
             }
     
             self.ensureUnhooked = function () {
-                API.BROWSER.webRequest.onBeforeSendHeaders.removeListener(onRequest);
-                isHooked = false;
+                if (isHooked) {
+                    API.BROWSER.webRequest.onBeforeSendHeaders.removeListener(onRequest);
+                    isHooked = false;
+                }
             }
 
         }

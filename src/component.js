@@ -53,10 +53,17 @@ exports.for = function (ctx) {
                         ctx.browser.devtools &&
                         ctx.browser.devtools.inspectedWindow &&
                         message.context.tabId === ctx.browser.devtools.inspectedWindow.tabId
+                    ) ||
+                    ( 
+                        ctx.name &&
+                        message.to === ctx.name
                     )
                 )
             ) {
-                if (message.to === "message-listener") {
+                if (
+                    message.to === "message-listener" ||
+                    (ctx.name && message.to === ctx.name)
+                ) {
                     if (
                         message.event === "currentContext" &&
                         typeof message.context !== "undefined"
@@ -252,6 +259,14 @@ exports.for = function (ctx) {
         });
     }
 
+    events.hasGrants = async function () {
+        if (!events.currentContext) {
+            return false;
+        }
+        const settings = await events._getHostnameSettingsFor(events.currentContext.hostname);
+        return settings.permissionGranted || false;
+    }
+
     events.isConfigured = async function () {
         if (!events.currentContext) {
             throw new Error(`Cannot get settings due to no 'currentContext'!`);
@@ -265,10 +280,11 @@ exports.for = function (ctx) {
             enabled: await events._getSettingForHostname(hostname, "enabled", false),
             enableUserAgentHeader: await events._getSettingForHostname(hostname, "enableUserAgentHeader", false),
             enableFirePHPHeader: await events._getSettingForHostname(hostname, "enableFirePHPHeader", false),
-            enableChromeLoggerData: await events._getSettingForHostname(hostname, "enableChromeLoggerData", false)
+            enableChromeLoggerData: await events._getSettingForHostname(hostname, "enableChromeLoggerData", false),
+            permissionGranted: await events._getSettingForHostname(hostname, "permissionGranted", false),
         };
 
-        settings._configured = (
+        settings._configured = settings.permissionGranted && (
             settings.enableUserAgentHeader ||
             settings.enableFirePHPHeader ||
             settings.enableChromeLoggerData
@@ -284,9 +300,10 @@ exports.for = function (ctx) {
                 enabled: events._getSettingForHostnameSync(hostname, "enabled", false),
                 enableUserAgentHeader: events._getSettingForHostnameSync(hostname, "enableUserAgentHeader", false),
                 enableFirePHPHeader: events._getSettingForHostnameSync(hostname, "enableFirePHPHeader", false),
-                enableChromeLoggerData: events._getSettingForHostnameSync(hostname, "enableChromeLoggerData", false)
+                enableChromeLoggerData: events._getSettingForHostnameSync(hostname, "enableChromeLoggerData", false),
+                permissionGranted: events._getSettingForHostnameSync(hostname, "permissionGranted", false)
             };
-            settings._configured = (
+            settings._configured = settings.permissionGranted && (
                 settings.enableUserAgentHeader ||
                 settings.enableFirePHPHeader ||
                 settings.enableChromeLoggerData
@@ -307,6 +324,7 @@ exports.for = function (ctx) {
     events._isEnabledForHostname = async function (hostname) {
         const settings = await events._getHostnameSettingsFor(hostname);
         return (
+            settings.permissionGranted &&
             settings.enabled &&
             settings._configured
         );
@@ -329,6 +347,14 @@ exports.for = function (ctx) {
             context: {
                 tabId: ctx.browser.devtools.inspectedWindow.tabId
             }*/
+        });
+    }
+
+    events.getCurrentContext = function () {
+        ctx.browser.runtime.sendMessage({
+            to: "background",
+            event: "getCurrentContext",
+            from: ctx.name
         });
     }
 

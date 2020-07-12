@@ -1,6 +1,6 @@
 {
   "name": "firephp-for-browser-devtools",
-  "version": "1.4.5",
+  "version": "1.5.0",
   "lockfileVersion": 1,
   "requires": true,
   "dependencies": {
@@ -4602,9 +4602,9 @@
       }
     },
     "domplate": {
-      "version": "0.5.0-pre.1",
-      "resolved": "https://registry.npmjs.org/domplate/-/domplate-0.5.0-pre.1.tgz",
-      "integrity": "sha512-hOrrJGVm0i5qF2fpw9TIxS5NVtG3ZCa2KYuiOI/0Wg8sIaqBqhB5n4k78tmYoFZVMnikf9ShxOsv81YN8joiCw==",
+      "version": "0.5.0-pre.2",
+      "resolved": "https://registry.npmjs.org/domplate/-/domplate-0.5.0-pre.2.tgz",
+      "integrity": "sha512-X/X3OY5vP+D68NXi1J+FDMKMWSTm8XMojLUJGZhQdm3dwGGyNQq4uGKxchEJKCEuenmWSVKsycwbWjvGqfI2pg==",
       "dev": true,
       "requires": {
         "bash.origin.lib": "^0.5.0-pre.1",
@@ -4822,9 +4822,9 @@
       "dev": true
     },
     "electron-to-chromium": {
-      "version": "1.3.485",
-      "resolved": "https://registry.npmjs.org/electron-to-chromium/-/electron-to-chromium-1.3.485.tgz",
-      "integrity": "sha512-Qclz/MFjp6H1oMd1U1AWCWqT8DW/SaN7lUb6ejh03bD6lBoN2X8W2xhXfsU4rdjf7TWReb0ZOGxo6MjsFiEgzQ==",
+      "version": "1.3.488",
+      "resolved": "https://registry.npmjs.org/electron-to-chromium/-/electron-to-chromium-1.3.488.tgz",
+      "integrity": "sha512-NReBdOugu1yl8ly+0VDtiQ6Yw/1sLjnvflWq0gvY1nfUXU2PbA+1XAVuEb7ModnwL/MfUPjby7e4pAFnSHiy6Q==",
       "dev": true
     },
     "elliptic": {
@@ -6058,20 +6058,20 @@
       }
     },
     "fireconsole.rep.js": {
-      "version": "0.2.0-pre.5",
-      "resolved": "https://registry.npmjs.org/fireconsole.rep.js/-/fireconsole.rep.js-0.2.0-pre.5.tgz",
-      "integrity": "sha512-BQ+5nLUymSTFNbBqMXrQD6uF/spGSlpFylCCdUOyI4mU6+loRcCKSFyeB6K5eZaIlYBJJzXvblgZMLYAEcoaDg==",
+      "version": "0.2.0-pre.6",
+      "resolved": "https://registry.npmjs.org/fireconsole.rep.js/-/fireconsole.rep.js-0.2.0-pre.6.tgz",
+      "integrity": "sha512-KYfvU/7AZoO6VFdSbU8BnTouxQPfJqFsyFJi5zUlz/Dkbx5P5MOIK2ueHgDglSeSYClzP+2tR4FEJZJYNrU5dQ==",
       "dev": true,
       "requires": {
         "bash.origin.lib": "^0.5.0-pre.1",
-        "domplate": "^0.5.0-pre.1",
+        "domplate": "^0.5.0-pre.2",
         "eventemitter2": "^4.1.2",
-        "insight-for-js": "^0.2.1-pre.2",
-        "insight.domplate.reps": "^0.2.0-pre.2",
+        "insight-for-js": "^0.2.1-pre.3",
+        "insight.domplate.reps": "^0.2.0-pre.3",
         "it.pinf.dev.pptr": "^0.1.0-pre.0",
-        "jsonrep": "^0.2.0-pre.2",
+        "jsonrep": "^0.2.0-pre.3",
         "lodash": "^4.17.4",
-        "wildfire-for-js": "^0.2.0-pre.0"
+        "wildfire-for-js": "^0.2.0-pre.1"
       }
     },
     "firefox-profile": {
@@ -7280,13 +7280,13 @@
       }
     },
     "insight.domplate.reps": {
-      "version": "0.2.0-pre.2",
-      "resolved": "https://registry.npmjs.org/insight.domplate.reps/-/insight.domplate.reps-0.2.0-pre.2.tgz",
-      "integrity": "sha512-A0B7MTvDc2c7UCiW3Hl/zy5Ys+/oqBuz/m2akZuAxZMynzXGHMHGNLRsQ1wLfJ75qr+NzXc4ab7eB1ieH1BGjg==",
+      "version": "0.2.0-pre.3",
+      "resolved": "https://registry.npmjs.org/insight.domplate.reps/-/insight.domplate.reps-0.2.0-pre.3.tgz",
+      "integrity": "sha512-vmF1Qbcqf8/A6opVdsb7YQXo5oPsA1RDlEvzr/HmK/7Xe6Wef88sUnvoBrNQY5qSprznT3wLWRpvmmMVKGfnxA==",
       "dev": true,
       "requires": {
         "bash.origin.lib": "^0.5.0-pre.1",
-        "domplate": "^0.5.0-pre.1"
+        "domplate": "^0.5.0-pre.2"
       }
     },
     "interpret": {
@@ -8760,15 +8760,15 @@
       "dev": true
     },
     "jsonrep": {
-      "version": "0.2.0-pre.2",
-      "resolved": "https://registry.npmjs.org/jsonrep/-/jsonrep-0.2.0-pre.2.tgz",
-      "integrity": "sha512-ksE4MFrUOKkSCO8a55B7QLCa2nQeob8IWlN4QCmPnokmxptkWCLCBruOt9H3PIW8RJAYhU016V/fMWCXuj95nw==",
+      "version": "0.2.0-pre.3",
+      "resolved": "https://registry.npmjs.org/jsonrep/-/jsonrep-0.2.0-pre.3.tgz",
+      "integrity": "sha512-avgq8H9qy56OizYauKBxsRx1q5A6e4DIb43GDk+CEwLdz6qXNd1oLMDHpu6Rtqn6wQWMcYVcQWKmdCDl+6nrjw==",
       "dev": true,
       "requires": {
         "bash.origin.lib": "^0.5.0-pre.1",
         "codeblock": "^0.4.0-pre.0",
-        "insight-for-js": "^0.2.1-pre.1",
-        "insight.domplate.reps": "^0.2.0-pre.2",
+        "insight-for-js": "^0.2.1-pre.3",
+        "insight.domplate.reps": "^0.2.0-pre.3",
         "it.pinf.org.browserify": "^0.2.0-pre.0",
         "pinf-loader-js": "^1.1.0-pre.1",
         "postcss": "^7.0.14",
@@ -13100,9 +13100,9 @@
       }
     },
     "to.pinf.org.mozilla.web-ext": {
-      "version": "0.3.0-pre.3",
-      "resolved": "https://registry.npmjs.org/to.pinf.org.mozilla.web-ext/-/to.pinf.org.mozilla.web-ext-0.3.0-pre.3.tgz",
-      "integrity": "sha512-omUS+PuRb64cgxT9SsOZiEApR3IrDTolpUblhnUPnEtz4vWheZhoe54Kp8cssaiOLKQRTSstawZlJrDnkmEa/Q==",
+      "version": "0.3.0-pre.4",
+      "resolved": "https://registry.npmjs.org/to.pinf.org.mozilla.web-ext/-/to.pinf.org.mozilla.web-ext-0.3.0-pre.4.tgz",
+      "integrity": "sha512-3g1OpYzM7Y+bCfbn2QdnHacBgmJbz9lr0CC12QfFNg8KAfXUGlHKZcd6JmcJo3UTHXoaM1/NWpXrlr7oSIbOhw==",
       "dev": true,
       "requires": {
         "bash.origin.lib": "^0.5.0-pre.1",
