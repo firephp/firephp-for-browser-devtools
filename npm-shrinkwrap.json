@@ -1,6 +1,6 @@
 {
   "name": "firephp-for-browser-devtools",
-  "version": "1.5.0",
+  "version": "1.5.4",
   "lockfileVersion": 1,
   "requires": true,
   "dependencies": {
@@ -9034,9 +9034,9 @@
       }
     },
     "lodash": {
-      "version": "4.17.15",
-      "resolved": "https://registry.npmjs.org/lodash/-/lodash-4.17.15.tgz",
-      "integrity": "sha512-8xOcRHvCjnocdS5cpwXQXVzmmh5e5+saE2QGoeQmbKmRS6J3VQppPOIt0MnmE+4xlZoumy0GPG0D0MVIQbNA1A==",
+      "version": "4.17.19",
+      "resolved": "https://registry.npmjs.org/lodash/-/lodash-4.17.19.tgz",
+      "integrity": "sha512-JNvd8XER9GQX0v2qJgsaN/mzFCNA5BRe/j8JN9d+tWyGLSodKQHKFicdwNYzWwI3wjRnaKPsGj1XkBjx/F96DQ==",
       "dev": true
     },
     "lodash.every": {
@@ -13100,9 +13100,9 @@
       }
     },
     "to.pinf.org.mozilla.web-ext": {
-      "version": "0.3.0-pre.4",
-      "resolved": "https://registry.npmjs.org/to.pinf.org.mozilla.web-ext/-/to.pinf.org.mozilla.web-ext-0.3.0-pre.4.tgz",
-      "integrity": "sha512-3g1OpYzM7Y+bCfbn2QdnHacBgmJbz9lr0CC12QfFNg8KAfXUGlHKZcd6JmcJo3UTHXoaM1/NWpXrlr7oSIbOhw==",
+      "version": "0.3.0-pre.5",
+      "resolved": "https://registry.npmjs.org/to.pinf.org.mozilla.web-ext/-/to.pinf.org.mozilla.web-ext-0.3.0-pre.5.tgz",
+      "integrity": "sha512-Qpi5F90ml4vJOQHd1BFhV5sgHVGI+xNjJQynrRPt8uGObz6F6g2Okoun5m3QH8H/bUTmxyTJi/UZbIicpl2dEw==",
       "dev": true,
       "requires": {
         "bash.origin.lib": "^0.5.0-pre.1",
