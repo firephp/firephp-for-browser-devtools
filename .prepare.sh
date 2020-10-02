@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -e
+
 # TODO: Get rid of this file once issues are fixed in underlying libraries.
 
 [ ! -e '.~/gi0.PINF.it~build~v0' ] || rm -Rf '.~/gi0.PINF.it~build~v0'

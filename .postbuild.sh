@@ -1,5 +1,7 @@
 #!/usr/bin/env bash.origin.script
 
+set -e
+
 # TODO: Move to '#!inf.json' once pinf.it/build/v0 executes instructions in sequence.
 
 function removeFiles {
