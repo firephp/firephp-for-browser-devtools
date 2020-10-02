@@ -1,6 +1,6 @@
 ![FirePHP Logo](https://github.com/firephp/firephp-for-browser-devtools/blob/master/src/skin/Icon_128.png?raw=true "FirePHP Logo")
 
-FirePHP for Browser Developer Tools ![Build](https://github.com/firephp/firephp-for-browser-devtools/workflows/Build/badge.svg)
+FirePHP for Browser Developer Tools [![Build](https://github.com/firephp/firephp-for-browser-devtools/workflows/Build/badge.svg)](https://github.com/firephp/firephp-for-browser-devtools/actions?query=workflow%3ABuild)
 ===================================
 
 This project holds the [FirePHP Tool](http://firephp.org) in the form of a Browser Extension compatible with:
