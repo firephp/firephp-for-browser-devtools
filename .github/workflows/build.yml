@@ -40,13 +40,13 @@ jobs:
       - name: Upload firefox extension as build artifact
         uses: actions/upload-artifact@v1
         with:
-          name: ${{ env.FIREPHP_BUILD_FILENAME_PREFIX }}-firefox.zip
+          name: ${{ env.FIREPHP_BUILD_FILENAME_PREFIX }}-firefox
           path: dist/${{ env.FIREPHP_BUILD_FILENAME_PREFIX }}-firefox.zip
 
       - name: Upload chrome extension as build artifact
         uses: actions/upload-artifact@v1
         with:
-          name: ${{ env.FIREPHP_BUILD_FILENAME_PREFIX }}-chrome.zip
+          name: ${{ env.FIREPHP_BUILD_FILENAME_PREFIX }}-chrome
           path: dist/${{ env.FIREPHP_BUILD_FILENAME_PREFIX }}-chrome.zip
 
       - name: Upload firefox release if tagging
