@@ -1,6 +1,6 @@
 {
   "name": "firephp-for-browser-devtools",
-  "version": "1.5.5-pre.0",
+  "version": "1.5.5",
   "devDependencies": {
     "codemirror": "^5.49.0",
     "eventemitter2": "^4.1.2",
