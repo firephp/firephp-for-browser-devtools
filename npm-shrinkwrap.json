@@ -1,6 +1,6 @@
 {
   "name": "firephp-for-browser-devtools",
-  "version": "1.5.5-pre.0",
+  "version": "1.5.5",
   "lockfileVersion": 1,
   "requires": true,
   "dependencies": {
@@ -6835,7 +6835,6 @@
       "dev": true,
       "requires": {
         "chalk": "^1.0.0",
-        "google-closure-compiler-linux": "^20180805.0.0",
         "google-closure-compiler-osx": "^20180805.0.0",
         "minimist": "^1.2.0",
         "vinyl": "^2.0.1",
@@ -6883,13 +6882,6 @@
           "dev": true
         }
       }
-    },
-    "google-closure-compiler-linux": {
-      "version": "20180805.0.0",
-      "resolved": "https://registry.npmjs.org/google-closure-compiler-linux/-/google-closure-compiler-linux-20180805.0.0.tgz",
-      "integrity": "sha512-Y53/dehGj5/HoAEnxoYFWLpLf8gHq8QaQSOw8ulnh6VkpHPdcAuhRqIVLcLeJ9rVW3xteOMQ2WFyRfFMayVZcA==",
-      "dev": true,
-      "optional": true
     },
     "google-closure-compiler-osx": {
       "version": "20180805.0.0",

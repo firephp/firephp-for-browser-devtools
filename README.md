@@ -46,7 +46,7 @@ Requirements (tested on macOS):
 
 Build from source:
 
-    nvm use 13
+    nvm use 14.2.0
     npm install
     npm run build
 
@@ -56,7 +56,7 @@ Run from source:
 
 **Status: DEV - The development experience is still work in progress!**
 
-    nvm use 13
+    nvm use 14.2.0
     npm install
     npm run dev
 
