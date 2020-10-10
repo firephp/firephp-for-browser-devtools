@@ -53,14 +53,14 @@ jobs:
         uses: fnkr/github-action-ghr@v1
         if: startsWith(github.ref, 'refs/tags/')
         env:
-          GHR_PATH: dist/firephp-firefox
+          GHR_PATH: dist/firephp-firefox.zip
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload chrome release (if tagging)
         uses: fnkr/github-action-ghr@v1
         if: startsWith(github.ref, 'refs/tags/')
         env:
-          GHR_PATH: dist/firephp-chrome
+          GHR_PATH: dist/firephp-chrome.zip
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: "[sm.act] Write snapshot report"

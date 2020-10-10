@@ -41,21 +41,13 @@ popd > /dev/null
 pushd "dist" > /dev/null
 
     filename="firephp"
-    # NOTE: We always keep the directory named the same.
-    #       Different directory and archive names can be used by a distribution service.
-    # if [ ! -z "${SM_ACT_GIT_BRANCH}" ]; then
-    #     filename="${filename}-${SM_ACT_GIT_BRANCH}-${SM_ACT_GIT_SHA3}"
-    # else
-    #     filename="${filename}-${SM_ACT_GIT_TAG}"
-    # fi
-    # echo "FIREPHP_BUILD_FILENAME_PREFIX=${filename}" >> $GITHUB_ENV
 
     pushd "firephp.build.firefox" > /dev/null
-        zip -r "../${filename}-firefox.zip" * --exclude '.DS_Store'
+        zip -r "../firephp-firefox.zip" * --exclude '.DS_Store'
     popd > /dev/null
 
     pushd "firephp.build.chrome" > /dev/null
-        zip -r "../${filename}-chrome.zip" * --exclude '.DS_Store'
+        zip -r "../firephp-chrome.zip" * --exclude '.DS_Store'
     popd > /dev/null
 
 popd > /dev/null
