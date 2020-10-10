@@ -7,7 +7,7 @@ jobs:
     strategy:
       matrix:
         node-version:
-          - 13.x
+          - 14.2.0
     steps:
       - uses: actions/checkout@v2
         with:
@@ -49,14 +49,14 @@ jobs:
           name: ${{ env.FIREPHP_BUILD_FILENAME_PREFIX }}-chrome
           path: dist/${{ env.FIREPHP_BUILD_FILENAME_PREFIX }}-chrome.zip
 
-      - name: Upload firefox release if tagging
+      - name: Upload firefox release (if tagging)
         uses: fnkr/github-action-ghr@v1
         if: startsWith(github.ref, 'refs/tags/')
         env:
           GHR_PATH: dist/${{ env.FIREPHP_BUILD_FILENAME_PREFIX }}-firefox
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload chrome release if tagging
+      - name: Upload chrome release (if tagging)
         uses: fnkr/github-action-ghr@v1
         if: startsWith(github.ref, 'refs/tags/')
         env:

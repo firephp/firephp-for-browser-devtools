@@ -96,10 +96,9 @@ Run from source:
 Release
 =======
 
-  1. Increment version in `package.json`
-  2. Push branch and verify build
-  3. Merge to master
-  4. Tag commit and push
+  1. Increment **major**, **minor**, or **patch** version in `package.json`
+  2. To **preview**, push **branch** and verify [build](https://github.com/firephp/firephp-for-browser-devtools/actions) (will append `[<branch>]` to extension name/version)
+  3. To **release**, merge to **master**, `git tag v<version>` and push (will build a release for distribution and upload to [releases](https://github.com/firephp/firephp-for-browser-devtools/releases))
   5. Download releases
   6. Upload to https://addons.mozilla.org/en-US/developers/
   7. Upload to https://chrome.google.com/u/2/webstore/devconsole
