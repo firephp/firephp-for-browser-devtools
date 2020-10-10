@@ -40,27 +40,27 @@ jobs:
       - name: Upload firefox extension as build artifact
         uses: actions/upload-artifact@v1
         with:
-          name: ${{ env.FIREPHP_BUILD_FILENAME_PREFIX }}-firefox
-          path: dist/${{ env.FIREPHP_BUILD_FILENAME_PREFIX }}-firefox.zip
+          name: firephp-firefox
+          path: dist/firephp-firefox.zip
 
       - name: Upload chrome extension as build artifact
         uses: actions/upload-artifact@v1
         with:
-          name: ${{ env.FIREPHP_BUILD_FILENAME_PREFIX }}-chrome
-          path: dist/${{ env.FIREPHP_BUILD_FILENAME_PREFIX }}-chrome.zip
+          name: firephp-chrome
+          path: dist/firephp-chrome.zip
 
       - name: Upload firefox release (if tagging)
         uses: fnkr/github-action-ghr@v1
         if: startsWith(github.ref, 'refs/tags/')
         env:
-          GHR_PATH: dist/${{ env.FIREPHP_BUILD_FILENAME_PREFIX }}-firefox
+          GHR_PATH: dist/firephp-firefox
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload chrome release (if tagging)
         uses: fnkr/github-action-ghr@v1
         if: startsWith(github.ref, 'refs/tags/')
         env:
-          GHR_PATH: dist/${{ env.FIREPHP_BUILD_FILENAME_PREFIX }}-chrome
+          GHR_PATH: dist/firephp-chrome
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: "[sm.act] Write snapshot report"
